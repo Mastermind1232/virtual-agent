@@ -1,0 +1,17 @@
+/* NuNu packaging: the Operator app.
+
+   Foundry's core stylesheet carries `form button { display: block; width: 100% }`,
+   and the Agent renders inside a form, so every button in here stretches to the
+   full row unless told otherwise. Upstream fights the same rule in several places.
+   Tabs keep their inline `flex: 1`, which outranks anything declared here. */
+
+#agent-view-operator button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    flex-shrink: 0;
+}
+
+/* A runner's name and marks own the row; SEND takes only what it needs. */
+#agent-view-operator .op-row-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

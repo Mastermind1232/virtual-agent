@@ -386,7 +386,7 @@
                     ${crew.map(({ r, marks, hits }) => `
                         <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #1b1b1b;">
                             <span style="flex:1;min-width:0;">
-                                <span style="color:#fff;font-size:.75rem;">${esc(r.name)}</span>
+                                <span class="op-row-name" style="color:#fff;font-size:.75rem;">${esc(r.name)}</span>
                                 <span style="font-size:.6rem;opacity:.55;"> &middot; ${esc(tierOf(r).name)}</span><br>
                                 <span style="font-size:.65rem;letter-spacing:2px;">${marks.map((m, i) => `<span title="${esc(g.skills[i].name)}" style="color:${m ? ACCENT : "#ff3366"}">${m ? "&#10003;" : "&#10007;"}</span>`).join("")}</span>
                                 <span style="font-size:.6rem;opacity:.55;margin-left:6px;">${hits} of ${g.skills.length}</span>
