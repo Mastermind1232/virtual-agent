@@ -300,10 +300,10 @@
             const crew = runners();
             const picker = g.status === "open" && crew.length
                 ? `<div style="margin-top:8px;display:flex;gap:6px;">
-                    <select id="op-runner-pick" style="flex:1;background:#111;color:#ddd;border:1px solid #333;border-radius:3px;font-size:.7rem;padding:3px;">
+                    <select id="op-runner-pick" style="font-family:inherit;flex:1;background:#111;color:#ddd;border:1px solid #333;border-radius:3px;font-size:.7rem;padding:3px;">
                         ${crew.map((r) => `<option value="${r.id}">${esc(r.name)} &middot; ${esc(tierOf(r).name)}</option>`).join("")}
                     </select>
-                    <button type="button" data-action="op-assign" data-gig="${g.id}" style="background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.7rem;padding:3px 10px;cursor:pointer;">SEND</button>
+                    <button type="button" data-action="op-assign" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.7rem;padding:3px 10px;cursor:pointer;">SEND</button>
                    </div>`
                 : "";
 
@@ -311,7 +311,7 @@
             const assist = (g.status === "assigned" && !g.assist && uncovered.length)
                 ? `<div style="margin-top:8px;">
                     <div style="font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:3px;">TAKE THE CALL (ONCE PER GIG)</div>
-                    ${uncovered.map((s) => `<button type="button" data-action="op-assist" data-gig="${g.id}" data-skill="${esc(s.name)}" style="background:rgba(34,221,255,.12);border:1px solid #22ddff;color:#22ddff;border-radius:3px;font-size:.65rem;padding:3px 8px;margin:0 4px 4px 0;cursor:pointer;">${esc(s.name)}</button>`).join("")}
+                    ${uncovered.map((s) => `<button type="button" data-action="op-assist" data-gig="${g.id}" data-skill="${esc(s.name)}" style="font-family:inherit;background:rgba(34,221,255,.12);border:1px solid #22ddff;color:#22ddff;border-radius:3px;font-size:.65rem;padding:3px 8px;margin:0 4px 4px 0;cursor:pointer;">${esc(s.name)}</button>`).join("")}
                    </div>`
                 : "";
 
@@ -321,8 +321,8 @@
 
             const gmTools = canEdit()
                 ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
-                    ${g.status === "assigned" ? `<button type="button" data-action="op-resolve" data-gig="${g.id}" style="background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">RESOLVE NOW</button>` : ""}
-                    <button type="button" data-action="op-delete-gig" data-gig="${g.id}" style="background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">DELETE</button>
+                    ${g.status === "assigned" ? `<button type="button" data-action="op-resolve" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">RESOLVE NOW</button>` : ""}
+                    <button type="button" data-action="op-delete-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">DELETE</button>
                    </div>`
                 : "";
 
@@ -362,7 +362,7 @@
                     <span style="color:#fff;font-size:.85rem;font-weight:bold;">${esc(r.name)}</span><br>
                     <span style="font-size:.6rem;opacity:.65;">${esc(t.name)} &middot; ${t.skills} skill${t.skills === 1 ? "" : "s"} &middot; ${r.completed ?? 0} done${next ? `, ${Math.max(0, next.gigs - (r.completed ?? 0))} to ${esc(next.name)}` : ""}</span>
                 </span>
-                ${canEdit() ? `<button type="button" data-action="op-drop-runner" data-runner="${r.id}" style="background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.6rem;padding:2px 6px;cursor:pointer;">DROP</button>` : ""}
+                ${canEdit() ? `<button type="button" data-action="op-drop-runner" data-runner="${r.id}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.6rem;padding:2px 6px;cursor:pointer;">DROP</button>` : ""}
             </div>${list}</div>`;
     }
 
@@ -372,7 +372,7 @@
         const live = all.filter((g) => g.status !== "done");
         const done = all.filter((g) => g.status === "done").slice(-8).reverse();
 
-        const tab = (id, label, count) => `<button type="button" data-action="op-tab" data-tab="${id}" style="flex:1;background:${view.tab === id ? `rgba(158,240,26,.15)` : "transparent"};border:0;border-bottom:2px solid ${view.tab === id ? ACCENT : "#222"};color:${view.tab === id ? ACCENT : "#777"};font-size:.7rem;letter-spacing:1px;padding:8px 0;cursor:pointer;font-family:inherit;">${label}${count ? ` (${count})` : ""}</button>`;
+        const tab = (id, label, count) => `<button type="button" data-action="op-tab" data-tab="${id}" style="font-family:inherit;flex:1;background:${view.tab === id ? `rgba(158,240,26,.15)` : "transparent"};border:0;border-bottom:2px solid ${view.tab === id ? ACCENT : "#222"};color:${view.tab === id ? ACCENT : "#777"};font-size:.7rem;letter-spacing:1px;padding:8px 0;cursor:pointer;font-family:inherit;">${label}${count ? ` (${count})` : ""}</button>`;
 
         const bodyGigs = live.length || done.length
             ? live.map((g) => gigCard(g, view)).join("")
@@ -389,7 +389,7 @@
                     <i class="fas fa-chevron-left" style="color:${ACCENT};"></i>
                     <h3 style="color:${ACCENT};margin:0;">Operator</h3>
                 </span>
-                ${canEdit() ? `<button type="button" data-action="${view.tab === "crew" ? "op-new-runner" : "op-new-gig"}" title="${view.tab === "crew" ? "Add a runner" : "Post a gig"}" style="background:rgba(158,240,26,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem;">+</button>` : ""}
+                ${canEdit() ? `<button type="button" data-action="${view.tab === "crew" ? "op-new-runner" : "op-new-gig"}" title="${view.tab === "crew" ? "Add a runner" : "Post a gig"}" style="font-family:inherit;background:rgba(158,240,26,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem;">+</button>` : ""}
             </div>
             <div style="display:flex;flex-shrink:0;">${tab("gigs", "GIGS", live.length)}${tab("crew", "CREW", crew.length)}</div>
             <div style="flex:1;overflow-y:auto;padding:10px;">${view.tab === "crew" ? bodyCrew : bodyGigs}</div>`;
@@ -414,7 +414,7 @@
         const rows = Array.from({ length: 5 }, (_, i) => `
             <div style="display:flex;gap:6px;margin-bottom:4px;">
                 <input type="text" name="skill${i}" list="op-skill-list" placeholder="Skill ${i + 1}${i ? " (optional)" : ""}" style="flex:2;">
-                <select name="dv${i}" style="flex:1;">${DIFF.map((d) => `<option value="${d.dv}"${d.dv === 15 ? " selected" : ""}>${d.name}</option>`).join("")}</select>
+                <select name="dv${i}" style="font-family:inherit;flex:1;">${DIFF.map((d) => `<option value="${d.dv}"${d.dv === 15 ? " selected" : ""}>${d.name}</option>`).join("")}</select>
             </div>`).join("");
 
         new Dialog({
