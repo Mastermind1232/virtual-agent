@@ -577,6 +577,9 @@ Hooks.once('ready', async function () {
     const migrateUnlocked = async (flagOwner) => {
         const existing = flagOwner.getFlag("VirtualAgent", "unlockedApps");
         if (!existing || !Array.isArray(existing)) return; // no flag = will use defaults
+        // NuNu packaging: once the GM has set this owner's app list (the 5.6 marker), it is authoritative.
+        // Without this, STYLE / FIXERS / BLACK MKT were re-added on every load after being switched off.
+        if (flagOwner.getFlag("VirtualAgent", "unlockedAppsMigrated5_6")) return;
         const missing = REQUIRED_APPS.filter(a => !existing.includes(a));
         if (missing.length > 0) {
             console.log(`Virtual Agent | Migration: adding [${missing.join(',')}] to ${flagOwner.name || flagOwner.id}`);
