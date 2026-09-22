@@ -410,6 +410,7 @@
 
             const gmTools = canEdit()
                 ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+                    ${g.status === "open" ? `<button type="button" data-action="op-edit-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #4a5a2e;color:#b6c98a;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">EDIT</button>` : ""}
                     ${g.status === "assigned" ? `<button type="button" data-action="op-resolve" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">RESOLVE NOW</button>` : ""}
                     <button type="button" data-action="op-delete-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">DELETE</button>
                    </div>`
@@ -498,29 +499,36 @@
         return [...names].sort();
     }
 
-    function newGigDialog(app) {
+    /** Post a new gig, or edit one that nobody has taken yet. */
+    function gigDialog(app, existing = null) {
         const list = skillNames();
-        const rows = Array.from({ length: 5 }, (_, i) => `
-            <div style="display:flex;gap:6px;margin-bottom:4px;">
-                <input type="text" name="skill${i}" list="op-skill-list" placeholder="Skill ${i + 1}${i ? " (optional)" : ""}" style="flex:2;">
-                <select name="dv${i}" style="font-family:inherit;flex:1;">${DIFF.map((d) => `<option value="${d.dv}"${d.dv === 15 ? " selected" : ""}>${d.name}</option>`).join("")}</select>
-            </div>`).join("");
+        const edit = !!existing;
+        const rows = Array.from({ length: 5 }, (_, i) => {
+            const sk = existing?.skills?.[i];
+            return `<div style="display:flex;gap:6px;margin-bottom:4px;">
+                <input type="text" name="skill${i}" list="op-skill-list" value="${esc(sk?.name ?? "")}" placeholder="Skill ${i + 1}${i ? " (optional)" : ""}" style="flex:2;">
+                <select name="dv${i}" style="font-family:inherit;flex:1;">${DIFF.map((d) => `<option value="${d.dv}"${d.dv === (sk?.dv ?? 15) ? " selected" : ""}>${d.name}</option>`).join("")}</select>
+            </div>`;
+        }).join("");
+
+        const days = edit ? Math.max(1, daysUntil(existing.due) ?? 7) : 7;
+        const fee = edit ? existing.fee : Number(game.settings.get(ID, "operatorFee") ?? 20);
 
         new Dialog({
-            title: "Post a gig",
+            title: edit ? "Edit gig" : "Post a gig",
             content: `<form>
                 <datalist id="op-skill-list">${list.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
-                <div class="form-group"><label>Title</label><input type="text" name="title" placeholder="Locker Job"></div>
-                <div class="form-group"><label>Client</label><input type="text" name="client" placeholder="Jaxon"></div>
-                <div class="form-group"><label>Brief</label><textarea name="brief" rows="2" placeholder="What the client says."></textarea></div>
-                <div class="form-group"><label>Payout (eb)</label><input type="number" name="payout" value="500" min="0" step="50"></div>
-                <div class="form-group"><label>Days</label><input type="number" name="days" value="7" min="1" step="1"></div>
-                <div class="form-group"><label>Your fee (%)</label><input type="number" name="fee" value="${Number(game.settings.get(ID, "operatorFee") ?? 20)}" min="0" max="100" step="5"></div>
+                <div class="form-group"><label>Title</label><input type="text" name="title" value="${esc(existing?.title ?? "")}" placeholder="Locker Job"></div>
+                <div class="form-group"><label>Client</label><input type="text" name="client" value="${esc(existing?.client ?? "")}" placeholder="Jaxon"></div>
+                <div class="form-group"><label>Brief</label><textarea name="brief" rows="2" placeholder="What the client says.">${esc(existing?.brief ?? "")}</textarea></div>
+                <div class="form-group"><label>Payout (eb)</label><input type="number" name="payout" value="${Number(existing?.payout ?? 500)}" min="0" step="50"></div>
+                <div class="form-group"><label>Days${edit ? " from today" : ""}</label><input type="number" name="days" value="${days}" min="1" step="1"></div>
+                <div class="form-group"><label>Your fee (%)</label><input type="number" name="fee" value="${fee}" min="0" max="100" step="5"></div>
                 <hr><label style="font-size:.8em;opacity:.7;">Skills, one to five</label>${rows}
             </form>`,
             buttons: {
                 post: {
-                    label: "Post", callback: async (h) => {
+                    label: edit ? "Save" : "Post", callback: async (h) => {
                         const f = h[0].querySelector("form");
                         const skills = [];
                         for (let i = 0; i < 5; i++) {
@@ -531,16 +539,27 @@
                         const t = today();
                         if (!t) return ui.notifications.error("The calendar module is not running, so a due date cannot be set.");
                         const client = f.client.value.trim() || "Unknown client";
-                        if (hasDropped(client)) return ui.notifications.warn(`${client} dropped you after three failures and no longer brings work.`);
-                        const gig = {
-                            id: uid(), title: f.title.value.trim() || "Untitled gig", client,
+                        if (!edit && hasDropped(client)) return ui.notifications.warn(`${esc(client)} dropped you after three failures and no longer brings work.`);
+
+                        const fields = {
+                            title: f.title.value.trim() || "Untitled gig", client,
                             brief: f.brief.value.trim(), payout: Math.max(0, Number(f.payout.value) || 0),
                             fee: Math.min(100, Math.max(0, Number(f.fee.value) || 0)),
-                            skills, posted: dateKey(t), due: dateKey(addDays(t, Math.max(1, Number(f.days.value) || 7))),
-                            runnerId: null, assist: null, status: "open", outcome: null,
+                            skills, due: dateKey(addDays(t, Math.max(1, Number(f.days.value) || 7))),
                         };
-                        await saveGigs([...gigs(), gig]);
-                        ui.notifications.info(`Operator: "${esc(gig.title)}" posted.`);
+
+                        const all = gigs();
+                        if (edit) {
+                            const i = all.findIndex((g) => g.id === existing.id);
+                            if (i < 0) return ui.notifications.warn("That gig is gone.");
+                            if (all[i].status !== "open") return ui.notifications.warn("Somebody has already taken that gig.");
+                            all[i] = { ...all[i], ...fields };
+                            await saveGigs(all);
+                            ui.notifications.info(`Operator: "${esc(fields.title)}" updated.`);
+                        } else {
+                            await saveGigs([...all, { id: uid(), ...fields, posted: dateKey(t), runnerId: null, assist: null, status: "open", outcome: null }]);
+                            ui.notifications.info(`Operator: "${esc(fields.title)}" posted.`);
+                        }
                         app?.render(true);
                     },
                 },
@@ -602,7 +621,15 @@
                     view.gigId = view.gigId === gigId ? null : gigId; app.render(true); break;
 
                 case "op-new-gig":
-                    if (canEdit()) newGigDialog(app); break;
+                    if (canEdit()) gigDialog(app); break;
+
+                case "op-edit-gig": {
+                    if (!canEdit()) break;
+                    const g = gigs().find((x) => x.id === gigId);
+                    if (!g) break;
+                    if (g.status !== "open") { ui.notifications.warn("That gig has already been taken."); break; }
+                    gigDialog(app, g); break;
+                }
 
                 case "op-new-runner":
                     if (canEdit()) newRunnerDialog(app); break;
