@@ -1128,7 +1128,9 @@ class AgentOSApplication extends Application {
         if (OP?.visible()) {
             data.homeApps = [OP.tile(), ...data.homeApps];
             data.homeUnlockedApps = [...data.homeUnlockedApps, "operator"];
-            data.operatorHtml = OP.html(this);
+            // A bad gig or stable record must not take the whole phone down with it.
+            try { data.operatorHtml = OP.html(this); }
+            catch (e) { console.error("Operator |", e); data.operatorHtml = `<div style="padding:30px 14px;text-align:center;color:#ff3366;font-size:.75rem;">Operator could not draw. See the console.</div>`; }
         }
         if (game.user.isGM && this._appLockPlayerUuid === "Everyone") {
             const owners = this._everyoneOwners();
@@ -2905,6 +2907,7 @@ class AgentOSApplication extends Application {
 
                 case 'app-icon': {
                     const app = $(ev.currentTarget).data('app');
+                    // NuNu packaging: 'operator' belongs in this allowlist or the Operator tile does nothing.
                     if (['chat', 'data', 'creds', 'map', 'id', 'social', 'bio', 'admin', 'operator', 'store', 'style', 'rep', 'auction', 'ncpd', 'ziggurat', 'garden', 'combat', 'skills'].includes(app)) {
                         this.currentView = app;
                         if (app === 'store' && !this._storeCatalog && !this._storeLoading) {

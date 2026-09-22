@@ -116,12 +116,20 @@
     /* ---------------------------------------------------------------- */
 
     function ownerUser() {
-        const name = String(game.settings.get(ID, "operatorOwner") || "").trim().toLowerCase();
-        if (!name) return null;
-        return game.users.find((u) => u.name.trim().toLowerCase() === name
-            || (u.character?.name ?? "").trim().toLowerCase() === name) ?? null;
+        const v = String(game.settings.get(ID, "operatorOwner") || "").trim();
+        if (!v) return null;
+        const name = v.toLowerCase();
+        return game.users.get(v)
+            ?? game.users.find((u) => u.name.trim().toLowerCase() === name
+                || (u.character?.name ?? "").trim().toLowerCase() === name)
+            ?? null;
     }
     const isOwner = () => { const u = ownerUser(); return !!u && u.id === game.user.id; };
+    /** One GM owns every write, so two clients can never clobber the same list. */
+    const activeGM = () => game.users.filter((u) => u.isGM && u.active).sort((a, b) => a.id.localeCompare(b.id))[0] ?? null;
+    const isActiveGM = () => activeGM()?.id === game.user.id;
+    /** Redraw the phone only if it is already open; never pop it open on someone. */
+    const renderPhone = () => { const a = globalThis.AgentDeviceApp?.ui; if (a?.rendered) a.render(true); };
     const visible = () => game.user.isGM || isOwner();
     const canEdit = () => game.user.isGM;
 
@@ -132,15 +140,21 @@
     /*  Client standing                                                  */
     /* ---------------------------------------------------------------- */
 
-    /** Consecutive failures for a client, most recent first. Three and they walk. */
+    const clientKey = (c) => String(c ?? "").trim().toLowerCase();
+
+    /** Consecutive failures for a client, newest first. Three and they walk. */
     function clientStreak(client) {
-        const key = String(client ?? "").trim().toLowerCase();
-        const done = gigs().filter((g) => g.status === "done" && String(g.client ?? "").trim().toLowerCase() === key)
-            .sort((a, b) => String(b.resolved ?? "").localeCompare(String(a.resolved ?? "")));
+        const key = clientKey(client);
+        const done = gigs().filter((g) => g.status === "done" && clientKey(g.client) === key)
+            // `resolved` is only a date, so same-day gigs tie; resolvedAt breaks it by the order they were settled.
+            .sort((a, b) => String(b.resolved ?? "").localeCompare(String(a.resolved ?? "")) || (b.resolvedAt ?? 0) - (a.resolvedAt ?? 0));
         let streak = 0;
         for (const g of done) { if (g.outcome?.success) break; streak++; }
         return streak;
     }
+
+    const dropped = () => readJSON("operatorDropped").map(clientKey);
+    const hasDropped = (client) => dropped().includes(clientKey(client));
 
     /* ---------------------------------------------------------------- */
     /*  Resolution                                                       */
@@ -193,7 +207,7 @@
         const finalRoll = wiped ? 100 : (await new Roll("1d100").evaluate()).total;
         const success = !wiped && finalRoll <= chance;
 
-        const fee = Number.isFinite(gig.fee) ? gig.fee : Number(game.settings.get(ID, "operatorFee") ?? 20);
+        const fee = Number.isFinite(gig.fee) ? gig.fee : 20;
         const cut = success ? Math.round((Number(gig.payout) || 0) * (100 - fee) / 100) : 0;
         const keep = success ? (Number(gig.payout) || 0) - cut : 0;
 
@@ -201,7 +215,12 @@
 
         const list = gigs();
         const idx = list.findIndex((g) => g.id === gig.id);
-        if (idx >= 0) { list[idx] = { ...list[idx], status: "done", outcome, resolved: todayKey() ?? "" }; await saveGigs(list); }
+        if (idx >= 0) { list[idx] = { ...list[idx], status: "done", outcome, resolved: todayKey() ?? "", resolvedAt: Date.now() }; await saveGigs(list); }
+
+        // Three failures in a row and the client stops bringing work.
+        if (!success && clientStreak(gig.client) >= 3 && !hasDropped(gig.client)) {
+            await writeJSON("operatorDropped", [...readJSON("operatorDropped"), clientKey(gig.client)]);
+        }
 
         if (success && runner) {
             const rl = runners();
@@ -242,7 +261,7 @@
                 : `<b style="color:#ff3366">Failed.</b> Rolled ${o.finalRoll} against ${o.chance}.`);
 
         const money = o.success
-            ? `<div style="margin-top:6px;">${esc(gig.client)} pays <b>${gig.payout}eb</b>. ${esc(runner?.name ?? "The runner")} is owed <b>${o.cut}eb</b> at a ${o.fee}% fee, leaving <b>${o.keep}eb</b>.</div>`
+            ? `<div style="margin-top:6px;">${esc(gig.client)} pays <b>${Number(gig.payout) || 0}eb</b>. ${esc(runner?.name ?? "The runner")} is owed <b>${o.cut}eb</b> at a ${o.fee}% fee, leaving <b>${o.keep}eb</b>.</div>`
             : `<div style="margin-top:6px;opacity:.8">No payout.</div>`;
 
         const streak = clientStreak(gig.client);
@@ -261,12 +280,67 @@
         });
     }
 
-    /** Called by the GM's client whenever the calendar date moves. */
+    /** Called when the calendar date moves. Only one GM does the work. */
     async function resolveDue() {
+        if (!isActiveGM() || _resolving) return;
+        _resolving = true;
+        try {
+            const due = gigs().filter((g) => g.status === "assigned" && g.due && (daysUntil(g.due) ?? 1) <= 0);
+            for (const g of due) await resolveGig(g);
+            if (due.length) renderPhone();
+        } finally { _resolving = false; }
+    }
+    let _resolving = false;
+
+    /* ---------------------------------------------------------------- */
+    /*  Writes                                                           */
+    /*                                                                   */
+    /*  Gigs and the stable live in world settings, which Foundry only   */
+    /*  lets a GM write. The owner is a player, so their actions are     */
+    /*  relayed to the active GM over the module's socket.               */
+    /* ---------------------------------------------------------------- */
+
+    const SOCKET = `module.${ID}`;
+
+    async function request(payload) {
+        if (game.user.isGM) return applyOp({ ...payload, userId: game.user.id });
+        if (!activeGM()) return ui.notifications.warn("No GM is connected, so the Operator cannot record that.");
+        game.socket.emit(SOCKET, { operator: true, ...payload, userId: game.user.id });
+    }
+
+    /** GM side. Every list write lands here, re-reading first so nothing is clobbered. */
+    async function applyOp(msg) {
         if (!game.user.isGM) return;
-        const due = gigs().filter((g) => g.status === "assigned" && g.due && (daysUntil(g.due) ?? 1) <= 0);
-        for (const g of due) await resolveGig(g);
-        if (due.length) globalThis.AgentDeviceApp?.ui?.render?.(true);
+        switch (msg.op) {
+            case "assign": {
+                const list = gigs();
+                const i = list.findIndex((g) => g.id === msg.gigId);
+                if (i < 0 || list[i].status !== "open") return;
+                const r = runners().find((x) => x.id === msg.runnerId);
+                if (!r) return;
+                list[i] = { ...list[i], runnerId: msg.runnerId, status: "assigned" };
+                await saveGigs(list);
+                await ChatMessage.create({ whisper: whisperTargets(), content: `<div style="font-family:monospace;"><b style="color:${ACCENT}">OPERATOR</b><br>${esc(r.name)} took <b>${esc(list[i].title)}</b>. Due ${esc(prettyDate(list[i].due))}.</div>` });
+                renderPhone();
+                return;
+            }
+            case "assist": {
+                const list = gigs();
+                const i = list.findIndex((g) => g.id === msg.gigId);
+                if (i < 0 || list[i].assist) return;   // one call per gig, whoever asks first
+                list[i] = { ...list[i], assist: { skill: msg.skill, total: msg.total, die: msg.die } };
+                await saveGigs(list);
+                renderPhone();
+                return;
+            }
+            case "resolve": {
+                const g = gigs().find((x) => x.id === msg.gigId);
+                if (!g || g.status !== "assigned" || !g.runnerId) return;
+                await resolveGig(g);
+                renderPhone();
+                return;
+            }
+        }
     }
 
     /* ---------------------------------------------------------------- */
@@ -284,7 +358,9 @@
 
         const status = g.status === "done"
             ? chip(g.outcome?.success ? "PAID" : "FAILED", g.outcome?.success ? ACCENT : "#ff3366")
-            : (g.status === "assigned" ? chip(days !== null && days <= 0 ? "DUE" : `${days}D LEFT`, "#ffd166") : chip("AVAILABLE", "#888"));
+            : (g.status === "assigned"
+                ? chip(days === null ? "IN PROGRESS" : (days <= 0 ? "DUE" : `${days}D LEFT`), "#ffd166")
+                : chip("AVAILABLE", "#888"));
 
         const skills = g.skills.map((s) => {
             const covered = runner && usableSkills(runner).some((u) => u.name.trim().toLowerCase() === s.name.trim().toLowerCase());
@@ -321,7 +397,7 @@
                 : "";
 
             const uncovered = runner ? g.skills.filter((s) => !usableSkills(runner).some((u) => u.name.trim().toLowerCase() === s.name.trim().toLowerCase())) : [];
-            const assist = (g.status === "assigned" && !g.assist && uncovered.length)
+            const assist = (g.status === "assigned" && !g.assist && uncovered.length && !_calling.has(g.id))
                 ? `<div style="margin-top:8px;">
                     <div style="font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:3px;">TAKE THE CALL (ONCE PER GIG)</div>
                     ${uncovered.map((s) => `<button type="button" data-action="op-assist" data-gig="${g.id}" data-skill="${esc(s.name)}" style="font-family:inherit;background:rgba(34,221,255,.12);border:1px solid #22ddff;color:#22ddff;border-radius:3px;font-size:.65rem;padding:3px 8px;margin:0 4px 4px 0;cursor:pointer;">${esc(s.name)}</button>`).join("")}
@@ -454,14 +530,17 @@
                         if (!skills.length) return ui.notifications.warn("A gig needs at least one skill.");
                         const t = today();
                         if (!t) return ui.notifications.error("The calendar module is not running, so a due date cannot be set.");
+                        const client = f.client.value.trim() || "Unknown client";
+                        if (hasDropped(client)) return ui.notifications.warn(`${client} dropped you after three failures and no longer brings work.`);
                         const gig = {
-                            id: uid(), title: f.title.value.trim() || "Untitled gig", client: f.client.value.trim() || "Unknown client",
-                            brief: f.brief.value.trim(), payout: Number(f.payout.value) || 0, fee: Number(f.fee.value) || 0,
+                            id: uid(), title: f.title.value.trim() || "Untitled gig", client,
+                            brief: f.brief.value.trim(), payout: Math.max(0, Number(f.payout.value) || 0),
+                            fee: Math.min(100, Math.max(0, Number(f.fee.value) || 0)),
                             skills, posted: dateKey(t), due: dateKey(addDays(t, Math.max(1, Number(f.days.value) || 7))),
                             runnerId: null, assist: null, status: "open", outcome: null,
                         };
                         await saveGigs([...gigs(), gig]);
-                        ui.notifications.info(`Operator: "${gig.title}" posted.`);
+                        ui.notifications.info(`Operator: "${esc(gig.title)}" posted.`);
                         app?.render(true);
                     },
                 },
@@ -473,7 +552,8 @@
 
     function newRunnerDialog(app) {
         const taken = new Set(runners().map((r) => r.actorUuid));
-        const choices = game.actors.filter((a) => !taken.has(a.uuid)).sort((a, b) => a.name.localeCompare(b.name));
+        const choices = game.actors.filter((a) => !taken.has(a.uuid) && ["character", "mook"].includes(a.type))
+            .sort((a, b) => a.name.localeCompare(b.name));
         if (!choices.length) return ui.notifications.warn("Every actor is already on the roster.");
 
         new Dialog({
@@ -491,7 +571,7 @@
                         if (!actor) return ui.notifications.warn("That actor is gone.");
                         const tier = Number(f.tier.value) || 0;
                         await saveRunners([...runners(), { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier, completed: TIERS[tier].gigs }]);
-                        ui.notifications.info(`Operator: ${actor.name} joined the stable.`);
+                        ui.notifications.info(`Operator: ${esc(actor.name)} joined the stable.`);
                         app?.render(true);
                     },
                 },
@@ -505,7 +585,10 @@
     /*  Clicks                                                           */
     /* ---------------------------------------------------------------- */
 
-    async function onClick(app, action, ev, html) {
+    /** Gigs with an action in flight, so a second click does nothing. */
+    const _calling = new Set();
+
+    async function onClick(app, action, ev) {
         const view = app._operator ?? (app._operator = { tab: "gigs", gigId: null });
         const $t = $(ev.currentTarget);
         const gigId = $t.data("gig");
@@ -539,42 +622,36 @@
                     app.render(true); break;
                 }
 
-                case "op-assign": {
-                    const pick = $t.data("runner");
-                    if (!pick) { ui.notifications.warn("Pick a runner first."); break; }
-                    const list = gigs();
-                    const i = list.findIndex((g) => g.id === gigId);
-                    if (i < 0) break;
-                    list[i] = { ...list[i], runnerId: pick, status: "assigned" };
-                    await saveGigs(list);
-                    const r = runners().find((x) => x.id === pick);
-                    ChatMessage.create({ whisper: whisperTargets(), content: `<div style="font-family:monospace;"><b style="color:${ACCENT}">OPERATOR</b><br>${esc(r?.name ?? "A runner")} took <b>${esc(list[i].title)}</b>. Due ${esc(prettyDate(list[i].due))}.</div>` });
-                    app.render(true); break;
-                }
+                case "op-assign":
+                    await request({ op: "assign", gigId, runnerId: $t.data("runner") });
+                    break;
 
                 case "op-assist": {
                     const skill = String($t.data("skill"));
-                    const list = gigs();
-                    const i = list.findIndex((g) => g.id === gigId);
-                    if (i < 0 || list[i].assist) break;
+                    const g = gigs().find((x) => x.id === gigId);
+                    if (!g || g.assist || _calling.has(gigId)) break;
                     const actor = ownerActor();
                     if (!actor) { ui.notifications.warn("No character is assigned to the Operator, so there is nothing to roll."); break; }
-                    const total = skillTotal(actor, skill);
-                    const roll = await new Roll("1d10").evaluate();
-                    await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Operator assist: ${skill}` });
-                    list[i] = { ...list[i], assist: { skill, total, die: roll.total } };
-                    await saveGigs(list);
-                    ui.notifications.info(`Operator: you covered ${skill}. That roll stands when the gig resolves.`);
-                    app.render(true); break;
+                    _calling.add(gigId);                      // the button cannot be pressed twice while this lands
+                    try {
+                        app.render(true);
+                        const total = skillTotal(actor, skill);
+                        const roll = await new Roll("1d10").evaluate();
+                        await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Operator assist: ${esc(skill)}` });
+                        await request({ op: "assist", gigId, skill, total, die: roll.total });
+                        ui.notifications.info(`Operator: you covered ${esc(skill)}. That roll stands when the gig resolves.`);
+                    } finally { _calling.delete(gigId); }
+                    break;
                 }
 
                 case "op-resolve": {
-                    if (!canEdit()) break;
+                    if (!canEdit() || _calling.has(gigId)) break;
                     const g = gigs().find((x) => x.id === gigId);
                     if (!g) break;
                     if (!g.runnerId) { ui.notifications.warn("Nobody is on that gig."); break; }
-                    await resolveGig(g);
-                    app.render(true); break;
+                    _calling.add(gigId);                      // a double click must not resolve it twice
+                    try { await request({ op: "resolve", gigId }); } finally { _calling.delete(gigId); }
+                    break;
                 }
             }
         } catch (err) {
@@ -587,24 +664,45 @@
     /*  Wiring                                                           */
     /* ---------------------------------------------------------------- */
 
-    globalThis.VirtualAgentOperator = { html, onClick, visible, tile, resolveDue, TIERS, DIFF };
+    globalThis.VirtualAgentOperator = { html, onClick, visible, tile, resolveDue };
 
     Hooks.once("init", () => {
         game.settings.register(ID, "operatorOwner", {
             name: "Operator app owner",
-            hint: "The player, by their name or their character's name, whose Agent carries the Operator app. The GM always has it. Leave blank for GM only.",
+            hint: "The player whose Agent carries the Operator app, and whose character rolls when they take a call. The GM always has it.",
             scope: "world", config: true, type: String, default: "",
-            onChange: () => globalThis.AgentDeviceApp?.ui?.render?.(true),
+            choices: { "": "GM only" },            // filled with the player list at ready; users do not exist yet at init
+            onChange: () => renderPhone(),
         });
         game.settings.register(ID, "operatorFee", {
             name: "Operator default fee (%)",
             hint: "The cut the Operator keeps of a gig's payout by default. Set per gig when posting.",
             scope: "world", config: true, type: Number, default: 20,
         });
-        game.settings.register(ID, "operatorGigs", { scope: "world", config: false, type: String, default: "[]" });
-        game.settings.register(ID, "operatorRunners", { scope: "world", config: false, type: String, default: "[]" });
+        game.settings.register(ID, "operatorGigs", { scope: "world", config: false, type: String, default: "[]", onChange: () => renderPhone() });
+        game.settings.register(ID, "operatorRunners", { scope: "world", config: false, type: String, default: "[]", onChange: () => renderPhone() });
+        game.settings.register(ID, "operatorDropped", { scope: "world", config: false, type: String, default: "[]" });
     });
 
     Hooks.on("nunuCalendar.dateChanged", () => { resolveDue().catch(console.error); });
-    Hooks.once("ready", () => { if (game.user.isGM) resolveDue().catch(console.error); });
+
+    Hooks.once("ready", () => {
+        // A player's actions arrive here; the upstream listener keys off `action`, so the two do not collide.
+        game.socket.on(SOCKET, (msg) => {
+            if (!msg?.operator || !isActiveGM()) return;
+            applyOp(msg).catch((e) => { console.error("Operator |", e); ui.notifications.error(`Operator: ${e.message}`); });
+        });
+
+        // The player list only exists now, so the owner setting gets its dropdown here.
+        const setting = game.settings.settings.get(`${ID}.operatorOwner`);
+        if (setting) {
+            setting.choices = {
+                "": "GM only",
+                ...Object.fromEntries(game.users.filter((u) => !u.isGM)
+                    .map((u) => [u.id, u.character ? `${u.name} (${u.character.name})` : u.name])),
+            };
+        }
+
+        resolveDue().catch(console.error);
+    });
 })();
