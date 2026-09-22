@@ -349,7 +349,6 @@
 
     function crewCard(r) {
         const t = tierOf(r);
-        const next = TIERS[r.tier + 1];
         const skills = usableSkills(r);
         const list = skills.length
             ? skills.map((s) => `<div style="display:flex;justify-content:space-between;font-size:.7rem;padding:1px 0;"><span>${esc(s.name)}</span><span style="color:${ACCENT}">${s.total}</span></div>`).join("")
@@ -360,7 +359,7 @@
                 <img src="${esc(r.img || "icons/svg/mystery-man.svg")}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid ${ACCENT};">
                 <span style="flex:1;">
                     <span style="color:#fff;font-size:.85rem;font-weight:bold;">${esc(r.name)}</span><br>
-                    <span style="font-size:.6rem;opacity:.65;">${esc(t.name)} &middot; ${t.skills} skill${t.skills === 1 ? "" : "s"} &middot; ${r.completed ?? 0} done${next ? `, ${Math.max(0, next.gigs - (r.completed ?? 0))} to ${esc(next.name)}` : ""}</span>
+                    <span style="font-size:.6rem;opacity:.65;">${esc(t.name)}</span>
                 </span>
                 ${canEdit() ? `<button type="button" data-action="op-drop-runner" data-runner="${r.id}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.6rem;padding:2px 6px;cursor:pointer;">DROP</button>` : ""}
             </div>${list}</div>`;
@@ -391,7 +390,7 @@
                 </span>
                 ${canEdit() ? `<button type="button" data-action="${view.tab === "crew" ? "op-new-runner" : "op-new-gig"}" title="${view.tab === "crew" ? "Add a runner" : "Post a gig"}" style="font-family:inherit;background:rgba(158,240,26,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem;">+</button>` : ""}
             </div>
-            <div style="display:flex;flex-shrink:0;">${tab("gigs", "GIGS", live.length)}${tab("crew", "CREW", crew.length)}</div>
+            <div style="display:flex;flex-shrink:0;">${tab("gigs", "GIGS", live.length)}${tab("crew", "RUNNERS", crew.length)}</div>
             <div style="flex:1;overflow-y:auto;padding:10px;">${view.tab === "crew" ? bodyCrew : bodyGigs}</div>`;
     }
 
