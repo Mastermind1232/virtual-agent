@@ -1320,6 +1320,14 @@ class AgentOSApplication extends Application {
             const tb = _lastActivityByContact[b.id] || 0;
             return tb - ta;
         });
+        // NuNu packaging: the Messenger lists conversations, not the address book.
+        // Only threads with something in them, plus the party channel and whichever
+        // thread is open right now, so arriving from Contacts does not show an
+        // empty list. Every contact still lives in the Contacts app.
+        data.threads = data.contacts.filter((c) =>
+            c.id === "party_group_chat"
+            || (_lastActivityByContact[c.id] || 0) > 0
+            || c.id === this.activeContactId);
         // Patch4.7 (Gotto Goho ghost-notification fix): the home-screen badge
         // used to sum Object.values(unreads), which includes orphan threadIds
         // left behind when a contact was deleted. Now we filter against the

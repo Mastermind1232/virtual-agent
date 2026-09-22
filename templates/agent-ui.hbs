@@ -92,7 +92,8 @@
                     </div>
 
                     <div class="contact-list" style="flex: 1; overflow-y: auto; padding: 10px;">
-                        {{#each contacts}}
+                        {{!-- NuNu packaging: conversations, not the address book. Contacts app has everyone. --}}
+                        {{#each threads}}
                             <div class="contact-card" data-contact-id="{{this.id}}" style="padding: 12px; margin-bottom: 8px; background: rgba(255, 255, 255, 0.05); border-left: 3px solid {{#if this.isPlayer}}var(--neon-cyan){{else}}var(--neon-red){{/if}}; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; position: relative;">
                                 {{#if this.unreads}}
                                     <span class="unread-badge" style="top: 0; right: 0;">{{this.unreads}}</span>
@@ -119,7 +120,7 @@
                                 </div>
                             </div>
                         {{else}}
-                            <div style="text-align: center; color: #555; font-style: italic; margin-top: 50px;">No contacts found.</div>
+                            <div style="text-align: center; color: #555; font-style: italic; margin-top: 50px;">No conversations yet. Open one from Contacts.</div>
                         {{/each}}
                     </div>
                 </div>
