@@ -1,0 +1,45 @@
+{
+  "id": "VirtualAgent",
+  "title": "Virtual Agent",
+  "description": "A glassmorphic, immersive Agent device UI for Cyberpunk RED. Provides a native smartphone interface for players to access the Data Pool, send Eurobucks, monitor vitals, and receive messages.",
+  "version": "1.8.4",
+  "compatibility": {
+    "minimum": "12",
+    "verified": "12"
+  },
+  "authors": [
+    {
+      "name": "inGramGames",
+      "url": "https://www.patreon.com/inGramGames",
+      "flags": {}
+    },
+    {
+      "name": "Mastermind1232 (packaging only)",
+      "url": "https://github.com/Mastermind1232",
+      "flags": {}
+    }
+  ],
+  "socket": true,
+  "esmodules": [],
+  "scripts": [
+    "scripts/agent-app.js",
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/agent.css"
+  ],
+  "packs": [],
+  "languages": [],
+  "relationships": {
+    "systems": [
+      {
+        "id": "cyberpunk-red-core",
+        "type": "system",
+        "compatibility": {}
+      }
+    ]
+  },
+  "url": "https://github.com/Mastermind1232/virtual-agent",
+  "manifest": "https://raw.githubusercontent.com/Mastermind1232/virtual-agent/main/module.json",
+  "download": "https://github.com/Mastermind1232/virtual-agent/releases/download/v1.8.4/module.zip"
+}
