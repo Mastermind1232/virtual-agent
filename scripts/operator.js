@@ -2,7 +2,7 @@
  *  NuNu packaging: the Operator app.
  *
  *  A Fixer's dispatch board. The owner receives gigs from clients,
- *  assigns the edgerunners on their roster, and collects when the gig
+ *  assigns the operators on their roster, and collects when the gig
  *  resolves against the in-game calendar. Rules live in the campaign
  *  vault under "Operator"; this file is the implementation.
  *
@@ -295,7 +295,7 @@
     /* ---------------------------------------------------------------- */
     /*  Writes                                                           */
     /*                                                                   */
-    /*  Gigs and the stable live in world settings, which Foundry only   */
+    /*  Gigs and operators live in world settings, which Foundry only    */
     /*  lets a GM write. The owner is a player, so their actions are     */
     /*  relayed to the active GM over the module's socket.               */
     /* ---------------------------------------------------------------- */
@@ -471,16 +471,16 @@
         const crew = runners();
         const bodyCrew = crew.length
             ? crew.map(crewCard).join("")
-            : `<div style="text-align:center;opacity:.45;font-size:.7rem;padding:30px 10px;">No one on the roster.${canEdit() ? " Tap + to add a runner." : ""}</div>`;
+            : `<div style="text-align:center;opacity:.45;font-size:.7rem;padding:30px 10px;">No operators yet.${canEdit() ? " Tap + to add one." : ""}</div>`;
 
         return `<div class="app-header drag-handle" style="justify-content:space-between;">
                 <span data-action="back-to-home" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
                     <i class="fas fa-chevron-left" style="color:${ACCENT};"></i>
                     <h3 style="color:${ACCENT};margin:0;">Operator</h3>
                 </span>
-                ${canEdit() ? `<button type="button" data-action="${view.tab === "crew" ? "op-new-runner" : "op-new-gig"}" title="${view.tab === "crew" ? "Add someone to the stable" : "Post a gig"}" style="font-family:inherit;background:rgba(158,240,26,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem;">+</button>` : ""}
+                ${canEdit() ? `<button type="button" data-action="${view.tab === "crew" ? "op-new-runner" : "op-new-gig"}" title="${view.tab === "crew" ? "Add an operator" : "Post a gig"}" style="font-family:inherit;background:rgba(158,240,26,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem;">+</button>` : ""}
             </div>
-            <div style="display:flex;flex-shrink:0;">${tab("gigs", "GIGS", live.length)}${tab("crew", "STABLE", crew.length)}</div>
+            <div style="display:flex;flex-shrink:0;">${tab("gigs", "GIGS", live.length)}${tab("crew", "OPERATORS", crew.length)}</div>
             <div style="flex:1;overflow-y:auto;padding:10px;">${view.tab === "crew" ? bodyCrew : bodyGigs}</div>`;
     }
 
@@ -557,7 +557,7 @@
         if (!choices.length) return ui.notifications.warn("Every actor is already on the roster.");
 
         new Dialog({
-            title: "Add an edgerunner",
+            title: "Add an operator",
             content: `<form>
                 <div class="form-group"><label>Actor</label><select name="uuid">${choices.map((a) => `<option value="${a.uuid}">${esc(a.name)}</option>`).join("")}</select></div>
                 <div class="form-group"><label>Tier</label><select name="tier">${TIERS.map((t, i) => `<option value="${i}">${t.name} (${t.skills} skill${t.skills === 1 ? "" : "s"})</option>`).join("")}</select></div>
@@ -571,7 +571,7 @@
                         if (!actor) return ui.notifications.warn("That actor is gone.");
                         const tier = Number(f.tier.value) || 0;
                         await saveRunners([...runners(), { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier, completed: TIERS[tier].gigs }]);
-                        ui.notifications.info(`Operator: ${esc(actor.name)} joined the stable.`);
+                        ui.notifications.info(`Operator: ${esc(actor.name)} is now one of your operators.`);
                         app?.render(true);
                     },
                 },
@@ -617,7 +617,7 @@
                 case "op-drop-runner": {
                     if (!canEdit()) break;
                     const id = $t.data("runner");
-                    if (!await Dialog.confirm({ title: "Drop runner", content: "<p>Take them out of the stable? Their gig history goes with them.</p>" })) break;
+                    if (!await Dialog.confirm({ title: "Drop operator", content: "<p>Drop this operator? Their gig history goes with them.</p>" })) break;
                     await saveRunners(runners().filter((r) => r.id !== id));
                     app.render(true); break;
                 }
