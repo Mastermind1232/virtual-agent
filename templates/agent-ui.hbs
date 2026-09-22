@@ -2338,7 +2338,7 @@
                                     role="tab" aria-selected="{{#if this.isActive}}true{{else}}false{{/if}}"
                                     data-action="admin-tab-select" data-target-uuid="{{this.uuid}}"
                                     title="{{this.name}}{{#if this.actorName}} — {{this.actorName}}{{/if}}{{#if this.noActor}} (no character assigned){{/if}}">
-                                    {{#if this.isGM}}<i class="fas fa-user-shield"></i>{{else}}<i class="fas fa-user"></i>{{/if}}
+                                    {{#if this.isGM}}<i class="fas fa-user-shield"></i>{{else if this.isAll}}<i class="fas fa-users"></i>{{else}}<i class="fas fa-user"></i>{{/if}}
                                     <span class="app-access-tab-label">{{this.name}}</span>
                                 </button>
                                 {{/each}}

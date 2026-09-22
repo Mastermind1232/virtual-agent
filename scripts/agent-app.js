@@ -1046,8 +1046,8 @@ class AgentOSApplication extends Application {
         let appLockFlagOwner = null;
         if (game.user.isGM) {
             const tabUuid = this._appLockPlayerUuid || "VirtualWallet";
-            if (tabUuid === "VirtualWallet") {
-                appLockFlagOwner = game.user; // GM's own flags
+            if (tabUuid === "VirtualWallet" || tabUuid === "Everyone") {
+                appLockFlagOwner = game.user; // GM's own flags (the Everyone tab displays these and writes to all)
             } else if (tabUuid.startsWith("User.")) {
                 appLockFlagOwner = game.users.get(tabUuid.split(".")[1]) || game.user;
             } else {
@@ -1112,6 +1112,15 @@ class AgentOSApplication extends Application {
                 actorName: null,
                 isGM: true,
                 isActive: (this._appLockPlayerUuid === "VirtualWallet" || !this._appLockPlayerUuid)
+            });
+            // NuNu packaging: one tab that toggles an app for every phone at once (GM included).
+            _adminTabs.push({
+                uuid: "Everyone",
+                name: "Everyone",
+                actorName: null,
+                isGM: false,
+                isAll: true,
+                isActive: this._appLockPlayerUuid === "Everyone"
             });
             for (const u of game.users.filter(x => !x.isGM)) {
                 const identity = this._getIdentity(u);
@@ -4961,6 +4970,33 @@ class AgentOSApplication extends Application {
                     // no assigned character (write to the user flag). Anything
                     // else is an actor uuid (write to the actor's flag).
                     const lockTargetUuid = this._appLockPlayerUuid || "VirtualWallet";
+                    if (lockTargetUuid === "Everyone") {
+                        // NuNu packaging: the GM's own list decides the direction; every phone gets the same result.
+                        const FALLBACK = ['chat', 'data', 'creds', 'map', 'id', 'social', 'bio', 'store', 'style', 'rep', 'auction', 'ncpd', 'ziggurat', 'garden', 'combat', 'skills'];
+                        const gmList = game.user.getFlag("VirtualAgent", "unlockedApps") || FALLBACK;
+                        const turnOn = !gmList.includes(appId);
+                        const owners = new Set([game.user]);
+                        for (const u of game.users.filter(x => !x.isGM)) {
+                            const identity = this._getIdentity(u);
+                            const a = (identity && identity !== "VirtualWallet" && !identity.startsWith("User.")) ? this._resolveActor(identity) : null;
+                            owners.add(a || u);
+                        }
+                        const _adminConsoleA = this.element.find('.admin-console')[0];
+                        const _savedAdminScrollA = _adminConsoleA ? _adminConsoleA.scrollTop : 0;
+                        for (const o of owners) {
+                            let list = o.getFlag("VirtualAgent", "unlockedApps") || FALLBACK;
+                            list = turnOn ? (list.includes(appId) ? list : [...list, appId]) : list.filter(a => a !== appId);
+                            await o.setFlag("VirtualAgent", "unlockedApps", list);
+                            await o.setFlag("VirtualAgent", "unlockedAppsMigrated5_6", true);
+                        }
+                        game.socket.emit("module.VirtualAgent", { action: "refreshApps" });
+                        this.render(true);
+                        if (_savedAdminScrollA > 0) {
+                            const _restoreA = () => { const el = this.element?.find?.('.admin-console')?.[0]; if (el) el.scrollTop = _savedAdminScrollA; };
+                            requestAnimationFrame(_restoreA); setTimeout(_restoreA, 0); setTimeout(_restoreA, 50); setTimeout(_restoreA, 150);
+                        }
+                        break;
+                    }
                     let targetObj = null;
                     if (lockTargetUuid === "VirtualWallet") {
                         targetObj = game.user; // GM
