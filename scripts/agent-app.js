@@ -1110,8 +1110,7 @@ class AgentOSApplication extends Application {
         if (game.user.isGM) {
             const lists = this._everyoneOwners().map((o) => o.getFlag("VirtualAgent", "unlockedApps") || defaultApps);
             for (const app of data.allApps) {
-                const n = lists.filter((l) => l.includes(app.id)).length;
-                app.partyHas = !lists.length ? null : (n === lists.length ? "all" : (n > 0 ? "some" : null));
+                app.partyHas = lists.some((l) => l.includes(app.id));
             }
         }
         if (game.user.isGM && this._appLockPlayerUuid === "Everyone") {
