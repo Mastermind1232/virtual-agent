@@ -834,9 +834,9 @@ Hooks.once("init", () => {
         scope: "world", config: true, type: String, default: ""
     });
     game.settings.register("VirtualAgent", "syncWorldMapPins", {
-        name: "Copy the scene's map pins onto the Sat Map",
-        hint: "Off: the Sat Map shows only pins placed on the phone. On: the Sat Map scene's journal pins are copied over too.",
-        scope: "world", config: true, type: Boolean, default: false,
+        name: "Sat Map pins follow the scene's map notes",
+        hint: "On: the Sat Map scene's journal pins are the phone's pins, with the same player visibility. Off: no pins.",
+        scope: "world", config: true, type: Boolean, default: true,
         onChange: () => globalThis.VirtualAgentWorldMap.sync().then(() => _queueAgentRender()).catch(console.error)
     });
     game.settings.register("VirtualAgent", "partyMarkerName", {
@@ -857,5 +857,6 @@ Hooks.on("updateJournalEntry", (doc, changes) => {
     globalThis.VirtualAgentWorldMap.sync().then(() => _queueAgentRender()).catch(console.error);
 });
 for (const h of ["createToken", "updateToken", "deleteToken"]) {
-    Hooks.on(h, (doc) => { if (doc.parent?.id === globalThis.VirtualAgentWorldMap.scene()?.id) _queueAgentRender(); });
+    // A beat later, so the token's new position is readable before the phone redraws.
+    Hooks.on(h, (doc) => { if (doc.parent?.id === globalThis.VirtualAgentWorldMap.scene()?.id) setTimeout(_queueAgentRender, 60); });
 }
