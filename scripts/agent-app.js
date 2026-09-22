@@ -1,5 +1,9 @@
 /* NuNu packaging: a player is shown by their Agent handle, else their character's name, else their Foundry user name. */
-function VA_displayName(u) { return (u?.getFlag?.("VirtualAgent", "idOverrides")?.handle) || u?.character?.name || u?.name || "Unknown"; }
+function VA_displayName(u) {
+    const handle = u?.getFlag?.("VirtualAgent", "idOverrides")?.handle; if (handle) return handle;
+    const last = u?.getFlag?.("VirtualAgent", "lastActorUuid"); const a = last ? fromUuidSync(last) : null;
+    return a?.name || u?.character?.name || u?.name || "Unknown";
+}
 /**
  * Virtual Agent — an Agent device for Foundry VTT (Cyberpunk RED)
  * Target: Foundry V12
@@ -1108,14 +1112,14 @@ class AgentOSApplication extends Application {
         } else {
             data.unlockedApps = defaultApps;
         }
-        // NuNu packaging: on the GM's home screen, mark which apps the party can see (tick = every player, dim tick = some).
+        // NuNu packaging: the home grid always shows the viewer's own apps (the Sys Admin tabs must not change it),
+        // and on the GM's phone each app carries a tick when at least one player has it, ticked apps first.
+        data.homeUnlockedApps = game.user.isGM ? (game.user.getFlag("VirtualAgent", "unlockedApps") || defaultApps) : data.unlockedApps;
+        data.homeApps = data.allApps;
         if (game.user.isGM) {
             const lists = this._everyoneOwners().map((o) => o.getFlag("VirtualAgent", "unlockedApps") || defaultApps);
-            for (const app of data.allApps) {
-                app.partyHas = lists.some((l) => l.includes(app.id));
-            }
-            // Ticked apps first, each block in the module's own order. SYS ADMIN is rendered separately and stays last.
-            data.allApps = [...data.allApps.filter((a) => a.partyHas), ...data.allApps.filter((a) => !a.partyHas)];
+            for (const app of data.allApps) app.partyHas = lists.some((l) => l.includes(app.id));
+            data.homeApps = [...data.allApps.filter((a) => a.partyHas), ...data.allApps.filter((a) => !a.partyHas)];
         }
         if (game.user.isGM && this._appLockPlayerUuid === "Everyone") {
             const owners = this._everyoneOwners();

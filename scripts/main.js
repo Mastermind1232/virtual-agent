@@ -831,7 +831,8 @@ Hooks.once("init", () => {
     game.settings.register("VirtualAgent", "satMapScene", {
         name: "Sat Map scene",
         hint: "Name of the Foundry scene the Sat Map picture shows. Its map pins appear on the phone, and the party marker token on it becomes the blip.",
-        scope: "world", config: true, type: String, default: ""
+        scope: "world", config: true, type: String, default: "",
+        onChange: () => globalThis.VirtualAgentWorldMap.sync().then(() => _queueAgentRender()).catch(console.error)
     });
     game.settings.register("VirtualAgent", "syncWorldMapPins", {
         name: "Show the scene's map notes as Sat Map pins",
@@ -842,7 +843,8 @@ Hooks.once("init", () => {
     game.settings.register("VirtualAgent", "partyMarkerName", {
         name: "Party marker token",
         hint: "Name of the token on the Sat Map scene that marks where the party is. Move it and the blip follows.",
-        scope: "world", config: true, type: String, default: "Party Marker"
+        scope: "world", config: true, type: String, default: "Party Marker",
+        onChange: () => _queueAgentRender()
     });
 });
 Hooks.once("ready", () => { globalThis.VirtualAgentWorldMap.sync().catch(console.error); });

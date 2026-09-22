@@ -30,8 +30,8 @@
                 <!-- HOME SCREEN VIEW -->
                 <div id="agent-view-home" class="agent-view" style="display: {{#if (eq currentView 'home')}}grid{{else}}none{{/if}}; height: 100%;">
                     <div class="agent-home">
-                        {{#each allApps}}
-                            {{#if (contains ../unlockedApps this.id)}}
+                        {{#each homeApps}}
+                            {{#if (contains ../homeUnlockedApps this.id)}}
                                 <div class="app-icon" data-app="{{this.id}}" data-action="app-icon">
                                     {{#if this.iconImg}}
                                         <span class="app-icon-img-wrap">
@@ -701,12 +701,7 @@
                             {{/each}}
                             {{#if partyBlip}}
                             {{!-- NuNu packaging: the party's position, from the party marker token on the world map. --}}
-                            <style>
-                              .agent-party-blip{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;background:#ff3366;box-shadow:0 0 8px #ff3366,0 0 2px #000;pointer-events:none;z-index:4}
-                              .agent-party-blip::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid #ff3366;animation:va-party-blip 1.6s ease-out infinite}
-                              @keyframes va-party-blip{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2.4);opacity:0}}
-                            </style>
-                            <div class="agent-party-blip" style="position: absolute; left: {{partyBlip.x}}%; top: {{partyBlip.y}}%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #ff3366; box-shadow: 0 0 8px #ff3366; pointer-events: none; z-index: 4;"></div>
+                            <div class="agent-party-blip" style="left: {{partyBlip.x}}%; top: {{partyBlip.y}}%;"></div>
                             {{/if}}
                         </div>
                         
