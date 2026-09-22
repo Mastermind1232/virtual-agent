@@ -1454,7 +1454,7 @@
                     <div class="app-header" style="background: rgba(58, 134, 255, 0.10); border-bottom: 2px solid #3a86ff; box-shadow: inset 0 -3px 0 0 #f8e800; display: flex; align-items: center; justify-content: space-between;">
                         <div data-action="back-to-home" style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; min-width: 0;">
                             <i class="fas fa-chevron-left" style="color: #3a86ff;"></i>
-                            <h3 style="color: #3a86ff; text-shadow: 0 0 6px rgba(58,134,255,0.5); margin: 0;">NCPD // Crime Database</h3>
+                            <h3 style="color: #3a86ff; text-shadow: 0 0 6px rgba(58,134,255,0.5); margin: 0;">AGPD // Crime Database</h3>
                         </div>
                         {{#if isGM}}
                         <button type="button" data-action="ncpd-modal-open" title="File a new rap sheet" style="background: rgba(58,134,255,0.18); border: 1px solid #3a86ff; color: #3a86ff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus"></i></button>
@@ -2140,8 +2140,8 @@
                         {{!-- Patch5.5 (Ryouhi / community): NCPD Crime Database admin --}}
                         {{#if isGM}}
                         <div class="admin-section">
-                            <div class="admin-section-title">NCPD Crime Database</div>
-                            <div class="admin-hint" style="margin-bottom: 8px;">File rap sheets the table can look up from the NCPD app. Bounty + status are optional.</div>
+                            <div class="admin-section-title">AGPD Crime Database</div>
+                            <div class="admin-hint" style="margin-bottom: 8px;">File rap sheets the table can look up from the AGPD app. Bounty + status are optional.</div>
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom: 6px;">
                                 <input type="text" id="ncpd-add-name" class="admin-input datapool-input" placeholder="Name *" data-preserve-draft style="box-sizing:border-box;">
                                 <input type="text" id="ncpd-add-status" class="admin-input datapool-input" placeholder="Status (Wanted / KIA…)" data-preserve-draft style="box-sizing:border-box;">

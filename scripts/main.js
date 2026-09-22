@@ -372,8 +372,8 @@ Hooks.once('init', function () {
     // ════════════════════════════════════════════════════════════════════════
 
     game.settings.register("VirtualAgent", "ncpdRapSheets", {
-        name: "NCPD Crime Database — Rap Sheets (JSON)",
-        hint: "GM-authored crime records. Managed via the NCPD DB Sys Admin panel.",
+        name: "AGPD Crime Database — Rap Sheets (JSON)",
+        hint: "GM-authored crime records. Managed via the AGPD DB Sys Admin panel.",
         scope: "world",
         config: false,
         restricted: true,

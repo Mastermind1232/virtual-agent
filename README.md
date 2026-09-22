@@ -18,4 +18,4 @@ Later releases arrive through Foundry's Update button.
 
 ## Version
 
-Current packaging: Virtual Agent 1.8.4 (released by inGramGames on 2026-07-16), packaged as 1.8.4.3.
+Current packaging: Virtual Agent 1.8.4 (released by inGramGames on 2026-07-16), packaged as 1.8.4.4. The NCPD DB app is labelled AGPD DB for this campaign.

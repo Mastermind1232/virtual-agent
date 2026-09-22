@@ -1032,7 +1032,7 @@ class AgentOSApplication extends Application {
             //   NCPD database UI hue), Ziggurat deep Arasaka-tower violet + data-fortress
             //   icon (Ziggurat is a Net data tower in 2077 lore, not a city skyline),
             //   The Garden Cyberpunk neon magenta (Black Chrome / Edgerunner dating palette).
-            { id: 'ncpd',   label: 'NCPD DB',   icon: 'fas fa-fingerprint',    color: '#3a86ff',            iconImg: null },
+            { id: 'ncpd',   label: 'AGPD DB',   icon: 'fas fa-fingerprint',    color: '#3a86ff',            iconImg: null },
             { id: 'ziggurat', label: 'ZIGGURAT', icon: 'fas fa-database',      color: '#7c4dff',            iconImg: null },
             { id: 'garden', label: 'THE GARDEN',icon: 'fas fa-seedling',       color: '#ff1493',            iconImg: null }
         ];
@@ -2051,7 +2051,7 @@ class AgentOSApplication extends Application {
         // Patch5.5.3 canon palette: pin colors map to recognizable CP RED factions
         // / threat tiers so the GM can color-code intent at a glance.
         data.mapPinColorPalette = [
-            { value: '#3a86ff', label: 'NCPD' },        // law enforcement
+            { value: '#3a86ff', label: 'AGPD' },        // law enforcement
             { value: '#ff003c', label: 'Trauma Team' }, // medical
             { value: '#cc0000', label: 'Arasaka' },     // corp red
             { value: '#ffcc00', label: 'Tyger Claws' }, // gang gold
@@ -5421,7 +5421,7 @@ class AgentOSApplication extends Application {
                     const name = useModal
                         ? (html.find('#ncpd-modal-name').val() || "").trim()
                         : (html.find('#ncpd-add-name').val() || "").trim();
-                    if (!name) { ui.notifications.warn("NCPD: Suspect name required."); return; }
+                    if (!name) { ui.notifications.warn("AGPD: Suspect name required."); return; }
                     const charges = useModal ? (html.find('#ncpd-modal-charges').val() || "").trim() : (html.find('#ncpd-add-charges').val() || "").trim();
                     const bounty  = useModal ? (html.find('#ncpd-modal-bounty').val()  || "").trim() : (html.find('#ncpd-add-bounty').val()  || "").trim();
                     const status  = useModal ? (html.find('#ncpd-modal-status').val()  || "Known to police").trim() : (html.find('#ncpd-add-status').val() || "Known to police").trim();
@@ -5452,7 +5452,7 @@ class AgentOSApplication extends Application {
                         html.find(`#${id}`).val("");
                         if (this._composerDrafts) this._composerDrafts[id] = "";
                     });
-                    ui.notifications.info(`NCPD: Filed rap sheet for "${name}".`);
+                    ui.notifications.info(`AGPD: Filed rap sheet for "${name}".`);
                     this.render(true);
                     break;
                 }
