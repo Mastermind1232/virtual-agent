@@ -18,4 +18,4 @@ Later releases arrive through Foundry's Update button.
 
 ## Version
 
-Current packaging: Virtual Agent 1.8.4 (released by inGramGames on 2026-07-16), packaged as 1.8.4.11. Players are listed by their character's name unless they set an Agent handle. Social and Style say "in AGZ". The GM's home screen ticks the apps at least one player can see. For this campaign the NCPD DB app is labelled AGPD DB and the Fixers app is labelled Contacts, and NC Mart is labelled NuNu Mart.
+Current packaging: Virtual Agent 1.8.4 (released by inGramGames on 2026-07-16), packaged as 1.8.4.12. On the GM's home screen, ticked apps come first. Players are listed by their character's name unless they set an Agent handle. Social and Style say "in AGZ". The GM's home screen ticks the apps at least one player can see. For this campaign the NCPD DB app is labelled AGPD DB and the Fixers app is labelled Contacts, and NC Mart is labelled NuNu Mart.

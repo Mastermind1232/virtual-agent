@@ -1114,6 +1114,8 @@ class AgentOSApplication extends Application {
             for (const app of data.allApps) {
                 app.partyHas = lists.some((l) => l.includes(app.id));
             }
+            // Ticked apps first, each block in the module's own order. SYS ADMIN is rendered separately and stays last.
+            data.allApps = [...data.allApps.filter((a) => a.partyHas), ...data.allApps.filter((a) => !a.partyHas)];
         }
         if (game.user.isGM && this._appLockPlayerUuid === "Everyone") {
             const owners = this._everyoneOwners();
