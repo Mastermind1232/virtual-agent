@@ -297,13 +297,26 @@
 
         let body = "";
         if (open) {
-            const crew = runners();
+            // Who can do this job: every runner scored against this gig's own skills.
+            const crew = runners().map((r) => {
+                const mine = usableSkills(r).map((u) => u.name.trim().toLowerCase());
+                const marks = g.skills.map((s) => mine.includes(s.name.trim().toLowerCase()));
+                return { r, marks, hits: marks.filter(Boolean).length };
+            }).sort((a, b) => b.hits - a.hits || a.r.name.localeCompare(b.r.name));
+
             const picker = g.status === "open" && crew.length
-                ? `<div style="margin-top:8px;display:flex;gap:6px;">
-                    <select id="op-runner-pick" style="font-family:inherit;flex:1;background:#111;color:#ddd;border:1px solid #333;border-radius:3px;font-size:.7rem;padding:3px;">
-                        ${crew.map((r) => `<option value="${r.id}">${esc(r.name)} &middot; ${esc(tierOf(r).name)}</option>`).join("")}
-                    </select>
-                    <button type="button" data-action="op-assign" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.7rem;padding:3px 10px;cursor:pointer;">SEND</button>
+                ? `<div style="margin-top:10px;">
+                    <div style="font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:4px;">WHO TAKES IT</div>
+                    ${crew.map(({ r, marks, hits }) => `
+                        <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #1b1b1b;">
+                            <span style="flex:1;min-width:0;">
+                                <span style="color:#fff;font-size:.75rem;">${esc(r.name)}</span>
+                                <span style="font-size:.6rem;opacity:.55;"> &middot; ${esc(tierOf(r).name)}</span><br>
+                                <span style="font-size:.65rem;letter-spacing:2px;">${marks.map((m, i) => `<span title="${esc(g.skills[i].name)}" style="color:${m ? ACCENT : "#ff3366"}">${m ? "&#10003;" : "&#10007;"}</span>`).join("")}</span>
+                                <span style="font-size:.6rem;opacity:.55;margin-left:6px;">${hits} of ${g.skills.length}</span>
+                            </span>
+                            <button type="button" data-action="op-assign" data-gig="${g.id}" data-runner="${r.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 10px;cursor:pointer;">SEND</button>
+                        </div>`).join("")}
                    </div>`
                 : "";
 
@@ -388,9 +401,9 @@
                     <i class="fas fa-chevron-left" style="color:${ACCENT};"></i>
                     <h3 style="color:${ACCENT};margin:0;">Operator</h3>
                 </span>
-                ${canEdit() ? `<button type="button" data-action="${view.tab === "crew" ? "op-new-runner" : "op-new-gig"}" title="${view.tab === "crew" ? "Add a runner" : "Post a gig"}" style="font-family:inherit;background:rgba(158,240,26,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem;">+</button>` : ""}
+                ${canEdit() ? `<button type="button" data-action="${view.tab === "crew" ? "op-new-runner" : "op-new-gig"}" title="${view.tab === "crew" ? "Add someone to the stable" : "Post a gig"}" style="font-family:inherit;background:rgba(158,240,26,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem;">+</button>` : ""}
             </div>
-            <div style="display:flex;flex-shrink:0;">${tab("gigs", "GIGS", live.length)}${tab("crew", "RUNNERS", crew.length)}</div>
+            <div style="display:flex;flex-shrink:0;">${tab("gigs", "GIGS", live.length)}${tab("crew", "STABLE", crew.length)}</div>
             <div style="flex:1;overflow-y:auto;padding:10px;">${view.tab === "crew" ? bodyCrew : bodyGigs}</div>`;
     }
 
@@ -477,7 +490,7 @@
                         if (!actor) return ui.notifications.warn("That actor is gone.");
                         const tier = Number(f.tier.value) || 0;
                         await saveRunners([...runners(), { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier, completed: TIERS[tier].gigs }]);
-                        ui.notifications.info(`Operator: ${actor.name} joined the roster.`);
+                        ui.notifications.info(`Operator: ${actor.name} joined the stable.`);
                         app?.render(true);
                     },
                 },
@@ -520,13 +533,13 @@
                 case "op-drop-runner": {
                     if (!canEdit()) break;
                     const id = $t.data("runner");
-                    if (!await Dialog.confirm({ title: "Drop runner", content: "<p>Take them off the roster? Their gig history goes with them.</p>" })) break;
+                    if (!await Dialog.confirm({ title: "Drop runner", content: "<p>Take them out of the stable? Their gig history goes with them.</p>" })) break;
                     await saveRunners(runners().filter((r) => r.id !== id));
                     app.render(true); break;
                 }
 
                 case "op-assign": {
-                    const pick = html.find("#op-runner-pick").val();
+                    const pick = $t.data("runner");
                     if (!pick) { ui.notifications.warn("Pick a runner first."); break; }
                     const list = gigs();
                     const i = list.findIndex((g) => g.id === gigId);
