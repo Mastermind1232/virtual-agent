@@ -1106,6 +1106,14 @@ class AgentOSApplication extends Application {
         } else {
             data.unlockedApps = defaultApps;
         }
+        // NuNu packaging: on the GM's home screen, mark which apps the party can see (tick = every player, dim tick = some).
+        if (game.user.isGM) {
+            const lists = this._everyoneOwners().map((o) => o.getFlag("VirtualAgent", "unlockedApps") || defaultApps);
+            for (const app of data.allApps) {
+                const n = lists.filter((l) => l.includes(app.id)).length;
+                app.partyHas = !lists.length ? null : (n === lists.length ? "all" : (n > 0 ? "some" : null));
+            }
+        }
         if (game.user.isGM && this._appLockPlayerUuid === "Everyone") {
             const owners = this._everyoneOwners();
             const lists = owners.map((o) => o.getFlag("VirtualAgent", "unlockedApps") || defaultApps);
