@@ -1020,7 +1020,7 @@ class AgentOSApplication extends Application {
             { id: 'id',     label: 'AGENT ID',  icon: 'fas fa-id-card',        color: '#4488ff',            iconImg: is2077 ? `${ICON_BASE}/id.png`     : null },
             { id: 'social', label: 'SOCIAL',    icon: 'fas fa-share-alt',      color: '#ff9900',            iconImg: is2077 ? `${ICON_BASE}/social.png` : null },
             { id: 'style',  label: 'STYLE',     icon: 'fas fa-tshirt',         color: '#e040fb',            iconImg: is2077 ? `${ICON_BASE}/style.png`  : null },
-            { id: 'rep',    label: 'FIXERS',    icon: 'fas fa-handshake',      color: '#64ffda',            iconImg: is2077 ? `${ICON_BASE}/rep.png`    : null },
+            { id: 'rep',    label: 'CONTACTS',    icon: 'fas fa-handshake',      color: '#64ffda',            iconImg: is2077 ? `${ICON_BASE}/rep.png`    : null },
             { id: 'auction',label: 'BLACK MKT', icon: 'fas fa-gavel',          color: '#ff6e40',            iconImg: is2077 ? `${ICON_BASE}/auction.png`: null },
             // 5.6.0: COMBAT (FFXII-style menu-driven combat HUD) + SKILLS
             // (folded-out skill picker). Combat tile glows when game.combat
