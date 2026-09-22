@@ -571,6 +571,17 @@ class AgentOSApplication extends Application {
         } catch (e) { console.warn("[VirtualAgent] _showDodgeDialog failed:", e); respond(false, 0); }
     }
 
+    /** NuNu packaging: the flag owners behind every player's phone (their character if assigned, else the user). GM excluded. */
+    _everyoneOwners() {
+        const owners = [];
+        for (const u of game.users.filter((x) => !x.isGM)) {
+            const identity = this._getIdentity(u);
+            const a = (identity && identity !== "VirtualWallet" && !identity.startsWith("User.")) ? this._resolveActor(identity) : null;
+            const o = a || u; if (!owners.includes(o)) owners.push(o);
+        }
+        return owners;
+    }
+
     async getData() {
         const data = await super.getData();
         // 5.8.14 unconditional diagnostic — fires every render
@@ -1095,6 +1106,11 @@ class AgentOSApplication extends Application {
         } else {
             data.unlockedApps = defaultApps;
         }
+        if (game.user.isGM && this._appLockPlayerUuid === "Everyone") {
+            const owners = this._everyoneOwners();
+            const lists = owners.map((o) => o.getFlag("VirtualAgent", "unlockedApps") || defaultApps);
+            data.unlockedApps = lists.length ? defaultApps.filter((a) => lists.every((l) => l.includes(a))) : [];
+        }
         data.appLockOwnerName = (appLockFlagOwner instanceof Actor)
             ? appLockFlagOwner.name
             : (appLockFlagOwner.id === game.user.id ? "GM (self)" : appLockFlagOwner.name);
@@ -1116,7 +1132,7 @@ class AgentOSApplication extends Application {
             // NuNu packaging: one tab that toggles an app for every phone at once (GM included).
             _adminTabs.push({
                 uuid: "Everyone",
-                name: "Everyone",
+                name: "Party",
                 actorName: null,
                 isGM: false,
                 isAll: true,
@@ -4980,14 +4996,9 @@ class AgentOSApplication extends Application {
                     if (lockTargetUuid === "Everyone") {
                         // NuNu packaging: the GM's own list decides the direction; every phone gets the same result.
                         const FALLBACK = ['chat', 'data', 'creds', 'map', 'id', 'social', 'bio', 'store', 'style', 'rep', 'auction', 'ncpd', 'ziggurat', 'garden', 'combat', 'skills'];
-                        const gmList = game.user.getFlag("VirtualAgent", "unlockedApps") || FALLBACK;
-                        const turnOn = !gmList.includes(appId);
-                        const owners = new Set([game.user]);
-                        for (const u of game.users.filter(x => !x.isGM)) {
-                            const identity = this._getIdentity(u);
-                            const a = (identity && identity !== "VirtualWallet" && !identity.startsWith("User.")) ? this._resolveActor(identity) : null;
-                            owners.add(a || u);
-                        }
+                        const owners = this._everyoneOwners();
+                        // Direction: if every player already has the app, switch it off for all; otherwise switch it on for all.
+                        const turnOn = !owners.every((o) => (o.getFlag("VirtualAgent", "unlockedApps") || FALLBACK).includes(appId));
                         const _adminConsoleA = this.element.find('.admin-console')[0];
                         const _savedAdminScrollA = _adminConsoleA ? _adminConsoleA.scrollTop : 0;
                         for (const o of owners) {
