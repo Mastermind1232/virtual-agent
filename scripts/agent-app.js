@@ -1,3 +1,5 @@
+/* NuNu packaging: a player is shown by their Agent handle, else their character's name, else their Foundry user name. */
+function VA_displayName(u) { return (u?.getFlag?.("VirtualAgent", "idOverrides")?.handle) || u?.character?.name || u?.name || "Unknown"; }
 /**
  * Virtual Agent — an Agent device for Foundry VTT (Cyberpunk RED)
  * Target: Foundry V12
@@ -221,7 +223,7 @@ class AgentOSApplication extends Application {
 
             // Use custom handle from Agent ID if set, fallback to Foundry name
             const idOver = u.getFlag("VirtualAgent", "idOverrides") || {};
-            const displayName = idOver.handle || u.name;
+            const displayName = idOver.handle || u.character?.name || u.name;
             contacts.push({
                 id: u.id,
                 name: u.isGM ? `${displayName} (Global Net)` : displayName,
@@ -860,7 +862,7 @@ class AgentOSApplication extends Application {
             // Players visible to the current user (everyone but self).
             data.groupCandidatePlayers = game.users.filter(u => u.id !== game.user.id).map(u => ({
                 id: u.id,
-                name: (u.getFlag("VirtualAgent", "idOverrides")?.handle) || u.name
+                name: VA_displayName(u)
             }));
             // NPC contacts the current user has on their device. GMs get the
             // union of their own NPCs plus any NPCs in other users' contact
@@ -1150,7 +1152,7 @@ class AgentOSApplication extends Application {
                 if (!identity || identity === "VirtualWallet" || identity.startsWith("User.")) {
                     _adminTabs.push({
                         uuid: `User.${u.id}`,
-                        name: (u.getFlag("VirtualAgent", "idOverrides")?.handle) || u.name,
+                        name: VA_displayName(u),
                         actorName: null,
                         isGM: false,
                         noActor: true,
@@ -1161,7 +1163,7 @@ class AgentOSApplication extends Application {
                 const playerActor = this._resolveActor(identity);
                 _adminTabs.push({
                     uuid: identity,
-                    name: (u.getFlag("VirtualAgent", "idOverrides")?.handle) || u.name,
+                    name: VA_displayName(u),
                     actorName: playerActor?.name || null,
                     isGM: false,
                     isActive: this._appLockPlayerUuid === identity
@@ -1188,7 +1190,7 @@ class AgentOSApplication extends Application {
                 const playerActor = this._resolveActor(identity);
                 _walletTabs.push({
                     uuid: identity,
-                    name: (u.getFlag("VirtualAgent", "idOverrides")?.handle) || u.name,
+                    name: VA_displayName(u),
                     actorName: playerActor?.name || null,
                     isGM: false,
                     isActive: activeWalletUuid === identity
@@ -1204,7 +1206,7 @@ class AgentOSApplication extends Application {
             data.adminTtCoverage = [];
             data.adminHousingRoster = [];
             for (const u of game.users.filter(uu => !uu.isGM)) {
-                const handle = (u.getFlag("VirtualAgent", "idOverrides")?.handle) || u.name;
+                const handle = VA_displayName(u);
                 data.adminTtCoverage.push({
                     userId: u.id,
                     name: handle,
@@ -1324,7 +1326,7 @@ class AgentOSApplication extends Application {
         data.partyPlayers = game.users.filter(u => u.id !== game.user.id).map(u => {
             const identity = this._getIdentity(u);
             const actor = this._resolveActor(identity);
-            return { id: u.id, name: (u.getFlag("VirtualAgent", "idOverrides")?.handle) || u.name, actorUuid: identity, actorName: actor?.name || null };
+            return { id: u.id, name: VA_displayName(u), actorUuid: identity, actorName: actor?.name || null };
         });
 
         // Patch4 (Gotto Goho bug): GM used to auto-default to the FIRST PLAYER's
@@ -1419,7 +1421,7 @@ class AgentOSApplication extends Application {
             const names = recipientIds
                 .map(id => game.users.get(id))
                 .filter(u => u && !u.isGM)
-                .map(u => (u.getFlag("VirtualAgent", "idOverrides")?.handle) || u.name);
+                .map(u => VA_displayName(u));
             if (names.length) data.gmSpeakingTo = names.join(", ");
         }
 
@@ -1459,7 +1461,7 @@ class AgentOSApplication extends Application {
             const coNames = coRecipientIds
                 .map(uid => game.users.get(uid))
                 .filter(u => u)
-                .map(u => (u.getFlag("VirtualAgent", "idOverrides")?.handle) || u.name);
+                .map(u => VA_displayName(u));
             data.privacyMode = "npc-private";
             if (coNames.length > 0) {
                 data.privacyLabel = `NPC CHANNEL · YOU + ${coNames.join(", ")} + GM`;
@@ -1482,7 +1484,7 @@ class AgentOSApplication extends Application {
                     const avatar = u.character?.img || u.avatar || "icons/svg/mystery-man.svg";
                     return {
                         id: u.id,
-                        name: idOver.handle || u.name,
+                        name: idOver.handle || u.character?.name || u.name,
                         isSelf: u.id === game.user.id,
                         isGM: u.isGM,
                         avatar: avatar,
@@ -1833,7 +1835,7 @@ class AgentOSApplication extends Application {
             for (const user of game.users) {
                 const userShards = user.getFlag("VirtualAgent", "shards") || [];
                 for (const s of userShards) {
-                    allShards.push({ ...s, _ownerId: user.id, _ownerName: (user.getFlag("VirtualAgent", "idOverrides")?.handle) || user.name });
+                    allShards.push({ ...s, _ownerId: user.id, _ownerName: VA_displayName(user) });
                 }
             }
             // Deduplicate by shard id (GM copy + player copy share same id)
@@ -8386,7 +8388,7 @@ class AgentOSApplication extends Application {
     }
 
     _getPartyPlayers() {
-        return game.users.filter(u => !u.isGM).map(u => ({ id: u.id, name: (u.getFlag("VirtualAgent", "idOverrides")?.handle) || u.name, actorUuid: this._getIdentity(u) }));
+        return game.users.filter(u => !u.isGM).map(u => ({ id: u.id, name: VA_displayName(u), actorUuid: this._getIdentity(u) }));
     }
 
     async _pushShard(targetId, title, content) {
@@ -8862,7 +8864,7 @@ Hooks.once('ready', function() {
                 category,
                 text,
                 authorId: claimedAuthor.id,
-                authorName: (claimedAuthor.getFlag("VirtualAgent", "idOverrides")?.handle) || claimedAuthor.name,
+                authorName: VA_displayName(claimedAuthor),
                 timestamp: Date.now()
             };
             list.push(safeEntry);
@@ -8946,7 +8948,7 @@ Hooks.once('ready', function() {
                     }
                 }
             } catch (e) { console.warn("[Virtual Agent] Store gate enforcement failed:", e); }
-            await app._processCheckout(actor, data.cart || [], total, (senderUser.getFlag("VirtualAgent", "idOverrides")?.handle) || senderUser.name);
+            await app._processCheckout(actor, data.cart || [], total, VA_displayName(senderUser));
             return;
         }
         if (data.action === "transferRequest") {
@@ -8993,7 +8995,7 @@ Hooks.once('ready', function() {
                 });
                 return;
             }
-            const senderDisplayName = (senderUser.getFlag("VirtualAgent", "idOverrides")?.handle) || senderUser.name;
+            const senderDisplayName = VA_displayName(senderUser);
             const _escTr = (s) => (foundry.utils.escapeHTML
                 ? foundry.utils.escapeHTML(String(s ?? ""))
                 : String(s ?? "").replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
