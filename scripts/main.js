@@ -799,13 +799,13 @@ globalThis.VirtualAgentWorldMap = {
         const d = wm.dimensions;
         return { x: Math.round(((x - d.sceneX) / d.sceneWidth) * 10000) / 100, y: Math.round(((y - d.sceneY) / d.sceneHeight) * 10000) / 100 };
     },
-    /** Where a scene sits on the world map: a GM-set flag, else the pin of the scene's Journal, else a pin named like the scene. */
-    scenePos(scene, wm) {
-        const f = scene.getFlag("VirtualAgent", "worldMapPos");
-        if (f && Number.isFinite(f.x) && Number.isFinite(f.y)) return { x: f.x, y: f.y };
-        const jid = scene.journal?.id ?? null;
-        const note = wm.notes.find((n) => (jid && n.entryId === jid) || n.entry?.name === scene.name || n.label === scene.name);
-        return note ? this.pct(wm, note.x, note.y) : null;
+    /** The party blip: the centre of the party marker token on the world-map scene. */
+    partyPos(wm) {
+        const name = (game.settings.get("VirtualAgent", "partyMarkerName") || "Party Marker").trim().toLowerCase();
+        const tok = wm.tokens.find((t) => (t.name || "").trim().toLowerCase() === name);
+        if (!tok) return null;
+        const g = wm.grid.size;
+        return this.pct(wm, tok.x + (tok.width * g) / 2, tok.y + (tok.height * g) / 2);
     },
     pinsFromNotes(wm) {
         const players = game.users.filter((u) => !u.isGM);
@@ -829,8 +829,13 @@ globalThis.VirtualAgentWorldMap = {
 Hooks.once("init", () => {
     game.settings.register("VirtualAgent", "satMapScene", {
         name: "Sat Map scene",
-        hint: "Name of the Foundry scene the Sat Map picture shows. Its map pins appear on the phone, and the party blip marks the active scene's spot on it.",
+        hint: "Name of the Foundry scene the Sat Map picture shows. Its map pins appear on the phone, and the party marker token on it becomes the blip.",
         scope: "world", config: true, type: String, default: ""
+    });
+    game.settings.register("VirtualAgent", "partyMarkerName", {
+        name: "Party marker token",
+        hint: "Name of the token on the Sat Map scene that marks where the party is. Move it and the blip follows.",
+        scope: "world", config: true, type: String, default: "Party Marker"
     });
 });
 Hooks.once("ready", () => { globalThis.VirtualAgentWorldMap.sync().catch(console.error); });
@@ -844,6 +849,6 @@ Hooks.on("updateJournalEntry", (doc, changes) => {
     if (!changes.ownership) return;
     globalThis.VirtualAgentWorldMap.sync().then(() => _queueAgentRender()).catch(console.error);
 });
-Hooks.on("updateScene", (scene, changes) => {
-    if ("active" in changes || "journal" in changes || changes.flags?.VirtualAgent) _queueAgentRender();
-});
+for (const h of ["createToken", "updateToken", "deleteToken"]) {
+    Hooks.on(h, (doc) => { if (doc.parent?.id === globalThis.VirtualAgentWorldMap.scene()?.id) _queueAgentRender(); });
+}
