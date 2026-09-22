@@ -2910,7 +2910,8 @@ textarea#agent-chat-input::-webkit-scrollbar-thumb { background: transparent; }
 }
 .AgentDevice-form .auction-create-form,
 .AgentDevice-form .auction-detail-card {
-    widt
+    /* NuNu packaging: this rule was left unclosed upstream ("widt"), which silently disabled every rule below it. */
+}
 
 /* Patch5.5.19 (Sleepingmann): pins with labelMode=hover hide their label until
    the user mouses over the pin. CSS lives here (not in the pin modal scope) so
