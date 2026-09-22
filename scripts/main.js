@@ -185,7 +185,7 @@ Hooks.once('init', function () {
 
     game.settings.register("VirtualAgent", "socialFeedArticles", {
         name: "Social Feed Articles (JSON)",
-        hint: 'Optional JSON array of social-feed entries. Each entry: { "category": "Trending in Night City", "text": "..." }. Leave blank to use defaults.',
+        hint: 'Optional JSON array of social-feed entries. Each entry: { "category": "Trending in AGZ", "text": "..." }. Leave blank to use defaults.',
         scope: "world",
         config: true,
         restricted: true,
