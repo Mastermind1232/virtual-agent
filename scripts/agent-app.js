@@ -7934,7 +7934,8 @@ class AgentOSApplication extends Application {
      * see the latest mousedown values.
      */
     _setupWindowDrag(html) {
-        const handle = html.find('.drag-handle').first();
+        // NuNu packaging: bind every .drag-handle, not just the first, so the bottom bezel drags too.
+        const handle = html.find('.drag-handle');
         if (!handle.length) return;
 
         // The actual window element (the app frame Foundry wraps around our template).
