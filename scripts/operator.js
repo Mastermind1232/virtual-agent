@@ -284,7 +284,7 @@
 
         const status = g.status === "done"
             ? chip(g.outcome?.success ? "PAID" : "FAILED", g.outcome?.success ? ACCENT : "#ff3366")
-            : (g.status === "assigned" ? chip(days !== null && days <= 0 ? "DUE" : `${days}D LEFT`, "#ffd166") : chip("OPEN", "#888"));
+            : (g.status === "assigned" ? chip(days !== null && days <= 0 ? "DUE" : `${days}D LEFT`, "#ffd166") : chip("AVAILABLE", "#888"));
 
         const skills = g.skills.map((s) => {
             const covered = runner && usableSkills(runner).some((u) => u.name.trim().toLowerCase() === s.name.trim().toLowerCase());
@@ -348,7 +348,8 @@
                 ${skills}${picker}${assist}${assistDone}${report}${gmTools}</div>`;
         }
 
-        return `<div style="background:rgba(255,255,255,.03);border:1px solid ${open ? ACCENT : "#222"};border-radius:6px;padding:10px;margin-bottom:8px;">
+        const spent = g.status === "done" && !open;
+        return `<div style="background:rgba(255,255,255,.03);border:1px solid ${open ? ACCENT : "#222"};border-radius:6px;padding:10px;margin-bottom:8px;${spent ? "opacity:.45;" : ""}">
             <div data-action="op-open-gig" data-gig="${g.id}" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
                 <span>
                     <span style="color:#fff;font-size:.85rem;font-weight:bold;">${esc(g.title)}</span><br>
