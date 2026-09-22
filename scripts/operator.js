@@ -413,7 +413,7 @@
         const list = skillNames();
         const rows = Array.from({ length: 5 }, (_, i) => `
             <div style="display:flex;gap:6px;margin-bottom:4px;">
-                <input type="text" name="skill${i}" list="op-skill-list" placeholder="Skill ${i + 1}${i < 2 ? "" : " (optional)"}" style="flex:2;">
+                <input type="text" name="skill${i}" list="op-skill-list" placeholder="Skill ${i + 1}${i ? " (optional)" : ""}" style="flex:2;">
                 <select name="dv${i}" style="flex:1;">${DIFF.map((d) => `<option value="${d.dv}"${d.dv === 15 ? " selected" : ""}>${d.name}</option>`).join("")}</select>
             </div>`).join("");
 
@@ -427,7 +427,7 @@
                 <div class="form-group"><label>Payout (eb)</label><input type="number" name="payout" value="500" min="0" step="50"></div>
                 <div class="form-group"><label>Days</label><input type="number" name="days" value="7" min="1" step="1"></div>
                 <div class="form-group"><label>Your fee (%)</label><input type="number" name="fee" value="${Number(game.settings.get(ID, "operatorFee") ?? 20)}" min="0" max="100" step="5"></div>
-                <hr><label style="font-size:.8em;opacity:.7;">Skills, two to five</label>${rows}
+                <hr><label style="font-size:.8em;opacity:.7;">Skills, one to five</label>${rows}
             </form>`,
             buttons: {
                 post: {
@@ -438,7 +438,7 @@
                             const name = f[`skill${i}`].value.trim();
                             if (name) skills.push({ name, dv: Number(f[`dv${i}`].value) });
                         }
-                        if (skills.length < 2) return ui.notifications.warn("A gig needs at least two skills.");
+                        if (!skills.length) return ui.notifications.warn("A gig needs at least one skill.");
                         const t = today();
                         if (!t) return ui.notifications.error("The calendar module is not running, so a due date cannot be set.");
                         const gig = {
