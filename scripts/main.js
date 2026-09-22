@@ -822,7 +822,8 @@ globalThis.VirtualAgentWorldMap = {
         let pins = [];
         try { pins = JSON.parse(game.settings.get("VirtualAgent", "mapIndicators") || "[]"); } catch (e) {}
         if (!Array.isArray(pins)) pins = [];
-        const next = [...pins.filter((p) => !String(p.id).startsWith("note_")), ...this.pinsFromNotes(wm)];
+        const wanted = game.settings.get("VirtualAgent", "syncWorldMapPins") ? this.pinsFromNotes(wm) : [];
+        const next = [...pins.filter((p) => !String(p.id).startsWith("note_")), ...wanted];
         if (JSON.stringify(pins) !== JSON.stringify(next)) await game.settings.set("VirtualAgent", "mapIndicators", JSON.stringify(next));
     }
 };
@@ -831,6 +832,12 @@ Hooks.once("init", () => {
         name: "Sat Map scene",
         hint: "Name of the Foundry scene the Sat Map picture shows. Its map pins appear on the phone, and the party marker token on it becomes the blip.",
         scope: "world", config: true, type: String, default: ""
+    });
+    game.settings.register("VirtualAgent", "syncWorldMapPins", {
+        name: "Copy the scene's map pins onto the Sat Map",
+        hint: "Off: the Sat Map shows only pins placed on the phone. On: the Sat Map scene's journal pins are copied over too.",
+        scope: "world", config: true, type: Boolean, default: false,
+        onChange: () => globalThis.VirtualAgentWorldMap.sync().then(() => _queueAgentRender()).catch(console.error)
     });
     game.settings.register("VirtualAgent", "partyMarkerName", {
         name: "Party marker token",
