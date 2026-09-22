@@ -834,9 +834,9 @@ Hooks.once("init", () => {
         scope: "world", config: true, type: String, default: ""
     });
     game.settings.register("VirtualAgent", "syncWorldMapPins", {
-        name: "Sat Map pins follow the scene's map notes",
-        hint: "On: the Sat Map scene's journal pins are the phone's pins, with the same player visibility. Off: no pins.",
-        scope: "world", config: true, type: Boolean, default: true,
+        name: "Show the scene's map notes as Sat Map pins",
+        hint: "Off (default): the Sat Map shows only the picture and the party blip. On: the Sat Map scene's journal pins appear too, with the same player visibility.",
+        scope: "world", config: true, type: Boolean, default: false,
         onChange: () => globalThis.VirtualAgentWorldMap.sync().then(() => _queueAgentRender()).catch(console.error)
     });
     game.settings.register("VirtualAgent", "partyMarkerName", {

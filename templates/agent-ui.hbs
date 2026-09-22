@@ -728,11 +728,7 @@
                               click anywhere on the map — modal opens pre-filled with the
                               click position so the GM never has to think in x/y coords. --}}
                         {{!-- NuNu packaging: pins come from the world map's notes; no placing pins from the phone. --}}
-                        <button type="button" data-action="map-pin-manage-open"
-                            title="Manage pins (show/hide, delete)"
-                            style="width: 42px; height: 42px; border-radius: 50%; background: rgba(0,0,0,0.85); border: 1px solid #7c4dff; color: #7c4dff; cursor: pointer; box-shadow: 0 0 10px rgba(170,136,255,0.3);">
-                            <i class="fas fa-list"></i>
-                        </button>
+                        {{!-- NuNu packaging: no pin management on the phone. --}}
                         {{/if}}
                     </div>
                     {{#if mapPinMode}}
