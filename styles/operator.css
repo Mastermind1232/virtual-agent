@@ -15,3 +15,9 @@
 
 /* A runner's name and marks own the row; SEND takes only what it needs. */
 #agent-view-operator .op-row-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* NuNu packaging: the strip of bezel above the screen is a drag handle, matching
+   the bottom. The ::after reaches down over the chassis margin the screen leaves
+   bare, so the whole dead area drags without moving anything on screen. */
+.agent-chassis .agent-top-bezel { position: relative; }
+.agent-chassis .agent-top-bezel::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 32px; cursor: move; }

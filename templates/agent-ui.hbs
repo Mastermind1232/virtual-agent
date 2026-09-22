@@ -1,6 +1,7 @@
 <form class="AgentDevice-form flexcol" autocomplete="off" style="height: 100%;">
     <div class="agent-chassis skin-{{uiSkin}}" data-actor-id="{{actorId}}" data-actor-uuid="{{actorUuid}}" data-skin="{{uiSkin}}">
-        <div class="agent-speaker"></div>
+        {{!-- NuNu packaging: the whole top bezel drags, not just the speaker grille. --}}
+        <div class="agent-top-bezel drag-handle"><div class="agent-speaker"></div></div>
 
         <!-- 1.2.0: corner-drag handle — scales the whole Agent (persists per device; double-click resets) -->
         <div class="agent-resize-grip" title="Drag to resize the Agent · double-click to reset">
