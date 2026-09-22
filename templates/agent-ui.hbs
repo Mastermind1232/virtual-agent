@@ -672,6 +672,9 @@
                     </div>
                 </div>
                 <!-- MAP VIEW -->
+                {{!-- NuNu packaging: OPERATOR (rendered by scripts/operator.js) --}}
+                <div id="agent-view-operator" class="agent-app-view agent-view" style="display: {{#if (eq currentView 'operator')}}flex{{else}}none{{/if}}; height: 100%; flex-direction: column; overflow: hidden;">{{{operatorHtml}}}</div>
+
                 <div id="agent-view-map" class="agent-app-view agent-view" style="display: {{#if (eq currentView 'map')}}flex{{else}}none{{/if}}; height: 100%; overflow: hidden; position: relative;">
                     <div class="app-header drag-handle" style="z-index: 10;">
                         <span style="display: flex; align-items: center; gap: 10px; cursor: pointer;" data-action="back-to-home">

@@ -1121,6 +1121,15 @@ class AgentOSApplication extends Application {
             for (const app of data.allApps) app.partyHas = lists.some((l) => l.includes(app.id));
             data.homeApps = [...data.allApps.filter((a) => a.partyHas), ...data.allApps.filter((a) => !a.partyHas)];
         }
+        // NuNu packaging: the Operator app is its own file and sits outside Application Access:
+        // it shows on the GM's phone and on the one player named in the Operator setting.
+        const OP = globalThis.VirtualAgentOperator;
+        data.operatorHtml = "";
+        if (OP?.visible()) {
+            data.homeApps = [OP.tile(), ...data.homeApps];
+            data.homeUnlockedApps = [...data.homeUnlockedApps, "operator"];
+            data.operatorHtml = OP.html(this);
+        }
         if (game.user.isGM && this._appLockPlayerUuid === "Everyone") {
             const owners = this._everyoneOwners();
             const lists = owners.map((o) => o.getFlag("VirtualAgent", "unlockedApps") || defaultApps);
@@ -2789,6 +2798,12 @@ class AgentOSApplication extends Application {
             ev.preventDefault(); ev.stopPropagation();
             const action = $(ev.currentTarget).data('action');
 
+            // NuNu packaging: the Operator app answers its own actions.
+            if (typeof action === "string" && action.startsWith("op-")) {
+                await globalThis.VirtualAgentOperator?.onClick(this, action, ev, html);
+                return;
+            }
+
             switch(action) {
                 case 'cancel-transfer':
                     this.showPayoutModal = false; this.render(true);
@@ -2890,7 +2905,7 @@ class AgentOSApplication extends Application {
 
                 case 'app-icon': {
                     const app = $(ev.currentTarget).data('app');
-                    if (['chat', 'data', 'creds', 'map', 'id', 'social', 'bio', 'admin', 'store', 'style', 'rep', 'auction', 'ncpd', 'ziggurat', 'garden', 'combat', 'skills'].includes(app)) {
+                    if (['chat', 'data', 'creds', 'map', 'id', 'social', 'bio', 'admin', 'operator', 'store', 'style', 'rep', 'auction', 'ncpd', 'ziggurat', 'garden', 'combat', 'skills'].includes(app)) {
                         this.currentView = app;
                         if (app === 'store' && !this._storeCatalog && !this._storeLoading) {
                             this._loadStoreCatalog().then(() => this.render(true));
