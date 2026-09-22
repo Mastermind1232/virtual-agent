@@ -1944,12 +1944,27 @@ class AgentOSApplication extends Application {
             data.styleColor = "#555";
         }
 
-        // --- NPC REPUTATION TRACKER ---
+        // --- CONTACTS ---
+        // NuNu packaging: one source of truth. The book is the phone's own contact
+        // list, the people this viewer actually has threads with. Role and standing
+        // live in a world-scope map keyed by contact id, so they read the same for
+        // everyone and survive a rename.
+        let _contactMeta = {};
         try {
-            const rawRep = game.settings.get("VirtualAgent", "npcReputations");
-            data.npcReputations = Array.isArray(rawRep) ? rawRep : (typeof rawRep === "string" && rawRep.trim() ? JSON.parse(rawRep) : []);
-        } catch (e) { data.npcReputations = []; }
-        // Each entry: { id, name, faction, standing: "friendly"|"neutral"|"hostile"|"allied", description, img }
+            const raw = game.settings.get("VirtualAgent", "contactMeta");
+            _contactMeta = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+        } catch (e) { _contactMeta = {}; }
+        data.contactMeta = _contactMeta;
+        data.npcReputations = (data.contacts || [])
+            .filter((c) => c.id !== "party_group_chat")
+            .map((c) => ({
+                id: c.id,
+                name: c.name,
+                avatar: c.avatar || null,
+                isPlayer: !String(c.id).startsWith("npc_"),
+                faction: _contactMeta[c.id]?.role || "",
+                standing: _contactMeta[c.id]?.standing || "neutral",
+            }));
 
         // Patch3 (CommanderCrunch69): sort option for the Fixers app.
         // Standing → numeric weight so the "by attitude" sort groups allied first,
@@ -1983,7 +1998,7 @@ class AgentOSApplication extends Application {
             { id: "default",  label: "Default order" },
             { id: "alpha",    label: "A → Z" },
             { id: "standing", label: "By attitude" },
-            { id: "faction",  label: "By faction" }
+            { id: "faction",  label: "By role" }
         ];
 
         // ════════════════════════════════════════════════════════════════════
@@ -5310,110 +5325,24 @@ class AgentOSApplication extends Application {
 
                 // --- REPUTATION TRACKER ---
                 case 'rep-set-standing': {
-                    // Patch4.7.3 (Gotto, "fix it never happens again"): 4.7.2's
-                    // capture-then-render pattern was racing the settings
-                    // onChange render. The onChange in main.js fires a render
-                    // synchronously during `await game.settings.set(...)`,
-                    // BEFORE my code below ran — by the time I captured
-                    // scrollTop, the DOM had already been rebuilt and scroll
-                    // reset to 0, so I was saving 0 and restoring nothing.
-                    //
-                    // Fix: capture scrollTop BEFORE the await, stuff it
-                    // directly into `_scrollPositions` (which the existing
-                    // render-lifecycle restore in activateListeners reads),
-                    // and pin it for several frames after the await so the
-                    // chain of renders all converge on the same target value.
-                    if (!game.user.isGM) return;
-                    const npcId = $(ev.currentTarget).data('npc-id');
-                    const standing = $(ev.currentTarget).data('standing');
-                    // Step 1 — capture BEFORE any await.
-                    const _repViewBefore = this.element.find('.rep-view')[0];
-                    const _pinnedRepScroll = _repViewBefore ? _repViewBefore.scrollTop : 0;
-                    this._scrollPositions = this._scrollPositions || {};
-                    if (_pinnedRepScroll > 0) {
-                        this._scrollPositions['.rep-view'] = _pinnedRepScroll;
-                    }
-                    // Step 2 — start an aggressive restoration loop NOW, before
-                    // the settings save even fires. It re-asserts the scroll on
-                    // every frame for ~400ms regardless of which renders fire
-                    // in between. Stops the moment the scroll matches and stays.
-                    if (_pinnedRepScroll > 0) {
-                        const startedAt = Date.now();
-                        const reassert = () => {
-                            const el = this.element?.find?.('.rep-view')?.[0];
-                            if (el && el.scrollTop !== _pinnedRepScroll) {
-                                el.scrollTop = _pinnedRepScroll;
-                            }
-                            if (Date.now() - startedAt < 400) requestAnimationFrame(reassert);
-                        };
-                        requestAnimationFrame(reassert);
-                    }
-                    // Step 3 — do the actual write. The settings onChange will
-                    // fire renders during this await; the reassert loop above
-                    // catches them all.
-                    let reps = [];
-                    try { reps = JSON.parse(game.settings.get("VirtualAgent", "npcReputations") || "[]"); } catch(e) {}
-                    reps = reps.map(r => r.id === npcId ? { ...r, standing } : r);
-                    await game.settings.set("VirtualAgent", "npcReputations", JSON.stringify(reps));
-                    // Step 4 — explicit render is harmless; onChange already
-                    // queued one, but call it to be sure the standing-pill
-                    // visual state reflects the new value.
+                    // NuNu packaging: standing is stored against the contact id, world-scope.
+                    if (!game.user.isGM) { ui.notifications.warn("Agent: Only the GM sets standing."); break; }
+                    const id = String($(ev.currentTarget).data('npc-id') || "");
+                    const standing = String($(ev.currentTarget).data('standing') || "neutral");
+                    if (!id) break;
+                    let cur = {};
+                    try { const raw = game.settings.get("VirtualAgent", "contactMeta"); cur = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {}); } catch (e) { cur = {}; }
+                    cur[id] = { ...(cur[id] || {}), standing };
+                    await game.settings.set("VirtualAgent", "contactMeta", JSON.stringify(cur));
                     this.render(true);
                     break;
                 }
 
-                case 'rep-add-npc': {
-                    if (!game.user.isGM) return;
-                    const rName = html.find('#rep-npc-name').val()?.trim();
-                    const rFaction = html.find('#rep-npc-faction').val()?.trim() || "Independent";
-                    if (!rName) { ui.notifications.warn("Agent: Enter a name."); break; }
-                    let reps = [];
-                    try { reps = JSON.parse(game.settings.get("VirtualAgent", "npcReputations") || "[]"); } catch(e) {}
-                    // Patch4.7 (Gotto): if an edit is in progress, update in
-                    // place instead of pushing a new entry.
-                    if (this._repEditingId) {
-                        const idx = reps.findIndex(r => r.id === this._repEditingId);
-                        if (idx >= 0) {
-                            reps[idx] = { ...reps[idx], name: rName, faction: rFaction };
-                        } else {
-                            reps.push({
-                                id: "rep_" + foundry.utils.randomID(),
-                                name: rName, faction: rFaction,
-                                standing: "neutral", description: ""
-                            });
-                        }
-                        this._repEditingId = null;
-                    } else {
-                        reps.push({
-                            id: "rep_" + foundry.utils.randomID(),
-                            name: rName,
-                            faction: rFaction,
-                            standing: "neutral",
-                            description: ""
-                        });
-                    }
-                    await game.settings.set("VirtualAgent", "npcReputations", JSON.stringify(reps));
-                    // Clear the input + draft so the row resets visibly.
-                    html.find('#rep-npc-name').val("");
-                    html.find('#rep-npc-faction').val("");
-                    if (this._composerDrafts) {
-                        this._composerDrafts['rep-npc-name'] = "";
-                        this._composerDrafts['rep-npc-faction'] = "";
-                    }
-                    this.render(true);
-                    break;
-                }
+                // NuNu packaging: 'rep-add-npc' removed. Contacts are created and purged in the Messenger,
+                // which is the one list. This view only labels them.
 
-                case 'rep-delete-npc': {
-                    if (!game.user.isGM) return;
-                    const delNpcId = $(ev.currentTarget).data('npc-id');
-                    let reps = [];
-                    try { reps = JSON.parse(game.settings.get("VirtualAgent", "npcReputations") || "[]"); } catch(e) {}
-                    reps = reps.filter(r => r.id !== delNpcId);
-                    await game.settings.set("VirtualAgent", "npcReputations", JSON.stringify(reps));
-                    this.render(true);
-                    break;
-                }
+                // NuNu packaging: 'rep-delete-npc' removed. Contacts are created and purged in the Messenger,
+                // which is the one list. This view only labels them.
 
                 // ════════════════════════════════════════════════════════════
                 // Patch5.5 — Black Chrome / All About Agents app actions
@@ -5905,72 +5834,39 @@ class AgentOSApplication extends Application {
                 }
 
                 case 'rep-edit-npc': {
-                    // Patch4.7 (Gotto): pre-fill the add row with the existing
-                    // values, mark as edit-in-progress, and let the GM save
-                    // back by clicking the + button. Simple in-place edit.
-                    if (!game.user.isGM) return;
-                    const editId = $(ev.currentTarget).data('npc-id');
-                    const editName = String($(ev.currentTarget).data('npc-name') || "");
-                    const editFaction = String($(ev.currentTarget).data('npc-faction') || "");
-                    html.find('#rep-npc-name').val(editName).focus();
-                    html.find('#rep-npc-faction').val(editFaction);
-                    if (this._composerDrafts) {
-                        this._composerDrafts['rep-npc-name'] = editName;
-                        this._composerDrafts['rep-npc-faction'] = editFaction;
-                    }
-                    this._repEditingId = editId; // checked by rep-add-npc
-                    ui.notifications.info(`Agent: Editing "${editName}" — change fields and press +.`);
+                    // NuNu packaging: edits the role label only. The name lives on the contact itself.
+                    if (!game.user.isGM) break;
+                    const id = String($(ev.currentTarget).data('npc-id') || "");
+                    const who = String($(ev.currentTarget).data('npc-name') || "");
+                    if (!id) break;
+                    let cur = {};
+                    try { const raw = game.settings.get("VirtualAgent", "contactMeta"); cur = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {}); } catch (e) { cur = {}; }
+                    const role = cur[id]?.role || "";
+                    new Dialog({
+                        title: `Role: ${who}`,
+                        content: `<form><div class="form-group"><label>Role</label><input type="text" name="role" value="${_agentEscHTML(role)}" placeholder="Fixer, Ripperdoc, Detective…"></div></form>`,
+                        buttons: {
+                            save: { label: "Save", callback: async (h) => {
+                                const v = h[0].querySelector('[name="role"]').value.trim();
+                                cur[id] = { ...(cur[id] || {}), role: v };
+                                await game.settings.set("VirtualAgent", "contactMeta", JSON.stringify(cur));
+                                this.render(true);
+                            } },
+                            cancel: { label: "Cancel" },
+                        },
+                        default: "save",
+                    }, { width: 340 }).render(true);
                     break;
                 }
 
                 case 'rep-open-messenger': {
-                    // Patch4.7 follow-up (Gotto): previously this jumped
-                    // straight into a 1-1 thread with the fixer. Expected
-                    // behavior: act like starting a NEW message — open the
-                    // ADD CONTACT modal pre-filled with the fixer's name so
-                    // the user (especially GM) can pick which player
-                    // device(s) the contact targets before the thread opens.
-                    const npcName = String($(ev.currentTarget).data('npc-name') || "");
-                    // NuNu packaging: if this person is already a Messenger contact for
-                    // whoever is looking, open that thread instead of asking them to make
-                    // the contact again. Falls through to the original flow when they are not.
-                    {
-                        const key = npcName.trim().toLowerCase();
-                        const existing = this._getContacts().find((c) => {
-                            const n = String(c.originalName || c.name || "").trim().toLowerCase();
-                            return n === key || n.startsWith(`${key} (`);
-                        });
-                        if (existing) {
-                            this.currentView = 'chat';
-                            this.activeContactId = existing.id;
-                            this.showAddContact = false;
-                            this.render(true);
-                            break;
-                        }
-                    }
-                    // Navigate to the Contacts view so the modal renders
-                    // against the right background, then open the modal with
-                    // the name pre-filled. For non-GMs the modal still works —
-                    // it's just a simpler add-to-own-contacts flow.
+                    // NuNu packaging: the book IS the contact list, so this is just a jump.
+                    const id = String($(ev.currentTarget).data('npc-id') || "");
+                    if (!id) break;
                     this.currentView = 'chat';
-                    this.activeContactId = null;
+                    this.activeContactId = id;
+                    this.showAddContact = false;
                     this.editContactId = null;
-                    this.editContactName = npcName;
-                    // 5.5.22 (CommanderCrunch69): players can't use the FilePicker
-                    // (no Foundry permission). Pre-fill the avatar from a same-
-                    // named world Actor's portrait if one exists, so the player
-                    // can just hit SAVE and get a real picture instead of the
-                    // mystery-man default. They can still clear/override the
-                    // field before saving.
-                    const _npcActorMatch = game.actors?.find?.(a => a.name === npcName);
-                    const _npcActorImg = _npcActorMatch?.img && _npcActorMatch.img !== "icons/svg/mystery-man.svg"
-                        ? _npcActorMatch.img : "";
-                    this.editContactAvatar = _npcActorImg;
-                    this.showAddContact = true;
-                    if (this._composerDrafts) {
-                        this._composerDrafts['new-contact-name'] = npcName;
-                        this._composerDrafts['new-contact-avatar'] = _npcActorImg;
-                    }
                     this.render(true);
                     break;
                 }

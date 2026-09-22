@@ -1375,19 +1375,7 @@
                         <h3>Contacts</h3>
                     </div>
                     <div class="rep-view" style="padding: 12px; flex: 1; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; min-width: 0;">
-                        {{#if isGM}}
-                        {{!-- Patch3.5: layout was overflowing the phone frame —
-                              the + button was flex-growing past the right edge.
-                              Lock the row to 100% width, force button to its
-                              intrinsic size, and let the two inputs share what's left. --}}
-                        <div class="rep-add-row" style="display: flex; gap: 4px; margin-bottom: 12px; align-items: center; width: 100%; min-width: 0; box-sizing: border-box;">
-                            <input type="text" id="rep-npc-name" class="rep-input" placeholder="NPC Name" style="flex: 1 1 0; min-width: 0;" data-preserve-draft>
-                            <input type="text" id="rep-npc-faction" class="rep-input rep-input-sm" placeholder="Role" style="flex: 1 1 0; min-width: 0;" data-preserve-draft>
-                            <button type="button" data-action="rep-add-npc" class="rep-add-btn" style="flex: 0 0 auto; width: 36px; min-width: 36px; padding: 6px 0; text-align: center;">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                        {{/if}}
+                        {{!-- NuNu packaging: contacts are created in the Messenger, which is the one list. --}}
 
                         {{#if npcReputations.length}}
                         <div class="rep-sort-row" style="display:flex; align-items:center; gap:8px; margin-bottom:10px; font-family:monospace; font-size:0.65rem;">
@@ -1416,8 +1404,8 @@
                                         <i class="fas fa-comment-dots" data-action="rep-open-messenger" data-npc-id="{{this.id}}" data-npc-name="{{this.name}}" title="Message {{this.name}}" style="cursor: pointer; color: var(--neon-cyan); font-size: 0.65rem;"></i>
                                         {{#if ../isGM}}
                                         {{!-- Patch4.7 (Gotto): edit a fixer entry in place. --}}
-                                        <i class="fas fa-pen" data-action="rep-edit-npc" data-npc-id="{{this.id}}" data-npc-name="{{this.name}}" data-npc-faction="{{this.faction}}" title="Edit this contact" style="cursor: pointer; color: #888; font-size: 0.6rem;"></i>
-                                        <i class="fas fa-trash-alt" data-action="rep-delete-npc" data-npc-id="{{this.id}}" title="Remove contact" style="cursor: pointer; color: #555; font-size: 0.6rem;"></i>
+                                        <i class="fas fa-pen" data-action="rep-edit-npc" data-npc-id="{{this.id}}" data-npc-name="{{this.name}}" data-npc-faction="{{this.faction}}" title="Set this contact\u2019s role" style="cursor: pointer; color: #888; font-size: 0.6rem;"></i>
+
                                         {{/if}}
                                     </div>
                                 </div>
@@ -1435,7 +1423,7 @@
                             <div style="text-align: center; padding: 30px; color: #666; font-size: 0.75rem;">
                                 <i class="fas fa-handshake" style="font-size: 1.5rem; margin-bottom: 8px; display: block; color: #64ffda;"></i>
                                 No contacts in the network yet.
-                                {{#if isGM}}<br>Add contacts above.{{/if}}
+                                {{#if isGM}}<br>Contacts appear here once they exist in the Messenger.{{/if}}
                             </div>
                         {{/if}}
                     </div>

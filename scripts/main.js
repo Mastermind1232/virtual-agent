@@ -197,6 +197,13 @@ Hooks.once('init', function () {
         }
     });
 
+    // NuNu packaging: role and standing per contact id, so the Contacts app needs no list of its own.
+    game.settings.register("VirtualAgent", "contactMeta", {
+        name: "Contact roles and standing (JSON)",
+        hint: "Set from the Contacts app. Keyed by contact id.",
+        scope: "world", config: false, type: String, default: "{}",
+        onChange: () => { const a = globalThis.AgentDeviceApp?.ui; if (a?.rendered) a.render(true); },
+    });
     game.settings.register("VirtualAgent", "npcReputations", {
         name: "NPC Reputations (JSON)",
         hint: 'JSON array of NPC reputation entries. Managed via the FIXERS app in-device.',
