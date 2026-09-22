@@ -34,7 +34,7 @@
     const diffName = (dv) => DIFF.find((d) => d.dv === Number(dv))?.name ?? `DV ${dv}`;
 
     /** Starting success chance by how many skills the gig carries. */
-    const CAPS = { 1: 95, 2: 95, 3: 90, 4: 85, 5: 80 };
+    const CAPS = { 1: 90, 2: 85, 3: 80, 4: 75, 5: 70 };
 
     const MISS = -25, FUMBLE = -50, PREEM = 25;
 
