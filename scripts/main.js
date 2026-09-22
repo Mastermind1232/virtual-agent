@@ -228,7 +228,7 @@ Hooks.once('init', function () {
     });
 
     game.settings.register("VirtualAgent", "customStoreItems", {
-        name: "Custom NC Mart Items (JSON)",
+        name: "Custom NuNu Mart Items (JSON)",
         hint: 'JSON array of custom store items. Each: { name, category, price, img (optional), description (optional) }. Managed via Sys Admin.',
         scope: "world",
         config: false,
@@ -259,8 +259,8 @@ Hooks.once('init', function () {
     });
 
     game.settings.register("VirtualAgent", "customStorePacks", {
-        name: "Custom Compendium Packs for NC Mart",
-        hint: 'Comma-separated compendium pack IDs to include in NC Mart (e.g., "world.my-gear,world.my-weapons").',
+        name: "Custom Compendium Packs for NuNu Mart",
+        hint: 'Comma-separated compendium pack IDs to include in NuNu Mart (e.g., "world.my-gear,world.my-weapons").',
         scope: "world",
         config: false,
         restricted: true,
@@ -286,11 +286,11 @@ Hooks.once('init', function () {
         default: true
     });
 
-    // Patch3.2 (CommanderCrunch69-class GM control request): NC Mart gates.
+    // Patch3.2 (CommanderCrunch69-class GM control request): NuNu Mart gates.
     // These are read in agent-app.js getData / catalog assembly and the cart
     // checkout path so even a cached catalog can't sneak past them.
     game.settings.register("VirtualAgent", "storeMaxPrice", {
-        name: "NC Mart — Max Item Price (eb)",
+        name: "NuNu Mart — Max Item Price (eb)",
         hint: "Hide any items priced strictly above this value. 0 = no cap. Use this to enforce 'nothing over 500eb tonight' rules.",
         scope: "world",
         config: true,
@@ -337,7 +337,7 @@ Hooks.once('init', function () {
     // above `storeFixerGatePrice` are hidden from players whose `fixerRank`
     // user-flag is below `storeFixerGateRank`. Both at 0 = gate disabled.
     game.settings.register("VirtualAgent", "storeFixerGatePrice", {
-        name: "NC Mart — Fixer Rank Gate · Price Threshold (eb)",
+        name: "NuNu Mart — Fixer Rank Gate · Price Threshold (eb)",
         hint: "Items priced strictly above this value require a minimum Fixer rank to appear. 0 = gate disabled.",
         scope: "world",
         config: true,
@@ -351,7 +351,7 @@ Hooks.once('init', function () {
     });
 
     game.settings.register("VirtualAgent", "storeFixerGateRank", {
-        name: "NC Mart — Fixer Rank Gate · Minimum Rank",
+        name: "NuNu Mart — Fixer Rank Gate · Minimum Rank",
         hint: "Minimum Fixer rank required for a player to see items above the price threshold. Each player's rank is set per-user in Sys Admin.",
         scope: "world",
         config: true,
@@ -428,7 +428,7 @@ Hooks.once('init', function () {
     });
 
     game.settings.register("VirtualAgent", "nightMarketActive", {
-        name: "NC Mart — Active Night Market (JSON)",
+        name: "NuNu Mart — Active Night Market (JSON)",
         hint: "Curated current Night Market — { name, openedAt, items:[{uuid, name, price, flavor, img}] }. GM authors via Sys Admin.",
         scope: "world",
         config: false,
@@ -443,7 +443,7 @@ Hooks.once('init', function () {
     });
 
     game.settings.register("VirtualAgent", "storeSourceFilter", {
-        name: "NC Mart — Source Filter",
+        name: "NuNu Mart — Source Filter",
         hint: "Restrict which items appear: 'all' includes both compendium/core packs and your custom items; 'core' shows only compendium-sourced items; 'custom' shows only items you added via Sys Admin.",
         scope: "world",
         config: true,
@@ -459,7 +459,7 @@ Hooks.once('init', function () {
     });
 
     game.settings.register("VirtualAgent", "storeLockedCategories", {
-        name: "NC Mart — Locked Categories",
+        name: "NuNu Mart — Locked Categories",
         hint: "Comma-separated list of category names that should be hidden from the shop entirely. Example: \"Cyberware, Drugs\". Useful when a vendor only stocks certain stuff.",
         scope: "world",
         config: true,
@@ -474,7 +474,7 @@ Hooks.once('init', function () {
     });
 
     game.settings.register("VirtualAgent", "storeBlacklistIds", {
-        name: "NC Mart — Blacklisted Item UUIDs / Names",
+        name: "NuNu Mart — Blacklisted Item UUIDs / Names",
         hint: "Comma- or newline-separated list of item UUIDs or names to hide from the shop. Use Sys Admin's blacklist UI to manage this list interactively.",
         scope: "world",
         config: false,

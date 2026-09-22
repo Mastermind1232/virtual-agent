@@ -906,12 +906,12 @@
                     </div>
                 </div>
 
-                <!-- NC MART STORE VIEW -->
+                <!-- NUNU MART STORE VIEW -->
                 <div id="agent-view-store" class="agent-app-view agent-view" style="display: {{#if (eq currentView 'store')}}flex{{else}}none{{/if}}; height: 100%;">
                     <div class="app-header" data-action="back-to-home" style="justify-content: space-between;">
                         <span style="display: flex; align-items: center; gap: 10px;">
                             <i class="fas fa-chevron-left" style="color: var(--neon-cyan);"></i>
-                            <h3>NC MART // {{#if (eq storeView 'cart')}}CART{{else}}{{storeCategory}}{{/if}}</h3>
+                            <h3>NUNU MART // {{#if (eq storeView 'cart')}}CART{{else}}{{storeCategory}}{{/if}}</h3>
                         </span>
                         <div style="display: flex; align-items: center; gap: 12px; padding-right: 5px;">
                             {{#if (eq storeView 'cart')}}
@@ -965,7 +965,7 @@
                               is now the dominant element, filter is a single
                               icon toggle pinned to natural width. --}}
                         <div class="store-search-area" style="padding: 8px 10px; background: rgba(0,0,0,0.3); border-bottom: 1px solid #222; display: flex !important; flex-direction: row !important; flex-wrap: nowrap !important; gap: 6px; align-items: center; min-width: 0; box-sizing: border-box;">
-                            <input type="text" id="store-search-input" class="datapool-input agent-search-input" placeholder="Search NC MART catalog..." value="{{storeSearch}}" autocomplete="off" data-preserve-draft style="flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; box-sizing: border-box; background-color:#111 !important; color:#fff !important; border:1px solid #444 !important; padding:6px 10px 6px 32px !important; font-family: monospace !important; font-size: 0.72rem !important; border-radius: 3px !important; height: 32px !important; line-height: normal !important;">
+                            <input type="text" id="store-search-input" class="datapool-input agent-search-input" placeholder="Search NUNU MART catalog..." value="{{storeSearch}}" autocomplete="off" data-preserve-draft style="flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; box-sizing: border-box; background-color:#111 !important; color:#fff !important; border:1px solid #444 !important; padding:6px 10px 6px 32px !important; font-family: monospace !important; font-size: 0.72rem !important; border-radius: 3px !important; height: 32px !important; line-height: normal !important;">
                             <button type="button" data-action="toggle-store-affordable" title="{{#if storeFilterAffordable}}Showing affordable only — click to show all{{else}}Show only items you can afford{{/if}}" style="display: inline-flex !important; flex: 0 0 32px !important; width: 32px !important; min-width: 32px !important; height: 32px !important; padding: 0 !important; align-items: center; justify-content: center; cursor: pointer; background: {{#if storeFilterAffordable}}rgba(0,255,204,0.18){{else}}rgba(255,255,255,0.04){{/if}} !important; border: 1px solid {{#if storeFilterAffordable}}var(--neon-cyan){{else}}#444{{/if}} !important; color: {{#if storeFilterAffordable}}var(--neon-cyan){{else}}#777{{/if}} !important; border-radius: 3px !important; box-shadow: none !important;"><i class="fas fa-wallet" style="font-size: 0.85rem;"></i></button>
                         </div>
                         {{!-- Patch4.7 (Gotto): price-tier filter strip. Sits
@@ -1894,9 +1894,9 @@
                             </div>
                         </div>
 
-                        <!-- SECTION: NC MART CUSTOM ITEMS -->
+                        <!-- SECTION: NUNU MART CUSTOM ITEMS -->
                         <div class="admin-section">
-                            <div class="admin-section-title">NC Mart — GM Controls</div>
+                            <div class="admin-section-title">NuNu Mart — GM Controls</div>
                             <div class="admin-hint" style="margin-bottom: 8px;">Gate what's available in the shop. SAVE GATES to apply; checkout is re-validated server-side.</div>
                             {{!-- Patch4 round 6 (CommanderCrunch69 bug): these
                                   inputs/select had no save action — the values
@@ -1956,8 +1956,8 @@
                             <div class="admin-hint" style="margin-bottom:10px; color:#555;">No items blacklisted.</div>
                             {{/if}}
 
-                            <div class="admin-section-title">NC Mart — Custom Items</div>
-                            <div class="admin-hint" style="margin-bottom: 8px;">Build store items with the form below — no JSON required. Each item shows up under its category in the NC Mart catalog.</div>
+                            <div class="admin-section-title">NuNu Mart — Custom Items</div>
+                            <div class="admin-hint" style="margin-bottom: 8px;">Build store items with the form below — no JSON required. Each item shows up under its category in the NuNu Mart catalog.</div>
 
                             {{!-- Patch4.7 follow-up: replaced the raw JSON
                                   textarea with a form-based item builder. Field
@@ -2004,7 +2004,7 @@
                             </div>
 
                             {{#if customStoreItemsParsed.length}}
-                            <div class="admin-hint" style="margin-bottom: 4px; color: var(--neon-cyan);">{{customStoreItemsParsed.length}} custom item(s) live in NC Mart:</div>
+                            <div class="admin-hint" style="margin-bottom: 4px; color: var(--neon-cyan);">{{customStoreItemsParsed.length}} custom item(s) live in NuNu Mart:</div>
                             <div class="admin-store-items-list" style="background:#181a1f; border:1px solid #2a2d33; border-radius:4px; padding:6px; margin-bottom:8px; max-height:160px; overflow-y:auto;">
                                 {{#each customStoreItemsParsed}}
                                 <div class="admin-store-item-row" style="display:flex; align-items:center; gap:8px; padding:4px 6px; border-bottom:1px solid #222; font-family:monospace; font-size:0.7rem;">
@@ -2060,14 +2060,14 @@
                         </div>
 
                         {{!-- Patch5.5 (community ask): Night Market curated drop.
-                              Pulls items from the NC Mart catalog so prices stay
+                              Pulls items from the NuNu Mart catalog so prices stay
                               consistent. Pop a flavor blurb per item; players see
-                              it on the NC Mart "Night Market" tab while the drop
+                              it on the NuNu Mart "Night Market" tab while the drop
                               is live. CLEAR ends the market. --}}
                         {{#if isGM}}
                         <div class="admin-section">
-                            <div class="admin-section-title">NC Mart — Night Market</div>
-                            <div class="admin-hint" style="margin-bottom: 8px;">Curate a limited-time drop. START to open the market with a name, ADD items from the catalog, END to close it. Players see the Night Market tab in NC Mart while the market has items.</div>
+                            <div class="admin-section-title">NuNu Mart — Night Market</div>
+                            <div class="admin-hint" style="margin-bottom: 8px;">Curate a limited-time drop. START to open the market with a name, ADD items from the catalog, END to close it. Players see the Night Market tab in NuNu Mart while the market has items.</div>
                             {{#if nightMarketOpen}}
                             {{!-- Patch5.5.6: live state — show END button, current name + item count --}}
                             <div class="admin-inline-group" style="margin-bottom: 10px;">
@@ -2097,7 +2097,7 @@
                             {{/if}}
                             {{#if nightMarketOpen}}
                             {{!-- Patch5.5.12: explicit LOAD/REFRESH catalog button so the
-                                  picker populates without having to open NC Mart first.
+                                  picker populates without having to open NuNu Mart first.
                                   Shows different states: not-loaded (LOAD button + empty
                                   message), loaded (REFRESH button + populated picker). --}}
                             <div style="display: flex; gap: 6px; align-items: center; margin-top: 8px; margin-bottom: 6px;">
@@ -2123,12 +2123,12 @@
                                             <button type="button" data-action="nm-add-from-catalog" data-item-uuid="{{this.uuid}}" style="background:rgba(170,0,255,0.15); border:1px solid #aa00ff; color:#aa00ff; cursor:pointer; padding:3px 8px; border-radius:3px; font-size:0.6rem;">+ ADD</button>
                                         </div>
                                         {{else}}
-                                        <div style="text-align: center; padding: 20px; color: #666; font-size: 0.65rem; font-style: italic;">Catalog empty — check NC Mart custom items / pack imports.</div>
+                                        <div style="text-align: center; padding: 20px; color: #666; font-size: 0.65rem; font-style: italic;">Catalog empty — check NuNu Mart custom items / pack imports.</div>
                                         {{/each}}
                                     {{else}}
                                     <div style="text-align: center; padding: 20px; color: #888; font-size: 0.7rem;">
                                         <i class="fas fa-download" style="font-size: 1.2rem; display: block; margin-bottom: 6px; color: #cc77ff;"></i>
-                                        Click <strong>LOAD CATALOG</strong> above to import the live NC Mart catalog. One-time per session.
+                                        Click <strong>LOAD CATALOG</strong> above to import the live NuNu Mart catalog. One-time per session.
                                     </div>
                                     {{/if}}
                                 </div>
@@ -2257,7 +2257,7 @@
                         {{#if isGM}}
                         <div class="admin-section">
                             <div class="admin-section-title">Player Profile (TT Coverage + Fixer Rank)</div>
-                            <div class="admin-hint" style="margin-bottom: 8px;"><strong>TT Coverage:</strong> blank = no coverage, panic button hidden. Common tiers: Bronze · Silver · Gold · Platinum.<br><strong>Fixer Rank (0–10):</strong> unlocks higher-priced NC Mart items per the world Fixer Rank Gate (Configure Settings → Virtual Agent).</div>
+                            <div class="admin-hint" style="margin-bottom: 8px;"><strong>TT Coverage:</strong> blank = no coverage, panic button hidden. Common tiers: Bronze · Silver · Gold · Platinum.<br><strong>Fixer Rank (0–10):</strong> unlocks higher-priced NuNu Mart items per the world Fixer Rank Gate (Configure Settings → Virtual Agent).</div>
                             <div class="admin-row" style="margin-bottom: 4px; font-size: 0.6rem; color: #888; letter-spacing: 1px;">
                                 <div style="flex: 0 0 35%;">PLAYER</div>
                                 <div style="flex: 1 1 auto;">TT COVERAGE</div>
@@ -2376,7 +2376,7 @@
         <!-- row, 7 menu buttons (only END TURN wired; rest land in slices 2-6) -->
         <!-- ============================================================ -->
         <div id="agent-view-combat" class="agent-app-view agent-view" style="display: {{#if (eq currentView 'combat')}}flex{{else}}none{{/if}}; flex-direction: column; height: 100%; overflow: hidden;">
-          <!-- 5.7.5: flex column matching NC MART pattern. Header (auto) / upper (flex 6) / lower (flex 4). -->
+          <!-- 5.7.5: flex column matching NUNU MART pattern. Header (auto) / upper (flex 6) / lower (flex 4). -->
           <div class="app-header" data-action="combat-header-back" style="flex: 0 0 auto; justify-content: space-between;">
             <span style="display: flex; align-items: center; gap: 10px;">
               <i class="fas fa-chevron-left" style="color: #ff3366;"></i>
@@ -2923,7 +2923,7 @@
         <!-- 5.6.0 SKILLS APP VIEW — standalone skill picker                  -->
         <!-- ============================================================ -->
         <div id="agent-view-skills" class="agent-app-view agent-view {{#if skillsShrunk}}skills-shrunk{{/if}}" style="display: {{#if (eq currentView 'skills')}}flex{{else}}none{{/if}}; flex-direction: column; height: 100%; overflow: hidden;">
-          <!-- 5.7.5: flex column matching NC MART pattern. -->
+          <!-- 5.7.5: flex column matching NUNU MART pattern. -->
           <div class="app-header" data-action="back-to-home" style="flex: 0 0 auto; justify-content: space-between;">
             <span style="display: flex; align-items: center; gap: 10px;">
               <i class="fas fa-chevron-left" style="color: #22ddff;"></i>

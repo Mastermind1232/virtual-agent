@@ -99,7 +99,7 @@ class AgentOSApplication extends Application {
         // Map pan state — instance-scoped so window mousemove handler sees mousedown writes
         this._panState = { isPanning: false, startX: 0, startY: 0 };
 
-        // NC MART store state
+        // NUNU MART store state
         this._storeCatalog = null;       // { Weapons: [...], Ammo: [...], ... }
         this._storeLoading = null;       // in-flight Promise during initial load
         this._storeCategory = "All"; // active category in the list view; "All" = flatten every category
@@ -139,7 +139,7 @@ class AgentOSApplication extends Application {
         this._storeFilterAffordable = false; // true = show only items player can afford
         // Patch4.7 (Gotto): price-tier dropdown ("all" | "100" | "500" | ...)
         this._storePriceTier = "all";
-        // Patch5.5: NC Mart mode toggle ("catalog" | "nightmarket"). Players can flip
+        // Patch5.5: NuNu Mart mode toggle ("catalog" | "nightmarket"). Players can flip
         // between the regular catalog and the GM-curated Night Market drop.
         this._storeMode = "catalog";
         // Patch4.7 (Gotto): social feed single-category filter ("all" or a category label)
@@ -374,7 +374,7 @@ class AgentOSApplication extends Application {
     /**
      * Resolve a UUID-like identifier into an Actor (or null for User/Virtual cases).
      */
-    // Patch4.7 (Gotto): NC Mart price-bucket bounds. Returns {min,max} for a
+    // Patch4.7 (Gotto): NuNu Mart price-bucket bounds. Returns {min,max} for a
     // dropdown value, or null for "all" / unknown.
     _priceBucketBounds(value) {
         switch (String(value || "").toLowerCase()) {
@@ -721,7 +721,7 @@ class AgentOSApplication extends Application {
             .map(a => `${a.category || ""} | ${a.text || ""}`)
             .join("\n");
 
-        // Custom NC Mart settings (GM only)
+        // Custom NuNu Mart settings (GM only)
         try {
             data.customStoreItemsRaw = game.settings.get("VirtualAgent", "customStoreItems") || "[]";
             data.customStorePacks = game.settings.get("VirtualAgent", "customStorePacks") || "";
@@ -1027,7 +1027,7 @@ class AgentOSApplication extends Application {
             { id: 'creds',  label: 'WALLET',    icon: 'fas fa-wallet',         color: 'var(--creds-gold)',  iconImg: is2077 ? `${ICON_BASE}/creds.png`  : null },
             { id: 'map',    label: 'SAT MAP',   icon: 'fas fa-map-marked-alt', color: 'var(--neon-yellow)', iconImg: is2077 ? `${ICON_BASE}/map.png`    : null },
             { id: 'bio',    label: 'BIOMON',    icon: 'fas fa-heartbeat',      color: '#ff3333',            iconImg: is2077 ? `${ICON_BASE}/bio.png`    : null },
-            { id: 'store',  label: 'NC MART',   icon: 'fas fa-shopping-cart',  color: '#00ffcc',            iconImg: is2077 ? `${ICON_BASE}/optics.png` : null },
+            { id: 'store',  label: 'NUNU MART',   icon: 'fas fa-shopping-cart',  color: '#00ffcc',            iconImg: is2077 ? `${ICON_BASE}/optics.png` : null },
             { id: 'id',     label: 'AGENT ID',  icon: 'fas fa-id-card',        color: '#4488ff',            iconImg: is2077 ? `${ICON_BASE}/id.png`     : null },
             { id: 'social', label: 'SOCIAL',    icon: 'fas fa-share-alt',      color: '#ff9900',            iconImg: is2077 ? `${ICON_BASE}/social.png` : null },
             { id: 'style',  label: 'STYLE',     icon: 'fas fa-tshirt',         color: '#e040fb',            iconImg: is2077 ? `${ICON_BASE}/style.png`  : null },
@@ -1748,7 +1748,7 @@ class AgentOSApplication extends Application {
         data.emojiCategory = this._emojiCategory;
         data.curatedEmojis = data.emojiSets[this._emojiCategory] || data.emojiSets.react;
 
-        // --- NC MART (Store) ---
+        // --- NUNU MART (Store) ---
         data.storeView = this._storeView || 'list';
         const cart = this._getCart();
         data.storeCart = cart;
@@ -2109,7 +2109,7 @@ class AgentOSApplication extends Application {
         data.storeMode = this._storeMode || "catalog";
         // Patch5.5.12: surface catalog-loaded state so the Sys Admin picker can
         // render an explicit LOAD button when the catalog hasn't been imported yet
-        // (NC Mart catalog only auto-loads when the GM opens the NC Mart app — Sys
+        // (NuNu Mart catalog only auto-loads when the GM opens the NuNu Mart app — Sys
         // Admin needs its own trigger).
         data.nmCatalogLoaded = !!this._storeCatalog;
         data.nmCatalogLoading = !!this._storeLoading;
@@ -4770,7 +4770,7 @@ class AgentOSApplication extends Application {
                         html.find(`#${id}`).val("");
                         if (this._composerDrafts) this._composerDrafts[id] = "";
                     });
-                    ui.notifications.info(`Virtual Agent: Added "${name}" (${category}, ${price}eb) to NC Mart.`);
+                    ui.notifications.info(`Virtual Agent: Added "${name}" (${category}, ${price}eb) to NuNu Mart.`);
                     this.render(true);
                     break;
                 }
@@ -4792,7 +4792,7 @@ class AgentOSApplication extends Application {
                     const next = entries.join(", ");
                     await game.settings.set("VirtualAgent", "customStorePacks", next);
                     this._storeCatalog = null; this._storeLoading = null;
-                    ui.notifications.info(`Virtual Agent: Added ${packId} — items will load on next NC Mart open.`);
+                    ui.notifications.info(`Virtual Agent: Added ${packId} — items will load on next NuNu Mart open.`);
                     this.render(true);
                     break;
                 }
@@ -4816,7 +4816,7 @@ class AgentOSApplication extends Application {
                     summary.push(maxPrice > 0 ? `cap ${maxPrice}eb` : "no cap");
                     summary.push(`source=${sourceFilter}`);
                     if (locked) summary.push(`locked: ${locked}`);
-                    ui.notifications.info(`Virtual Agent: NC Mart gates saved — ${summary.join(", ")}.`);
+                    ui.notifications.info(`Virtual Agent: NuNu Mart gates saved — ${summary.join(", ")}.`);
                     this.render(true);
                     break;
                 }
@@ -4827,7 +4827,7 @@ class AgentOSApplication extends Application {
                     await game.settings.set("VirtualAgent", "storeSourceFilter", "all");
                     await game.settings.set("VirtualAgent", "storeLockedCategories", "");
                     this._storeCatalog = null; this._storeLoading = null;
-                    ui.notifications.info("Virtual Agent: NC Mart gates cleared (no cap, all sources, no locked categories).");
+                    ui.notifications.info("Virtual Agent: NuNu Mart gates cleared (no cap, all sources, no locked categories).");
                     this.render(true);
                     break;
                 }
@@ -4871,7 +4871,7 @@ class AgentOSApplication extends Application {
                     list.splice(idx, 1);
                     await game.settings.set("VirtualAgent", "customStoreItems", JSON.stringify(list));
                     this._storeCatalog = null; this._storeLoading = null;
-                    ui.notifications.info(`Virtual Agent: Removed "${removed?.name || 'item'}" from NC Mart.`);
+                    ui.notifications.info(`Virtual Agent: Removed "${removed?.name || 'item'}" from NuNu Mart.`);
                     this.render(true);
                     break;
                 }
@@ -5236,7 +5236,7 @@ class AgentOSApplication extends Application {
                     }
                     if (!found) return;
                     await this._addToCart(uuid, found);
-                    ui.notifications.info(`NC MART: ${found.name} added to cart.`);
+                    ui.notifications.info(`NUNU MART: ${found.name} added to cart.`);
                     this.render(false);
                     break;
                 }
@@ -5762,21 +5762,21 @@ class AgentOSApplication extends Application {
                 case 'nm-load-catalog': {
                     // Patch5.5.12: explicit Sys Admin trigger for loading the NC
                     // Mart catalog so the Night Market picker can populate without
-                    // the GM having to open NC Mart first. Re-runs the same lazy
-                    // loader the player-side NC Mart uses; cached on the instance.
+                    // the GM having to open NuNu Mart first. Re-runs the same lazy
+                    // loader the player-side NuNu Mart uses; cached on the instance.
                     if (!game.user.isGM) return;
                     if (this._storeCatalog) {
-                        ui.notifications.info("NC Mart catalog: refreshing...");
+                        ui.notifications.info("NuNu Mart catalog: refreshing...");
                         this._storeCatalog = null;
                     } else {
-                        ui.notifications.info("NC Mart catalog: importing (one moment)...");
+                        ui.notifications.info("NuNu Mart catalog: importing (one moment)...");
                     }
                     try {
                         await this._loadStoreCatalog();
-                        ui.notifications.info("NC Mart catalog: loaded.");
+                        ui.notifications.info("NuNu Mart catalog: loaded.");
                     } catch (e) {
                         console.error(e);
-                        ui.notifications.error("NC Mart catalog: load failed — see console.");
+                        ui.notifications.error("NuNu Mart catalog: load failed — see console.");
                     }
                     this.render(true);
                     break;
@@ -6480,14 +6480,14 @@ class AgentOSApplication extends Application {
             try { _ss.setSelectionRange(_ss.value.length, _ss.value.length); } catch (e) {}
         }
 
-        // Restore NC Mart scroll position for the current category
+        // Restore NuNu Mart scroll position for the current category
         const _storeListEl = html.find('.store-item-list')[0];
         if (_storeListEl && this._storeCategory && this._storeScrollPositions[this._storeCategory]) {
             _storeListEl.scrollTop = this._storeScrollPositions[this._storeCategory];
         }
 
         // Patch3.3: restore scroll positions of long admin/list containers so
-        // toggling items (e.g. Sys Admin app-lock toggles, NC Mart GM-controls
+        // toggling items (e.g. Sys Admin app-lock toggles, NuNu Mart GM-controls
         // edits) doesn't snap the view back to the top.
         // Patch4 round 2: do this BOTH synchronously and again on the next
         // animation frame. The synchronous pass handles content that already
@@ -6506,7 +6506,7 @@ class AgentOSApplication extends Application {
         setTimeout(_restoreScroll, 50);
         setTimeout(_restoreScroll, 150);
 
-        // Patch3 (your own list): NC Mart category bar "snap-back" — after a
+        // Patch3 (your own list): NuNu Mart category bar "snap-back" — after a
         // re-render the bar's horizontal scroll resets to 0, hiding the active
         // tab if it was off-screen. Bring the active category into view.
         const _catBar = html.find('.store-category-bar')[0];
@@ -6735,7 +6735,7 @@ class AgentOSApplication extends Application {
             this.render(false);
         });
 
-        // Patch4.7 (Gotto): NC Mart price-tier dropdown. Bound on `change`
+        // Patch4.7 (Gotto): NuNu Mart price-tier dropdown. Bound on `change`
         // because the global data-action switch only listens for clicks.
         html.on('change', '#store-price-tier-select', (ev) => {
             this._storePriceTier = String(ev.currentTarget.value || "all");
@@ -8132,7 +8132,7 @@ class AgentOSApplication extends Application {
     }
 
     /**
-     * Run a NC MART checkout. Validates balance + permission, deducts wealth
+     * Run a NUNU MART checkout. Validates balance + permission, deducts wealth
      * via deltaLedgerProperty, and adds the items to the actor's inventory.
      * Players without OWNER on the target actor route via socket to the GM.
      */
@@ -8173,7 +8173,7 @@ class AgentOSApplication extends Application {
     async _processCheckout(actor, cart, total, requesterName) {
         // Deduct wealth via CPR ledger
         if (typeof actor.deltaLedgerProperty === "function") {
-            await actor.deltaLedgerProperty("wealth", -total, `Agent: NC MART order (${cart.length} item${cart.length===1?'':'s'})`);
+            await actor.deltaLedgerProperty("wealth", -total, `Agent: NUNU MART order (${cart.length} item${cart.length===1?'':'s'})`);
         } else {
             const ebPath = this._getActorEurobucks(actor).path;
             await actor.update({ [ebPath]: Math.max(0, this._getActorEurobucks(actor).balance - total) });
@@ -8189,7 +8189,7 @@ class AgentOSApplication extends Application {
                         name: entry.name || "Custom Item",
                         type: entry.type || "gear",
                         img: entry.img || "icons/svg/mystery-man.svg",
-                        system: { description: { value: entry.description || `Purchased from NC MART for ${entry.price}eb.` } }
+                        system: { description: { value: entry.description || `Purchased from NUNU MART for ${entry.price}eb.` } }
                     });
                     customItemCount++;
                     continue;
@@ -8215,7 +8215,7 @@ class AgentOSApplication extends Application {
         const whisper = Array.from(new Set([...owners, ...gms]));
         ChatMessage.create({
             content: `<div style="border:1px solid #00ffcc; background:#0a1a1a; padding:10px; font-family:monospace; color:#fff;">
-                <b style="color:#00ffcc;">NC MART :: ORDER RECEIPT</b><br>
+                <b style="color:#00ffcc;">NUNU MART :: ORDER RECEIPT</b><br>
                 <span style="color:#888;">CUSTOMER:</span> ${_agentEscHTML(actor.name)}<br>
                 <span style="color:#888;">ITEMS:</span> ${Number(itemDocs.length)}<br>
                 <span style="color:#888;">TOTAL:</span> ${Number(total)}eb<br>
