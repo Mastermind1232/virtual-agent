@@ -5931,6 +5931,23 @@ class AgentOSApplication extends Application {
                     // the user (especially GM) can pick which player
                     // device(s) the contact targets before the thread opens.
                     const npcName = String($(ev.currentTarget).data('npc-name') || "");
+                    // NuNu packaging: if this person is already a Messenger contact for
+                    // whoever is looking, open that thread instead of asking them to make
+                    // the contact again. Falls through to the original flow when they are not.
+                    {
+                        const key = npcName.trim().toLowerCase();
+                        const existing = this._getContacts().find((c) => {
+                            const n = String(c.originalName || c.name || "").trim().toLowerCase();
+                            return n === key || n.startsWith(`${key} (`);
+                        });
+                        if (existing) {
+                            this.currentView = 'chat';
+                            this.activeContactId = existing.id;
+                            this.showAddContact = false;
+                            this.render(true);
+                            break;
+                        }
+                    }
                     // Navigate to the Contacts view so the modal renders
                     // against the right background, then open the modal with
                     // the name pre-filled. For non-GMs the modal still works —

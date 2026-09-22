@@ -1382,7 +1382,7 @@
                               intrinsic size, and let the two inputs share what's left. --}}
                         <div class="rep-add-row" style="display: flex; gap: 4px; margin-bottom: 12px; align-items: center; width: 100%; min-width: 0; box-sizing: border-box;">
                             <input type="text" id="rep-npc-name" class="rep-input" placeholder="NPC Name" style="flex: 1 1 0; min-width: 0;" data-preserve-draft>
-                            <input type="text" id="rep-npc-faction" class="rep-input rep-input-sm" placeholder="Faction" style="flex: 1 1 0; min-width: 0;" data-preserve-draft>
+                            <input type="text" id="rep-npc-faction" class="rep-input rep-input-sm" placeholder="Role" style="flex: 1 1 0; min-width: 0;" data-preserve-draft>
                             <button type="button" data-action="rep-add-npc" class="rep-add-btn" style="flex: 0 0 auto; width: 36px; min-width: 36px; padding: 6px 0; text-align: center;">
                                 <i class="fas fa-plus"></i>
                             </button>
@@ -1406,14 +1406,14 @@
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                     <div>
                                         <div style="font-size: 0.8rem; color: #fff; font-weight: 600;">{{this.name}}</div>
-                                        <div style="font-size: 0.55rem; color: #888;">{{this.faction}}</div>
+                                        {{#if this.faction}}<div class="rep-role">{{this.faction}}</div>{{/if}}
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 6px;">
                                         <span class="rep-standing-badge rep-standing-{{this.standing}}" style="font-size: 0.55rem; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">
                                             {{this.standing}}
                                         </span>
                                         {{!-- Patch4.7 (Gotto): jump to a Messenger thread for this fixer. --}}
-                                        <i class="fas fa-comment-dots" data-action="rep-open-messenger" data-npc-id="{{this.id}}" data-npc-name="{{this.name}}" title="Open Messenger thread with {{this.name}}" style="cursor: pointer; color: var(--neon-cyan); font-size: 0.65rem;"></i>
+                                        <i class="fas fa-comment-dots" data-action="rep-open-messenger" data-npc-id="{{this.id}}" data-npc-name="{{this.name}}" title="Message {{this.name}}" style="cursor: pointer; color: var(--neon-cyan); font-size: 0.65rem;"></i>
                                         {{#if ../isGM}}
                                         {{!-- Patch4.7 (Gotto): edit a fixer entry in place. --}}
                                         <i class="fas fa-pen" data-action="rep-edit-npc" data-npc-id="{{this.id}}" data-npc-name="{{this.name}}" data-npc-faction="{{this.faction}}" title="Edit this contact" style="cursor: pointer; color: #888; font-size: 0.6rem;"></i>
@@ -1435,7 +1435,7 @@
                             <div style="text-align: center; padding: 30px; color: #666; font-size: 0.75rem;">
                                 <i class="fas fa-handshake" style="font-size: 1.5rem; margin-bottom: 8px; display: block; color: #64ffda;"></i>
                                 No contacts in the network yet.
-                                {{#if isGM}}<br>Add NPCs and factions above.{{/if}}
+                                {{#if isGM}}<br>Add contacts above.{{/if}}
                             </div>
                         {{/if}}
                     </div>
