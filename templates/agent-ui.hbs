@@ -699,6 +699,10 @@
                                 </div>
                             </div>
                             {{/each}}
+                            {{#if partyBlip}}
+                            {{!-- NuNu packaging: the party's position, from the active scene's spot on the world map. --}}
+                            <div class="agent-party-blip" style="left: {{partyBlip.x}}%; top: {{partyBlip.y}}%;"></div>
+                            {{/if}}
                         </div>
                         
                         <!-- Tactical Overlay -->
@@ -1075,9 +1079,9 @@
                     {{#if canEditId}}
                     <div style="display: flex; gap: 4px; padding: 4px 12px; overflow-x: auto; flex-shrink: 0; background: rgba(0,0,0,0.3); border-bottom: 1px solid #222;">
                         {{#each idPlayerList}}
-                        <div data-action="id-select-player" data-player-id="{{this.id}}" style="cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 5px 10px; background: {{#if (eq this.id ../idTargetUserId)}}rgba(68,136,255,0.2){{else}}rgba(255,255,255,0.03){{/if}}; border: 1px solid {{#if (eq this.id ../idTargetUserId)}}#4488ff{{else}}#333{{/if}}; border-radius: 6px; white-space: nowrap; transition: all 0.2s;">
+                        <div data-action="id-select-player" data-player-id="{{this.id}}" style="cursor: pointer; display: flex; flex: 0 0 auto; white-space: nowrap; align-items: center; gap: 6px; padding: 5px 10px; background: {{#if (eq this.id ../idTargetUserId)}}rgba(68,136,255,0.2){{else}}rgba(255,255,255,0.03){{/if}}; border: 1px solid {{#if (eq this.id ../idTargetUserId)}}#4488ff{{else}}#333{{/if}}; border-radius: 6px; white-space: nowrap; transition: all 0.2s;">
                             <img src="{{this.img}}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover; border: 1px solid {{#if (eq this.id ../idTargetUserId)}}#4488ff{{else}}#444{{/if}};">
-                            <span style="font-size: 0.65rem; color: {{#if (eq this.id ../idTargetUserId)}}#fff{{else}}#888{{/if}};">{{this.actorName}}</span>
+                            <span style="font-size: 0.65rem; white-space: nowrap; color: {{#if (eq this.id ../idTargetUserId)}}#fff{{else}}#888{{/if}};">{{this.actorName}}</span>
                         </div>
                         {{/each}}
                     </div>

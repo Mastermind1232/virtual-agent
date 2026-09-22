@@ -2031,6 +2031,13 @@ class AgentOSApplication extends Application {
         // Only show indicators flagged visible (GM can hide while drafting).
         // GM always sees all pins (so they can manage hidden ones); players see only visible.
         data.mapIndicatorsView = game.user.isGM ? data.mapIndicators : data.mapIndicators.filter(p => p.isVisible !== false);
+        // NuNu packaging: the party's position on the Sat Map, from the active scene's spot on the world-map scene.
+        data.partyBlip = null;
+        try {
+            const wm = globalThis.VirtualAgentWorldMap?.scene();
+            const act = game.scenes.active;
+            data.partyBlip = (wm && act) ? globalThis.VirtualAgentWorldMap.scenePos(act, wm) : null;
+        } catch (e) { data.partyBlip = null; }
         // Patch5.5.5: GM add-content modal visibility (only ever true if GM).
         data.showNcpdAddModal = !!this.showNcpdAddModal && game.user.isGM;
         data.showZigguratAddModal = !!this.showZigguratAddModal && game.user.isGM;

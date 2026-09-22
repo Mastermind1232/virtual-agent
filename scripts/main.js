@@ -782,3 +782,68 @@ Hooks.on('deleteChatMessage', (msg, options, userId) => {
         console.warn(`[VirtualAgent rollwatch] roll message DELETED | id: ${msg.id} | author: ${msg.author?.name || '?'} | total: ${msg.rolls[0]?.total} | deletion by user: ${game.users?.get?.(userId)?.name || userId}`);
     } catch (e) {}
 });
+
+
+/* ------------------------------------------------------------------ */
+/*  NuNu packaging: the Sat Map follows a Foundry scene                 */
+/*  - Foundry map pins (Notes) on that scene become Sat Map pins.       */
+/*  - The active scene's spot on that map is the party blip.            */
+/* ------------------------------------------------------------------ */
+globalThis.VirtualAgentWorldMap = {
+    scene() {
+        let name = "";
+        try { name = game.settings.get("VirtualAgent", "satMapScene") || ""; } catch (e) { return null; }
+        return name ? (game.scenes.getName(name) ?? null) : null;
+    },
+    pct(wm, x, y) {
+        const d = wm.dimensions;
+        return { x: Math.round(((x - d.sceneX) / d.sceneWidth) * 10000) / 100, y: Math.round(((y - d.sceneY) / d.sceneHeight) * 10000) / 100 };
+    },
+    /** Where a scene sits on the world map: a GM-set flag, else the pin of the scene's Journal, else a pin named like the scene. */
+    scenePos(scene, wm) {
+        const f = scene.getFlag("VirtualAgent", "worldMapPos");
+        if (f && Number.isFinite(f.x) && Number.isFinite(f.y)) return { x: f.x, y: f.y };
+        const jid = scene.journal?.id ?? null;
+        const note = wm.notes.find((n) => (jid && n.entryId === jid) || n.entry?.name === scene.name || n.label === scene.name);
+        return note ? this.pct(wm, note.x, note.y) : null;
+    },
+    pinsFromNotes(wm) {
+        const players = game.users.filter((u) => !u.isGM);
+        return wm.notes.contents.map((n) => {
+            const entry = n.entry, p = this.pct(wm, n.x, n.y);
+            const visible = entry ? players.some((u) => entry.testUserPermission(u, "LIMITED")) : true;
+            return { id: `note_${n.id}`, label: n.label || entry?.name || "Pin", color: "#75e0d7", icon: "fa-map-marker-alt", notes: "", labelMode: "hover", x: p.x, y: p.y, isVisible: visible, createdAt: 0 };
+        });
+    },
+    /** GM only. Replaces the synced pins, keeps the ones placed by hand on the phone. */
+    async sync() {
+        if (!game.user?.isGM) return;
+        const wm = this.scene(); if (!wm) return;
+        let pins = [];
+        try { pins = JSON.parse(game.settings.get("VirtualAgent", "mapIndicators") || "[]"); } catch (e) {}
+        if (!Array.isArray(pins)) pins = [];
+        const next = [...pins.filter((p) => !String(p.id).startsWith("note_")), ...this.pinsFromNotes(wm)];
+        if (JSON.stringify(pins) !== JSON.stringify(next)) await game.settings.set("VirtualAgent", "mapIndicators", JSON.stringify(next));
+    }
+};
+Hooks.once("init", () => {
+    game.settings.register("VirtualAgent", "satMapScene", {
+        name: "Sat Map scene",
+        hint: "Name of the Foundry scene the Sat Map picture shows. Its map pins appear on the phone, and the party blip marks the active scene's spot on it.",
+        scope: "world", config: true, type: String, default: ""
+    });
+});
+Hooks.once("ready", () => { globalThis.VirtualAgentWorldMap.sync().catch(console.error); });
+for (const h of ["createNote", "updateNote", "deleteNote"]) {
+    Hooks.on(h, (doc) => {
+        if (doc.parent?.id !== globalThis.VirtualAgentWorldMap.scene()?.id) return;
+        globalThis.VirtualAgentWorldMap.sync().then(() => _queueAgentRender()).catch(console.error);
+    });
+}
+Hooks.on("updateJournalEntry", (doc, changes) => {
+    if (!changes.ownership) return;
+    globalThis.VirtualAgentWorldMap.sync().then(() => _queueAgentRender()).catch(console.error);
+});
+Hooks.on("updateScene", (scene, changes) => {
+    if ("active" in changes || "journal" in changes || changes.flags?.VirtualAgent) _queueAgentRender();
+});
