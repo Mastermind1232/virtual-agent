@@ -44,6 +44,11 @@
                         {{#each ../standings}}<option value="{{this.id}}" {{#if (eq this.id ../this.standing)}}selected{{/if}}>{{this.label}}</option>{{/each}}
                     </select>
                 </label>
+                <label class="nc-operator">
+                    <input type="checkbox" data-field="operator" {{#if this.isOperator}}checked{{/if}}>
+                    <span>Works for the Operator</span>
+                    <span class="nc-op-note">{{#if this.isOperator}}on the roster{{else}}{{#if this.hasActor}}can be sent on gigs{{else}}needs an actor of this name first{{/if}}{{/if}}</span>
+                </label>
                 <label class="nc-avatar">Portrait
                     <span class="nc-avatar-row">
                         <input type="text" data-field="avatar" value="{{this.avatar}}" placeholder="Image path">

@@ -721,7 +721,28 @@
     /*  Wiring                                                           */
     /* ---------------------------------------------------------------- */
 
-    globalThis.VirtualAgentOperator = { html, onClick, visible, tile, resolveDue };
+    /** Roster membership by name, for the Contacts manager's toggle. */
+    const rosterHas = (name) => runners().some((r) => r.name.trim().toLowerCase() === String(name).trim().toLowerCase());
+
+    /** Put someone on the roster. Their usable skills come from an actor sheet, so one has to exist. */
+    async function rosterAdd(name) {
+        if (!game.user.isGM) return false;
+        const key = String(name).trim().toLowerCase();
+        if (rosterHas(key)) return true;
+        const actor = game.actors.find((a) => a.name.trim().toLowerCase() === key);
+        if (!actor) { ui.notifications.warn(`Operator: no actor called "${name}", and an operator's skills come from their sheet.`); return false; }
+        await saveRunners([...runners(), { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier: 0, completed: 0 }]);
+        await giveContact(actor.name, actor.img);
+        return true;
+    }
+
+    async function rosterRemove(name) {
+        if (!game.user.isGM) return;
+        const key = String(name).trim().toLowerCase();
+        await saveRunners(runners().filter((r) => r.name.trim().toLowerCase() !== key));
+    }
+
+    globalThis.VirtualAgentOperator = { html, onClick, visible, tile, resolveDue, rosterHas, rosterAdd, rosterRemove, TIERS };
 
     Hooks.once("init", () => {
         game.settings.register(ID, "operatorOwner", {

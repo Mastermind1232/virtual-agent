@@ -117,6 +117,8 @@
                     standingColour: standing(c.standing).colour,
                     holderNames: c.holders.map((id) => game.users.get(id)).filter(Boolean).map(whoIs).join(", "),
                     party: party.map((p) => ({ ...p, has: c.holders.includes(p.id) })),
+                    isOperator: !!globalThis.VirtualAgentOperator?.rosterHas?.(c.name),
+                    hasActor: !!game.actors.find((a) => a.name.trim().toLowerCase() === c.name.trim().toLowerCase()),
                     open: this.editing === c.id,
                 })),
             };
@@ -151,6 +153,17 @@
                 const holders = card.find("[data-holder]:checked").toArray().map((el) => el.dataset.holder);
 
                 await save({ id, name, avatar, holders });
+
+                // On the Operator roster or not. Adding needs an actor, since an operator's
+                // usable skills are read from their sheet.
+                const OP = globalThis.VirtualAgentOperator;
+                if (OP?.rosterAdd) {
+                    const wantsOperator = card.find("[data-field=operator]").is(":checked");
+                    const onRoster = OP.rosterHas(name);
+                    if (wantsOperator && !onRoster) await OP.rosterAdd(name);
+                    else if (!wantsOperator && onRoster) await OP.rosterRemove(name);
+                }
+
                 const meta = readMeta();
                 meta[id] = { ...(meta[id] || {}), faction, standing: stand, role };
                 await writeMeta(meta);
