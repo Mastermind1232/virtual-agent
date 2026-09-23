@@ -1,3 +1,7 @@
+/* NuNu packaging: a contact shared by several players is shown as one row per player,
+   with id `${contactId}__${userId}`. Anything that looks the contact up in storage has to
+   strip that back off first, or it edits nothing while still deleting messages. */
+function VA_baseId(id) { return String(id ?? "").split("__")[0]; }
 /* NuNu packaging: housing and lifestyle from the campaign's Economic Tables.
    Both are monthly, and together they are what the 28th charges. */
 const VA_HOUSING = [
@@ -212,7 +216,7 @@ class AgentOSApplication extends Application {
         });
     }
 
-    _getContacts() {
+    _getContacts({ ignoreSearch = false } = {}) {
         let contacts = [];
 
         // 0. The Permanent Party / Group Chat (Seen by everyone)
@@ -285,11 +289,12 @@ class AgentOSApplication extends Application {
                 // Leaked into this user's flag from a previous targeting; ignore.
                 return;
             }
-            if (!game.user.isGM && Array.isArray(c.targetUserIds) && c.targetUserIds.length > 1) {
+            const liveTargets = Array.isArray(c.targetUserIds) ? c.targetUserIds.filter((id) => game.users.get(id)) : [];
+            if (!game.user.isGM && liveTargets.length > 1) {
                 // Their half of a shared contact, under the same id the GM uses for it.
                 c = { ...c, id: `${c.id}__${game.user.id}`, targetUserIds: [game.user.id] };
             }
-            c.active = npcStatuses[c.id] !== false;
+            c.active = (npcStatuses[c.id] ?? npcStatuses[VA_baseId(c.id)]) !== false;
             // NuNu packaging: a contact several players share is several conversations.
             // On the GM's phone that becomes one row per player, each with its own thread,
             // so two players texting the same NPC never land in one another's messages.
@@ -347,7 +352,7 @@ class AgentOSApplication extends Application {
         }
 
         // 4. Filter by search query if present (single source of truth)
-        if (this.searchQuery) {
+        if (this.searchQuery && !ignoreSearch) {
             let q = this.searchQuery.toLowerCase();
             contacts = contacts.filter(c => c.name.toLowerCase().includes(q));
         }
@@ -2014,7 +2019,8 @@ class AgentOSApplication extends Application {
             _contactMeta = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
         } catch (e) { _contactMeta = {}; }
         data.contactMeta = _contactMeta;
-        data.npcReputations = (data.contacts || [])
+        // NuNu packaging: the Messenger's search box does not belong to this app.
+        data.npcReputations = (this._getContacts({ ignoreSearch: true }) || [])
             // NuNu packaging: the crew are not contacts. They are still in the Messenger,
             // so anyone can text them; this app is the people outside the party.
             .filter((c) => c.id !== "party_group_chat" && !c.isPlayer && !String(c.id).startsWith("pcgroup_"))
@@ -2023,8 +2029,8 @@ class AgentOSApplication extends Application {
                 name: c.name,
                 avatar: c.avatar || null,
                 isPlayer: !String(c.id).startsWith("npc_"),
-                faction: _contactMeta[c.id]?.faction || "",
-                standing: _contactMeta[c.id]?.standing || "neutral",
+                faction: _contactMeta[VA_baseId(c.id)]?.faction || "",
+                standing: _contactMeta[VA_baseId(c.id)]?.standing || "neutral",
             }));
 
         // Patch3 (CommanderCrunch69): sort option for the Fixers app.
@@ -2890,20 +2896,29 @@ class AgentOSApplication extends Application {
             if (rent !== undefined && rent !== "") row.find("input.va-rent").val(String(rent));
         });
 
-        // NuNu packaging: a debt claim pays the finder a tenth of the debt.
-        html.on("input change", "#ncpd-add-debt", (ev) => {
-            const debt = Number(String($(ev.currentTarget).val() || "").replace(/[^0-9.]/g, ""));
-            if (Number.isFinite(debt) && debt > 0) html.find("#ncpd-add-bounty").val(String(Math.round(debt / 10)));
-        });
-        // Bounties carry a wanted tier; debt claims carry a debt instead.
-        html.on("change", "#ncpd-add-kind", (ev) => {
-            const debt = String($(ev.currentTarget).val()) === "debt";
-            html.find("#ncpd-add-debt").toggle(debt);
-            html.find("#ncpd-add-status").toggle(!debt);
-            // Who can post one depends on which it is. Add to these lists as the campaign grows.
-            const sources = debt ? ["The Collector"] : ["AGPD"];
-            html.find("#ncpd-add-source").html(sources.map((x) => `<option value="${x}">${x}</option>`).join(""));
-        });
+        // NuNu packaging: the same three behaviours on both the Sys Admin form and the
+        // in-app modal. Debt fills the finder's tenth; the kind decides who can post it
+        // and which amount field shows; a wanted tier fills the bounty from the campaign table.
+        const BOUNTY_SOURCES = { bounty: ["AGPD"], debt: ["The Collector"] };
+        const TIER_PAYOUT = { "Tier: F": "100", "Tier: E": "500", "Tier: D": "1000", "Tier: C": "1500", "Tier: B": "2000", "Tier: A": "3000" };
+        for (const p of ["add", "modal"]) {
+            html.on("input change", `#ncpd-${p}-debt`, (ev) => {
+                const debt = Number(String($(ev.currentTarget).val() || "").replace(/[^0-9.]/g, ""));
+                if (Number.isFinite(debt) && debt > 0) html.find(`#ncpd-${p}-bounty`).val(String(Math.round(debt / 10)));
+            });
+            html.on("change", `#ncpd-${p}-kind`, (ev) => {
+                const debt = String($(ev.currentTarget).val()) === "debt";
+                html.find(`#ncpd-${p}-debt`).toggle(debt);
+                html.find(`#ncpd-${p}-status`).toggle(!debt);
+                html.find(`#ncpd-${p}-source`).html((BOUNTY_SOURCES[debt ? "debt" : "bounty"]).map((x) => `<option value="${x}">${x}</option>`).join(""));
+            });
+            html.on("change", `#ncpd-${p}-status`, (ev) => {
+                const field = html.find(`#ncpd-${p}-bounty`);
+                const pay = TIER_PAYOUT[String(ev.currentTarget.value)];
+                if (pay && !String(field.val() || "").trim()) field.val(pay);
+            });
+        }
+
 
         html.on("change", "#ncpd-add-status", (ev) => {
             const payouts = { "Tier: F": "100", "Tier: E": "500", "Tier: D": "1000", "Tier: C": "1500", "Tier: B": "2000", "Tier: A": "3000" };
@@ -5621,7 +5636,7 @@ class AgentOSApplication extends Application {
                     if (!profile) { ui.notifications.warn("The Garden: profile not found."); return; }
                     const contactId = `npc_garden_${pid}`;
                     let mine = game.user.getFlag("VirtualAgent", "customContacts") || [];
-                    if (!mine.some(c => c.id === contactId)) {
+                    if (!mine.some(c => c.id === VA_baseId(contactId))) {
                         mine = mine.concat([{
                             id: contactId,
                             name: profile.name || "Garden match",
@@ -5947,7 +5962,7 @@ class AgentOSApplication extends Application {
                 case 'rep-edit-npc': {
                     // NuNu packaging: edits the role label only. The name lives on the contact itself.
                     if (!game.user.isGM) break;
-                    const id = String($(ev.currentTarget).data('npc-id') || "");
+                    const id = VA_baseId($(ev.currentTarget).data('npc-id'));
                     const who = String($(ev.currentTarget).data('npc-name') || "");
                     if (!id) break;
                     let cur = {};
@@ -6073,9 +6088,10 @@ class AgentOSApplication extends Application {
                                     }
                                     for (const u of game.users) {
                                         if (u.id === game.user.id) continue;
+                                        if (onlyUser && u.id !== onlyUser) continue;
                                         let playerContacts = u.getFlag("VirtualAgent", "customContacts") || [];
-                                        if (playerContacts.some(c => c.id === id)) {
-                                            playerContacts = playerContacts.filter(c => c.id !== id);
+                                        if (playerContacts.some(c => c.id === base)) {
+                                            playerContacts = playerContacts.filter(c => c.id !== base);
                                             await u.setFlag("VirtualAgent", "customContacts", playerContacts);
                                         }
                                     }
@@ -7054,7 +7070,7 @@ class AgentOSApplication extends Application {
                 } else {
                     const editAvatar = html.find('#new-contact-avatar').val()?.trim() || "";
                     let mine = game.user.getFlag("VirtualAgent", "customContacts") || [];
-                    mine = mine.map(c => c.id === this.editContactId ? { ...c, name, avatar: editAvatar || c.avatar || null } : c);
+                    mine = mine.map(c => c.id === VA_baseId(this.editContactId) ? { ...c, name, avatar: editAvatar || c.avatar || null } : c);
                     await game.user.setFlag("VirtualAgent", "customContacts", mine);
                 }
             } else {

@@ -156,8 +156,9 @@
             id: existing?.id ?? `npc_${uid()}`,
             name: runnerName, originalName: runnerName,
             avatar: (img && img !== "icons/svg/mystery-man.svg") ? img : (existing?.avatar ?? null),
-            ownerId: game.user.id,
-            targetUserIds: [...new Set([...(existing?.targetUserIds ?? []), owner.id])],
+            ownerId: owner.id,
+            isPlayer: false,
+            targetUserIds: [owner.id],   // one owner, so the thread never splits and never moves
         };
         await game.user.setFlag(ID, "customContacts", [...gmList.filter((c) => !same(c)), record]);
         const theirs = owner.getFlag(ID, "customContacts") || [];
@@ -761,6 +762,7 @@
 
         resolveDue().catch(console.error);
         // Operators added before this version never got a contact; give them one now.
-        if (game.user.isGM) for (const r of runners()) giveContact(r.name, r.img).catch(console.error);
+        // Awaited in turn: each write has to see the previous one or only the last survives.
+        if (isActiveGM()) (async () => { for (const r of runners()) await giveContact(r.name, r.img); })().catch(console.error);
     });
 })();

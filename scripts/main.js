@@ -746,7 +746,7 @@ Hooks.on('createChatMessage', async (message, options, userId) => {
                     : true; // public message — everyone is implicit recipient
                 if (userIsRecipient && !game.user.isGM) {
                     const myContacts = game.user.getFlag("VirtualAgent", "customContacts") || [];
-                    if (!myContacts.some(c => c.id === threadId)) {
+                    if (!myContacts.some(c => c.id === threadId || String(threadId).startsWith(`${c.id}__`))) {
                         const flags = message.flags.VirtualAgent;
                         const restored = {
                             id: threadId,

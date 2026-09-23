@@ -1513,7 +1513,20 @@
                             </div>
                             <input type="text" id="ncpd-modal-name" placeholder="Name *" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom:8px;">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom: 8px;">
-                                <input type="text" id="ncpd-modal-status" placeholder="Status (Wanted / KIA…)" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; box-sizing:border-box;">
+                                {{!-- NuNu packaging: the in-app form files the same record the Sys Admin one does. --}}
+                                <select id="ncpd-modal-kind" style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
+                                    <option value="bounty">Bounty</option>
+                                    <option value="debt">Debt claim</option>
+                                </select>
+                                <select id="ncpd-modal-source" style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
+                                    <option value="AGPD">AGPD</option>
+                                </select>
+                                <select id="ncpd-modal-status" style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
+                                    <option value="">Status (none)</option>
+                                    <option value="Tier: F">Tier: F</option><option value="Tier: E">Tier: E</option><option value="Tier: D">Tier: D</option>
+                                    <option value="Tier: C">Tier: C</option><option value="Tier: B">Tier: B</option><option value="Tier: A">Tier: A (legendary)</option>
+                                </select>
+                                <input type="text" id="ncpd-modal-debt" placeholder="Debt owed (eb)" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%; display:none;">
                                 <input type="text" id="ncpd-modal-bounty" placeholder="Bounty (eb)" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; box-sizing:border-box;">
                             </div>
                             <input type="text" id="ncpd-modal-charges" placeholder="Charges (comma-separated)" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom: 8px;">
