@@ -2145,7 +2145,9 @@
                                     <option value="bounty">Bounty</option>
                                     <option value="debt">Debt claim</option>
                                 </select>
-                                <input type="text" id="ncpd-add-source" class="admin-input datapool-input" placeholder="Posted by (AGPD, a fixer, a gang…)" data-preserve-draft style="box-sizing:border-box;">
+                                <select id="ncpd-add-source" class="admin-input datapool-input" style="box-sizing:border-box;">
+                                    <option value="AGPD">AGPD</option>
+                                </select>
                                 <input type="text" id="ncpd-add-debt" class="admin-input datapool-input" placeholder="Debt owed (eb)" data-preserve-draft style="box-sizing:border-box; display:none;">
                                 {{!-- NuNu packaging: wanted tiers from the campaign's bounty table; picking one fills the bounty. --}}
                                 <select id="ncpd-add-status" class="admin-input datapool-input" style="box-sizing:border-box;">

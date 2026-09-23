@@ -2876,6 +2876,9 @@ class AgentOSApplication extends Application {
             const debt = String($(ev.currentTarget).val()) === "debt";
             html.find("#ncpd-add-debt").toggle(debt);
             html.find("#ncpd-add-status").toggle(!debt);
+            // Who can post one depends on which it is. Add to these lists as the campaign grows.
+            const sources = debt ? ["The Collector"] : ["AGPD"];
+            html.find("#ncpd-add-source").html(sources.map((x) => `<option value="${x}">${x}</option>`).join(""));
         });
 
         html.on("change", "#ncpd-add-status", (ev) => {
