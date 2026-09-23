@@ -1444,10 +1444,15 @@
                                 <div style="font-size: 0.5rem; color: #3a86ff; text-align: center; letter-spacing: 1px; margin-top: 3px; font-family: monospace;">SUBJECT</div>
                             </div>
                             <div style="flex: 1; min-width: 0;">
-                            <div style="font-size: 0.55rem; color: #3a86ff; letter-spacing: 2px; margin-bottom: 4px;">RAP SHEET</div>
+                            <div style="font-size: 0.55rem; color: #3a86ff; letter-spacing: 2px; margin-bottom: 4px;">{{#if (eq ncpdActiveRecord.kind "debt")}}DEBT CLAIM{{else}}BOUNTY{{/if}}{{#if ncpdActiveRecord.source}} &middot; {{ncpdActiveRecord.source}}{{/if}}</div>
                             <div style="font-size: 1.1rem; color: #fff; font-weight: bold; margin-bottom: 8px;">{{ncpdActiveRecord.name}}</div>
                             {{#if ncpdActiveRecord.status}}<div style="font-size: 0.65rem; color: #ffcc00; margin-bottom: 8px; padding: 2px 8px; background: rgba(255,204,0,0.1); border: 1px solid #ffcc00; border-radius: 3px; display: inline-block;">{{ncpdActiveRecord.status}}</div>{{/if}}
-                            {{#if ncpdActiveRecord.bounty}}<div style="font-size: 0.7rem; color: var(--creds-gold); margin-bottom: 8px;"><i class="fas fa-dollar-sign"></i> BOUNTY: {{ncpdActiveRecord.bounty}}</div>{{/if}}
+                            {{#if (eq ncpdActiveRecord.kind "debt")}}
+                            {{#if ncpdActiveRecord.debt}}<div style="font-size: 0.7rem; color: #ddd; margin-bottom: 4px;"><i class="fas fa-file-invoice-dollar"></i> OWES: {{ncpdActiveRecord.debt}}eb</div>{{/if}}
+                            {{#if ncpdActiveRecord.bounty}}<div style="font-size: 0.7rem; color: var(--creds-gold); margin-bottom: 8px;"><i class="fas fa-hand-holding-dollar"></i> FINDER'S FEE: {{ncpdActiveRecord.bounty}}eb &middot; alive</div>{{/if}}
+                            {{else}}
+                            {{#if ncpdActiveRecord.bounty}}<div style="font-size: 0.7rem; color: var(--creds-gold); margin-bottom: 8px;"><i class="fas fa-dollar-sign"></i> BOUNTY: {{ncpdActiveRecord.bounty}}eb</div>{{/if}}
+                            {{/if}}
                             <div style="font-size: 0.55rem; color: #888; letter-spacing: 1px; margin-top: 10px;">CHARGES</div>
                             <div style="font-size: 0.75rem; color: #ddd; margin-bottom: 8px; white-space: pre-wrap;">{{#if ncpdActiveRecord.charges}}{{ncpdActiveRecord.charges}}{{else}}—{{/if}}</div>
                             {{#if ncpdActiveRecord.notes}}
@@ -1472,7 +1477,7 @@
                             <div style="flex: 1; min-width: 0;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <strong style="color: #fff;">{{this.name}}</strong>
-                                    {{#if this.bounty}}<span style="color: var(--creds-gold); font-size: 0.7rem;">{{this.bounty}}</span>{{/if}}
+                                    {{#if this.amountLabel}}<span style="color: var(--creds-gold); font-size: 0.7rem; white-space: nowrap;">{{this.amountLabel}}</span>{{/if}}
                                 </div>
                                 {{#if this.source}}<div style="font-size: 0.55rem; color: #7f8a99; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.source}}</div>{{/if}}
                                 {{#if this.charges}}<div style="font-size: 0.65rem; color: #aaa; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{this.charges}}</div>{{/if}}
@@ -1489,7 +1494,7 @@
                             <div style="flex: 1; min-width: 0;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <strong style="color: #fff;">{{this.name}}</strong>
-                                    {{#if this.bounty}}<span style="color: var(--creds-gold); font-size: 0.7rem;">{{this.bounty}}</span>{{/if}}
+                                    {{#if this.amountLabel}}<span style="color: var(--creds-gold); font-size: 0.7rem; white-space: nowrap;">{{this.amountLabel}}</span>{{/if}}
                                 </div>
                                 {{#if this.source}}<div style="font-size: 0.55rem; color: #7f8a99; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.source}}</div>{{/if}}
                                 {{#if this.charges}}<div style="font-size: 0.65rem; color: #aaa; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{this.charges}}</div>{{/if}}
