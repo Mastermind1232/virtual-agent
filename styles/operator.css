@@ -87,8 +87,9 @@
 .nunu-contacts .nc-danger { background: transparent; border: 1px solid #4a3030; color: #a97070; margin-right: auto; }
 .nunu-contacts .nc-empty { color: #6d7681; font-size: 13px; text-align: center; padding: 34px 10px; }
 
-/* The actors-tab button that opens it. */
-.nunu-contacts-btn { width: 100%; }
+/* The actors-tab button that opens it: its own row, full width, above the Improvement buttons. */
+.nunu-contacts-row { flex: 0 0 100%; width: 100%; margin: 4px 0; }
+.nunu-contacts-row .nunu-contacts-btn { width: 100%; }
 
 /* NuNu packaging: a contact's affiliation and, when they have one, their Role. */
 #agent-view-rep .rep-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }

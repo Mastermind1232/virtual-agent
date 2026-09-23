@@ -189,9 +189,13 @@
         btn.innerHTML = '<i class="fas fa-address-book"></i> Contacts';
         btn.addEventListener("click", () => globalThis.VirtualAgentContacts.open());
 
-        // Under the character-creator button when one is there, otherwise at the foot of the tab.
+        // Its own full-width row under the character creator, above the Improvement buttons,
+        // rather than squeezing into their flex row.
         const creator = Array.from(root.querySelectorAll("button")).find((b) => /character creator/i.test(b.textContent));
-        if (creator?.parentElement) creator.parentElement.insertBefore(btn, creator.nextSibling);
-        else (root.querySelector(".directory-footer") ?? root.querySelector(".directory-header") ?? root).appendChild(btn);
+        const row = document.createElement("div");
+        row.className = "nunu-contacts-row";
+        row.appendChild(btn);
+        if (creator) (creator.closest("div") ?? creator).after(row);
+        else (root.querySelector(".directory-footer") ?? root.querySelector(".directory-header") ?? root).appendChild(row);
     });
 })();
