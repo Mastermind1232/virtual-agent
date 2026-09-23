@@ -2834,6 +2834,15 @@ class AgentOSApplication extends Application {
 
     activateListeners(html) {
         super.activateListeners(html);
+
+        // NuNu packaging: choosing a wanted tier fills the bounty from the campaign's
+        // bounty table. Tier A is open-ended, so it seeds the floor and waits for a number.
+        html.on("change", "#ncpd-add-status", (ev) => {
+            const payouts = { "Tier: F": "100", "Tier: E": "500", "Tier: D": "1000", "Tier: C": "1500", "Tier: B": "2000", "Tier: A": "3000" };
+            const field = html.find("#ncpd-add-bounty");
+            const pay = payouts[String(ev.currentTarget.value)];
+            if (pay && !String(field.val() || "").trim()) field.val(pay);
+        });
         console.log(`[Virtual Agent] Kernel active. Module version: ${game.modules?.get('VirtualAgent')?.version || 'unknown'}`);
 
         // --- AUTHORITATIVE [DATA-ACTION] LISTENERS ---

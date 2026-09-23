@@ -1505,7 +1505,7 @@
                             <input type="text" id="ncpd-modal-name" placeholder="Name *" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom:8px;">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom: 8px;">
                                 <input type="text" id="ncpd-modal-status" placeholder="Status (Wanted / KIA…)" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; box-sizing:border-box;">
-                                <input type="text" id="ncpd-modal-bounty" placeholder="Bounty (5,000eb)" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; box-sizing:border-box;">
+                                <input type="text" id="ncpd-modal-bounty" placeholder="Bounty (eb)" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; box-sizing:border-box;">
                             </div>
                             <input type="text" id="ncpd-modal-charges" placeholder="Charges (comma-separated)" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom: 8px;">
                             <textarea id="ncpd-modal-notes" rows="3" placeholder="Notes (priors, MO, last known location…)" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom: 8px; resize:none;"></textarea>
@@ -2126,10 +2126,13 @@
                         {{#if isGM}}
                         <div class="admin-section">
                             <div class="admin-section-title">AGPD Crime Database</div>
-                            <div class="admin-hint" style="margin-bottom: 8px;">File rap sheets the table can look up from the AGPD app. Bounty + status are optional.</div>
+                            <div class="admin-hint" style="margin-bottom: 8px;">File rap sheets the table can look up from the AGPD app. Pick a wanted tier and the bounty fills itself; both stay editable.</div>
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom: 6px;">
                                 <input type="text" id="ncpd-add-name" class="admin-input datapool-input" placeholder="Name *" data-preserve-draft style="box-sizing:border-box;">
-                                <input type="text" id="ncpd-add-status" class="admin-input datapool-input" placeholder="Status (Wanted / KIA…)" data-preserve-draft style="box-sizing:border-box;">
+                                {{!-- NuNu packaging: wanted tiers from the campaign's bounty table; picking one fills the bounty. --}}
+                                <select id="ncpd-add-status" class="admin-input datapool-input" style="box-sizing:border-box;">
+                                    <option value="">Status (none)</option><option value="Tier: F">Tier: F</option><option value="Tier: E">Tier: E</option><option value="Tier: D">Tier: D</option><option value="Tier: C">Tier: C</option><option value="Tier: B">Tier: B</option><option value="Tier: A">Tier: A (legendary)</option><option value="KIA">KIA</option>
+                                </select>
                                 <input type="text" id="ncpd-add-bounty" class="admin-input datapool-input" placeholder="Bounty (5,000eb)" data-preserve-draft style="box-sizing:border-box;">
                                 <input type="text" id="ncpd-add-charges" class="admin-input datapool-input" placeholder="Charges (comma-separated)" data-preserve-draft style="box-sizing:border-box;">
                             </div>
