@@ -2015,7 +2015,9 @@ class AgentOSApplication extends Application {
         } catch (e) { _contactMeta = {}; }
         data.contactMeta = _contactMeta;
         data.npcReputations = (data.contacts || [])
-            .filter((c) => c.id !== "party_group_chat")
+            // NuNu packaging: the crew are not contacts. They are still in the Messenger,
+            // so anyone can text them; this app is the people outside the party.
+            .filter((c) => c.id !== "party_group_chat" && !c.isPlayer && !String(c.id).startsWith("pcgroup_"))
             .map((c) => ({
                 id: c.id,
                 name: c.name,
