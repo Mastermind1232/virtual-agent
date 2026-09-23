@@ -219,6 +219,16 @@ class AgentOSApplication extends Application {
         // 1. Add other users as contacts
         game.users.forEach(u => {
             if (u.id === game.user.id) return;
+            // NuNu packaging: the GM is not a person in the fiction, so they are not
+            // listed as someone to text. An existing thread with them still shows,
+            // so a GM who does DM a player is not lost.
+            if (u.isGM && !game.user.isGM) {
+                const hasHistory = game.messages.some((m) => {
+                    const f = m.flags?.VirtualAgent;
+                    return f?.isAgentMessage && (f.threadId === u.id || (m.author?.id === u.id && f.threadId === game.user.id));
+                });
+                if (!hasHistory) return;
+            }
 
             let isHidden = u.getFlag("VirtualAgent", "hideOnlineStatus") || false;
             let isJammed = u.getFlag("VirtualAgent", "isJammed") || false;
