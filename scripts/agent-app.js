@@ -1,3 +1,11 @@
+/* NuNu packaging: a character's Role in Cyberpunk RED is an Item of type "role",
+   not `system.externalData.role`, which does not exist in the system's data model.
+   Upstream reads the missing field, so every Agent ID reads "Citizen". */
+function VA_roleOf(actor) {
+    if (!actor) return "";
+    const role = (actor.itemTypes?.role ?? [])[0];
+    return role?.name || actor.system?.externalData?.role || "";
+}
 /* NuNu packaging: a player is shown by their Agent handle, else their character's name, else their Foundry user name. */
 function VA_displayName(u) {
     const handle = u?.getFlag?.("VirtualAgent", "idOverrides")?.handle; if (handle) return handle;
@@ -788,7 +796,7 @@ class AgentOSApplication extends Application {
         // --- HARDWARE IDENTITY & BALANCES ---
         data.actorId = actor?.id || "VIRTUAL";
         data.actorUuid = this.actorUuid || "User." + game.user.id;
-        data.actorRole = actor?.system?.externalData?.role || "Citizen";
+        data.actorRole = VA_roleOf(actor) || "Citizen";
         data.actorHandle = actor?.system?.externalData?.handle || game.user.name;
         data.actorIdShort = (actor?.id || game.user.id).substring(0, 8).toUpperCase();
         data.isVirtualWallet = isVirtualWallet;
@@ -826,7 +834,7 @@ class AgentOSApplication extends Application {
                 // displayName when reviewing their card, so the GM panel
                 // matches what the player sees on their own device.
                 data.idViewName = tOverrides.displayName || tActor?.name || targetUser.name;
-                data.idViewRole = tActor?.system?.externalData?.role || "Citizen";
+                data.idViewRole = VA_roleOf(tActor) || "Citizen";
                 data.idViewHandle = tOverrides.handle || tActor?.system?.externalData?.handle || targetUser.name;
                 data.idViewIdShort = (tActor?.id || targetUser.id).substring(0, 8).toUpperCase();
                 data.idViewSinStatus = tOverrides.sinStatus || "Registered";
@@ -1970,7 +1978,7 @@ class AgentOSApplication extends Application {
                 name: c.name,
                 avatar: c.avatar || null,
                 isPlayer: !String(c.id).startsWith("npc_"),
-                faction: _contactMeta[c.id]?.role || "",
+                faction: _contactMeta[c.id]?.role || VA_roleOf(game.users.get(c.id)?.character) || "",
                 standing: _contactMeta[c.id]?.standing || "neutral",
             }));
 
