@@ -1501,7 +1501,7 @@ class AgentOSApplication extends Application {
         } else if (this.activeContactId && game.users.get(this.activeContactId)) {
             data.privacyMode = "private";
             const targetU = game.users.get(this.activeContactId);
-            const targetName = (targetU?.getFlag("VirtualAgent", "idOverrides")?.handle) || targetU?.name || "recipient";
+            const targetName = targetU ? VA_displayName(targetU) : "recipient";
             // Patch4.7 (Gotto): tighten wording. Players were unsure whether
             // "PRIVATE · X only (GMs can read)" meant "ONLY X+GM can read" or
             // "X+GM plus maybe others". Explicit "ONLY YOU + " + recipient + " + GM" leaves no room.
