@@ -189,13 +189,12 @@
         btn.innerHTML = '<i class="fas fa-address-book"></i> Contacts';
         btn.addEventListener("click", () => globalThis.VirtualAgentContacts.open());
 
-        // Its own full-width row under the character creator, above the Improvement buttons,
-        // rather than squeezing into their flex row.
+        // Sits with the other directory buttons, above the Improvement ones. No wrapper and
+        // no flex overrides: a full-width row of its own pushed them out of the footer.
+        const improvement = Array.from(root.querySelectorAll("button")).find((b) => /improvement/i.test(b.textContent));
         const creator = Array.from(root.querySelectorAll("button")).find((b) => /character creator/i.test(b.textContent));
-        const row = document.createElement("div");
-        row.className = "nunu-contacts-row";
-        row.appendChild(btn);
-        if (creator) (creator.closest("div") ?? creator).after(row);
-        else (root.querySelector(".directory-footer") ?? root.querySelector(".directory-header") ?? root).appendChild(row);
+        const anchor = improvement ?? creator;
+        if (anchor?.parentElement) anchor.parentElement.insertBefore(btn, improvement ? improvement : creator.nextSibling);
+        else (root.querySelector(".directory-footer") ?? root.querySelector(".directory-header") ?? root).appendChild(btn);
     });
 })();
