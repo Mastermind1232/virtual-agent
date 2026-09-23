@@ -271,8 +271,8 @@
                             {{!-- Patch4 (Ley): privacy indicator so players
                                   can tell at a glance whether their messages
                                   are private or visible to the whole party. --}}
-                            {{#if privacyLabel}}
-                            <span style="font-size:0.5rem; color:{{#if (eq privacyMode 'group')}}#ffcc00{{else}}#7fffd4{{/if}}; font-family:monospace; letter-spacing:0.5px; text-transform:uppercase; opacity:0.85;"><i class="fas fa-{{#if (eq privacyMode 'group')}}users{{else}}lock{{/if}}" style="margin-right:3px;"></i>{{privacyLabel}}</span>
+                            {{!-- NuNu packaging: the who-can-read-this line is removed. --}}
+ font-family:monospace; letter-spacing:0.5px; text-transform:uppercase; opacity:0.85;"><i class="fas fa-{{#if (eq privacyMode 'group')}}users{{else}}lock{{/if}}" style="margin-right:3px;"></i>{{privacyLabel}}</span>
                             {{/if}}
                             {{!-- Patch4.8.3: GM voice switcher in multi-NPC
                                   group threads. Single-NPC threads keep the
