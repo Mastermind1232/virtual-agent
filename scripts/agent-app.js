@@ -4532,7 +4532,7 @@ class AgentOSApplication extends Application {
                     const isNpcThread = this.activeContactId?.startsWith("npc_");
                     const speakerAlias = (game.user.isGM && isNpcThread && threadContact)
                         ? (threadContact.originalName || threadContact.name)
-                        : (game.user.name + " (Agent)");
+                        : (VA_displayName(game.user) + " (Agent)");
                     const npcOverrideName = (game.user.isGM && isNpcThread && threadContact) ? (threadContact.originalName || threadContact.name) : undefined;
                     // 5.5.27 (live-Foundry screenshot): cross-user avatar resolution.
                     // When a PLAYER creates an NPC contact and uploads its
@@ -6660,7 +6660,7 @@ class AgentOSApplication extends Application {
                 ? (threadContact.originalName || threadContact.name)
                 : (groupNpcOverride
                     ? (groupNpcOverride.originalName || groupNpcOverride.name)
-                    : (game.user.name + " (Agent)"));
+                    : (VA_displayName(game.user) + " (Agent)"));
 
             const npcOverrideName = (game.user.isGM && isNpcThread && threadContact)
                 ? (threadContact.originalName || threadContact.name)
