@@ -2009,7 +2009,8 @@ class AgentOSApplication extends Application {
         // then friendly, neutral, hostile.
         const STANDING_WEIGHT = { allied: 0, friendly: 1, neutral: 2, hostile: 3 };
         const STANDING_LABEL  = { allied: "ALLIED", friendly: "FRIENDLY", neutral: "NEUTRAL", hostile: "HOSTILE" };
-        const sortMode = this._repSort || "default";
+        // NuNu packaging: A to Z is the default; there is no unsorted view.
+        const sortMode = this._repSort || "alpha";
         data.repSort = sortMode;
         if (Array.isArray(data.npcReputations) && data.npcReputations.length) {
             const arr = data.npcReputations.slice();
@@ -2033,7 +2034,6 @@ class AgentOSApplication extends Application {
             data.npcReputations = arr;
         }
         data.repSortOptions = [
-            { id: "default",  label: "Default order" },
             { id: "alpha",    label: "A → Z" },
             { id: "faction",  label: "By role" }
         ];
