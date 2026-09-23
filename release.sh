@@ -14,8 +14,8 @@ echo "── checking ${VERSION}"
 for f in scripts/*.js; do node --check "$f"; done
 echo "   javascript parses"
 
-npx -y handlebars@4 templates/agent-ui.hbs > /dev/null
-echo "   template compiles"
+for f in templates/*.hbs; do npx -y handlebars@4 "$f" > /dev/null; done
+echo "   templates compile"
 
 node -e '
 const h = require("fs").readFileSync("templates/agent-ui.hbs", "utf8");
@@ -35,6 +35,9 @@ if (b !== 0) { console.error(`  stylesheet braces unbalanced by ${b}`); process.
 echo "   stylesheet balances"
 
 git diff --quiet && git diff --cached --quiet || { git add -A; git commit -qm "${VERSION}: ${NOTES}"; }
+grep -q "v${VERSION}/module.zip" module.json || { echo "  module.json download URL does not point at v${VERSION}"; exit 1; }
+echo "   manifest points at this version"
+
 git push -q
 zip -qr module.zip . -x ".git/*" -x "module.zip" -x "release.sh"
 gh release create "v${VERSION}" module.zip -t "Virtual Agent ${VERSION}" -n "${NOTES}" > /dev/null

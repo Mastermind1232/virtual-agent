@@ -1,0 +1,73 @@
+{{!-- NuNu packaging: the GM's book of everyone the party can call. --}}
+<div class="nunu-contacts-body">
+
+    <div class="nc-toolbar">
+        <label>Sort
+            <select data-sort>
+                <option value="name" {{#if (eq sort "name")}}selected{{/if}}>Name</option>
+                <option value="faction" {{#if (eq sort "faction")}}selected{{/if}}>Affiliation</option>
+                <option value="standing" {{#if (eq sort "standing")}}selected{{/if}}>Attitude</option>
+            </select>
+        </label>
+        <button type="button" data-new><i class="fas fa-plus"></i> New contact</button>
+    </div>
+
+    {{#each contacts}}
+    <div class="nc-card {{#if this.open}}is-open{{/if}}" data-card>
+
+        <div class="nc-row" data-open="{{this.id}}">
+            <img src="{{#if this.avatar}}{{this.avatar}}{{else}}icons/svg/mystery-man.svg{{/if}}" alt="">
+            <span class="nc-who">
+                <span class="nc-name">{{this.name}}</span>
+                <span class="nc-sub">
+                    <span class="nc-chip" style="color: {{this.standingColour}};">{{#if this.faction}}{{this.faction}}{{else}}Unaffiliated{{/if}}</span>
+                    <span class="nc-standing">{{this.standingLabel}}</span>
+                </span>
+            </span>
+            <span class="nc-holders">{{#if this.holderNames}}{{this.holderNames}}{{else}}on nobody's phone{{/if}}</span>
+        </div>
+
+        {{#if this.open}}
+        <div class="nc-edit">
+            <div class="nc-fields">
+                <label>Name<input type="text" data-field="name" value="{{this.name}}"></label>
+                <label>Affiliation<input type="text" data-field="faction" value="{{this.faction}}" placeholder="AGPD, Fenixxx, The Bunnies…"></label>
+                <label>Attitude to the party
+                    <select data-field="standing">
+                        {{#each ../standings}}<option value="{{this.id}}" {{#if (eq this.id ../this.standing)}}selected{{/if}}>{{this.label}}</option>{{/each}}
+                    </select>
+                </label>
+                <label class="nc-avatar">Portrait
+                    <span class="nc-avatar-row">
+                        <input type="text" data-field="avatar" value="{{this.avatar}}" placeholder="Image path">
+                        <button type="button" data-browse title="Browse"><i class="fas fa-file-import"></i></button>
+                    </span>
+                </label>
+            </div>
+
+            <div class="nc-party">
+                <span class="nc-party-label">Who has their number</span>
+                <div class="nc-party-grid">
+                    {{#each this.party}}
+                    <label class="nc-person">
+                        <input type="checkbox" data-holder="{{this.id}}" {{#if this.has}}checked{{/if}}>
+                        <img src="{{this.img}}" alt="">
+                        <span>{{this.name}}</span>
+                    </label>
+                    {{/each}}
+                </div>
+            </div>
+
+            <div class="nc-actions">
+                <button type="button" class="nc-danger" data-delete="{{this.id}}"><i class="fas fa-trash"></i> Delete</button>
+                <button type="button" class="nc-save" data-save="{{this.id}}"><i class="fas fa-check"></i> Save</button>
+            </div>
+        </div>
+        {{/if}}
+
+    </div>
+    {{else}}
+    <p class="nc-empty">Nobody in the book yet. Add a contact and tick who has their number.</p>
+    {{/each}}
+
+</div>

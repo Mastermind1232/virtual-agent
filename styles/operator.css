@@ -38,3 +38,54 @@
 }
 #agent-view-rep .rep-role.rep-allied { color: #64ffda; }
 #agent-view-rep .rep-role.rep-hostile { color: #ff3366; }
+
+/* ------------------------------------------------------------------ *
+ *  NuNu packaging: the Contacts manager, the GM's book behind the phones.
+ * ------------------------------------------------------------------ */
+.nunu-contacts .window-content { background: #12151a; color: #e6e9ee; padding: 0; }
+.nunu-contacts-body { padding: 12px 14px 18px; font-family: "Inter", system-ui, sans-serif; }
+
+.nunu-contacts .nc-toolbar { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 12px; }
+.nunu-contacts .nc-toolbar label { flex: 0 0 auto; font-size: 11px; color: #8b9399; display: flex; flex-direction: column; gap: 3px; }
+.nunu-contacts .nc-toolbar select { background: #1a1f26; color: #e6e9ee; border: 1px solid #2c333c; border-radius: 4px; padding: 4px 6px; height: 28px; }
+.nunu-contacts .nc-toolbar button { margin-left: auto; flex: 0 0 auto; width: auto; height: 28px; background: rgba(0,255,204,.12); border: 1px solid #00ffcc; color: #00ffcc; border-radius: 4px; padding: 0 12px; font-size: 12px; cursor: pointer; }
+
+.nunu-contacts .nc-card { border: 1px solid #242a33; border-radius: 6px; margin-bottom: 8px; background: #161a20; overflow: hidden; }
+.nunu-contacts .nc-card.is-open { border-color: #00ffcc; }
+
+.nunu-contacts .nc-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; cursor: pointer; }
+.nunu-contacts .nc-row img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 1px solid #2c333c; flex: 0 0 auto; }
+.nunu-contacts .nc-who { flex: 1; min-width: 0; }
+.nunu-contacts .nc-name { display: block; font-size: 14px; font-weight: 600; color: #fff; }
+.nunu-contacts .nc-sub { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
+.nunu-contacts .nc-chip { border: 1px solid currentColor; border-radius: 3px; padding: 0 5px; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.nunu-contacts .nc-standing { font-size: 11px; color: #8b9399; }
+.nunu-contacts .nc-holders { flex: 0 1 38%; text-align: right; font-size: 11px; color: #8b9399; }
+
+.nunu-contacts .nc-edit { border-top: 1px solid #242a33; padding: 12px 11px; }
+.nunu-contacts .nc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.nunu-contacts .nc-fields label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #8b9399; }
+.nunu-contacts .nc-fields input,
+.nunu-contacts .nc-fields select { background: #1a1f26; color: #e6e9ee; border: 1px solid #2c333c; border-radius: 4px; padding: 5px 7px; height: 28px; font-size: 12px; }
+.nunu-contacts .nc-avatar { grid-column: 1 / -1; }
+.nunu-contacts .nc-avatar-row { display: flex; gap: 5px; }
+.nunu-contacts .nc-avatar-row input { flex: 1; }
+.nunu-contacts .nc-avatar-row button { flex: 0 0 auto; width: 30px; height: 28px; background: #1a1f26; border: 1px solid #2c333c; color: #8b9399; border-radius: 4px; cursor: pointer; }
+
+.nunu-contacts .nc-party { margin-top: 13px; }
+.nunu-contacts .nc-party-label { display: block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #6d7681; margin-bottom: 6px; }
+.nunu-contacts .nc-party-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.nunu-contacts .nc-person { display: flex; align-items: center; gap: 6px; background: #1a1f26; border: 1px solid #242a33; border-radius: 4px; padding: 5px 7px; font-size: 12px; cursor: pointer; }
+.nunu-contacts .nc-person:has(input:checked) { border-color: #00ffcc; background: rgba(0,255,204,.08); }
+.nunu-contacts .nc-person input { flex: 0 0 auto; margin: 0; }
+.nunu-contacts .nc-person img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.nunu-contacts .nc-person span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.nunu-contacts .nc-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 13px; }
+.nunu-contacts .nc-actions button { width: auto; height: 28px; border-radius: 4px; padding: 0 13px; font-size: 12px; cursor: pointer; }
+.nunu-contacts .nc-save { background: rgba(0,255,204,.12); border: 1px solid #00ffcc; color: #00ffcc; }
+.nunu-contacts .nc-danger { background: transparent; border: 1px solid #4a3030; color: #a97070; margin-right: auto; }
+.nunu-contacts .nc-empty { color: #6d7681; font-size: 13px; text-align: center; padding: 34px 10px; }
+
+/* The actors-tab button that opens it. */
+.nunu-contacts-btn { width: 100%; }
