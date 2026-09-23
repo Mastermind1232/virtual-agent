@@ -198,6 +198,17 @@ Hooks.once('init', function () {
     });
 
     // NuNu packaging: role and standing per contact id, so the Contacts app needs no list of its own.
+    game.settings.register("VirtualAgent", "textNotices", {
+        name: "Announce incoming texts",
+        hint: "Pops a notice in the corner naming the sender and the first line of their message. Click it to open the thread.",
+        scope: "client", config: true, type: Boolean, default: true,
+    });
+    game.settings.register("VirtualAgent", "textNoticeVolume", {
+        name: "Text notice volume",
+        hint: "Volume of the chime when a text arrives. Zero is silent.",
+        scope: "client", config: true, type: Number, default: 0.4,
+        range: { min: 0, max: 1, step: 0.1 },
+    });
     game.settings.register("VirtualAgent", "contactMeta", {
         name: "Contact roles and standing (JSON)",
         hint: "Set from the Contacts app. Keyed by contact id.",
@@ -701,9 +712,13 @@ Hooks.on('createChatMessage', async (message, options, userId) => {
         let unreads = game.user.getFlag("VirtualAgent", "unreads") || {};
         let app = globalThis.AgentDeviceApp?.ui;
 
-        if (!(app?.rendered && app.currentView === 'chat-thread' && app.activeContactId === threadId)) {
+        const looking = app?.rendered && app.currentView === 'chat-thread' && app.activeContactId === threadId;
+        if (!looking) {
             unreads[threadId] = (unreads[threadId] || 0) + 1;
             await game.user.setFlag("VirtualAgent", "unreads", unreads);
+            // NuNu packaging: a text you are not already reading announces itself, with who
+            // it is from and the opening words, plus a short chime. Clicking it opens the thread.
+            _agentAnnounce(message);
         }
 
         // Patch4.8 (player report): if the recipient deleted this NPC thread
@@ -868,4 +883,44 @@ Hooks.on("updateJournalEntry", (doc, changes) => {
 for (const h of ["createToken", "updateToken", "deleteToken"]) {
     // A beat later, so the token's new position is readable before the phone redraws.
     Hooks.on(h, (doc) => { if (doc.parent?.id === globalThis.VirtualAgentWorldMap.scene()?.id) setTimeout(_queueAgentRender, 60); });
+}
+
+
+/* ------------------------------------------------------------------ *
+ *  NuNu packaging: incoming-text notice.
+ *
+ *  Upstream counts unread texts but shows nothing when the phone is
+ *  closed, so a message mid-scene is easy to miss entirely.
+ * ------------------------------------------------------------------ */
+
+function _agentAnnounce(message) {
+    try {
+        if (!game.settings.get("VirtualAgent", "textNotices")) return;
+    } catch (e) { return; }
+
+    const flags = message.flags?.VirtualAgent ?? {};
+    const from = flags.overrideName
+        || flags.targetName
+        || (message.author?.character?.name)
+        || message.author?.name
+        || "Unknown";
+
+    const text = String(message.content ?? "")
+        .replace(/<br\s*\/?>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    const preview = text.length > 90 ? `${text.slice(0, 90)}…` : text;
+
+    // Foundry's notify() returns nothing in v12, so there is no element to bind a
+    // click to. The notice names the sender and the opening words; the phone is a
+    // click away on the calendar widget.
+    ui.notifications?.info?.(`${from}: ${preview || "(attachment)"}`, { permanent: false, console: false });
+
+    try {
+        const volume = game.settings.get("VirtualAgent", "textNoticeVolume");
+        const Audio = foundry.audio?.AudioHelper ?? globalThis.AudioHelper;
+        if (volume > 0 && Audio?.play) Audio.play({ src: "sounds/notify.wav", volume, autoplay: true, loop: false }, false);
+    } catch (e) { /* no sound is not worth an error */ }
 }
