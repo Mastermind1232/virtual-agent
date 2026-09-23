@@ -89,3 +89,9 @@
 
 /* The actors-tab button that opens it. */
 .nunu-contacts-btn { width: 100%; }
+
+/* NuNu packaging: a contact's affiliation and, when they have one, their Role. */
+#agent-view-rep .rep-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
+#agent-view-rep .rep-tags .rep-role { margin-top: 0; }
+#agent-view-rep .rep-role.rep-job { color: #8ab4ff; }
+.nunu-contacts .nc-role { border: 1px solid #3c5578; border-radius: 3px; padding: 0 5px; font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #8ab4ff; }

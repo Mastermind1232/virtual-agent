@@ -2031,6 +2031,7 @@ class AgentOSApplication extends Application {
                 isPlayer: !String(c.id).startsWith("npc_"),
                 faction: _contactMeta[VA_baseId(c.id)]?.faction || "",
                 standing: _contactMeta[VA_baseId(c.id)]?.standing || "neutral",
+                role: _contactMeta[VA_baseId(c.id)]?.role || "",
             }));
 
         // Patch3 (CommanderCrunch69): sort option for the Fixers app.

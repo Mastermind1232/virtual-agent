@@ -21,6 +21,7 @@
                 <span class="nc-name">{{this.name}}</span>
                 <span class="nc-sub">
                     <span class="nc-chip" style="color: {{this.standingColour}};">{{#if this.faction}}{{this.faction}}{{else}}Unaffiliated{{/if}}</span>
+                    {{#if this.role}}<span class="nc-role">{{this.role}}</span>{{/if}}
                     <span class="nc-standing">{{this.standingLabel}}</span>
                 </span>
             </span>
@@ -32,6 +33,12 @@
             <div class="nc-fields">
                 <label>Name<input type="text" data-field="name" value="{{this.name}}"></label>
                 <label>Affiliation<input type="text" data-field="faction" value="{{this.faction}}" placeholder="AGPD, Fenixxx, The Bunnies…"></label>
+                <label>Role
+                    <select data-field="role">
+                        <option value="">N/A</option>
+                        {{#each ../roles}}<option value="{{this}}" {{#if (eq this ../this.role)}}selected{{/if}}>{{this}}</option>{{/each}}
+                    </select>
+                </label>
                 <label>Attitude to the party
                     <select data-field="standing">
                         {{#each ../standings}}<option value="{{this.id}}" {{#if (eq this.id ../this.standing)}}selected{{/if}}>{{this.label}}</option>{{/each}}

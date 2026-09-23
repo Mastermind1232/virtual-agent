@@ -24,6 +24,9 @@
     ];
     const standing = (id) => STANDINGS.find((s) => s.id === id) ?? STANDINGS[1];
 
+    /** The ten Roles of Cyberpunk RED. Most people have none, so the list starts empty. */
+    const ROLES = ["Exec", "Fixer", "Lawman", "Media", "Medtech", "Netrunner", "Nomad", "Rockerboy", "Solo", "Tech"];
+
     const readMeta = () => {
         try { const raw = game.settings.get(ID, "contactMeta"); return typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {}); }
         catch (e) { return {}; }
@@ -49,6 +52,7 @@
             holders: [...c.holders],
             faction: meta[c.id]?.faction || "",
             standing: meta[c.id]?.standing || "neutral",
+            role: meta[c.id]?.role || "",
         }));
     }
 
@@ -104,6 +108,7 @@
             return {
                 sort: this.sort,
                 standings: STANDINGS,
+                roles: ROLES,
                 party,
                 editing: this.editing,
                 contacts: list.map((c) => ({
@@ -142,11 +147,12 @@
                 const avatar = (card.find("[data-field=avatar]").val() || "").trim();
                 const faction = (card.find("[data-field=faction]").val() || "").trim();
                 const stand = card.find("[data-field=standing]").val() || "neutral";
+                const role = card.find("[data-field=role]").val() || "";
                 const holders = card.find("[data-holder]:checked").toArray().map((el) => el.dataset.holder);
 
                 await save({ id, name, avatar, holders });
                 const meta = readMeta();
-                meta[id] = { ...(meta[id] || {}), faction, standing: stand };
+                meta[id] = { ...(meta[id] || {}), faction, standing: stand, role };
                 await writeMeta(meta);
                 ui.notifications.info(`Contacts: ${name} saved.`);
                 this.editing = null;

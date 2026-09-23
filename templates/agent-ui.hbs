@@ -1393,7 +1393,7 @@
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                                     <div>
                                         <div style="font-size: 0.8rem; color: #fff; font-weight: 600;">{{this.name}}</div>
-                                        <div class="rep-role rep-{{this.standing}}">{{#if this.faction}}{{this.faction}}{{else}}Unaffiliated{{/if}}</div>
+                                        <div class="rep-tags"><span class="rep-role rep-{{this.standing}}">{{#if this.faction}}{{this.faction}}{{else}}Unaffiliated{{/if}}</span>{{#if this.role}}<span class="rep-role rep-job">{{this.role}}</span>{{/if}}</div>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 6px;">
                                         {{!-- Patch4.7 (Gotto): jump to a Messenger thread for this fixer. --}}
