@@ -1077,7 +1077,7 @@ class AgentOSApplication extends Application {
             //   NCPD database UI hue), Ziggurat deep Arasaka-tower violet + data-fortress
             //   icon (Ziggurat is a Net data tower in 2077 lore, not a city skyline),
             //   The Garden Cyberpunk neon magenta (Black Chrome / Edgerunner dating palette).
-            { id: 'ncpd',   label: 'AGPD DB',   icon: 'fas fa-fingerprint',    color: '#3a86ff',            iconImg: null },
+            { id: 'ncpd',   label: 'BOUNTIES',   icon: 'fas fa-fingerprint',    color: '#3a86ff',            iconImg: null },
             { id: 'ziggurat', label: 'ZIGGURAT', icon: 'fas fa-database',      color: '#7c4dff',            iconImg: null },
             { id: 'garden', label: 'THE GARDEN',icon: 'fas fa-seedling',       color: '#ff1493',            iconImg: null }
         ];
@@ -2060,6 +2060,12 @@ class AgentOSApplication extends Application {
         } else {
             data.ncpdRapSheetsView = data.ncpdRapSheets;
         }
+        {
+            // NuNu packaging: bounties and debt claims are two lists in one app.
+            const view = data.ncpdRapSheetsView || [];
+            data.bountyList = view.filter((r) => r.kind !== "debt");
+            data.debtList = view.filter((r) => r.kind === "debt");
+        }
         data.ncpdActiveId = this._ncpdActiveId || null;
         data.ncpdActiveRecord = data.ncpdActiveId
             ? data.ncpdRapSheets.find(s => s.id === data.ncpdActiveId) || null
@@ -2858,6 +2864,18 @@ class AgentOSApplication extends Application {
             const rent = $(ev.currentTarget).find("option:selected").data("rent");
             const row = $(ev.currentTarget).closest("[data-housing-row]");
             if (rent !== undefined && rent !== "") row.find("input.va-rent").val(String(rent));
+        });
+
+        // NuNu packaging: a debt claim pays the finder a tenth of the debt.
+        html.on("input change", "#ncpd-add-debt", (ev) => {
+            const debt = Number(String($(ev.currentTarget).val() || "").replace(/[^0-9.]/g, ""));
+            if (Number.isFinite(debt) && debt > 0) html.find("#ncpd-add-bounty").val(String(Math.round(debt / 10)));
+        });
+        // Bounties carry a wanted tier; debt claims carry a debt instead.
+        html.on("change", "#ncpd-add-kind", (ev) => {
+            const debt = String($(ev.currentTarget).val()) === "debt";
+            html.find("#ncpd-add-debt").toggle(debt);
+            html.find("#ncpd-add-status").toggle(!debt);
         });
 
         html.on("change", "#ncpd-add-status", (ev) => {
@@ -5451,7 +5469,7 @@ class AgentOSApplication extends Application {
                     const name = useModal
                         ? (html.find('#ncpd-modal-name').val() || "").trim()
                         : (html.find('#ncpd-add-name').val() || "").trim();
-                    if (!name) { ui.notifications.warn("AGPD: Suspect name required."); return; }
+                    if (!name) { ui.notifications.warn("Bounties: a name is required."); return; }
                     const charges = useModal ? (html.find('#ncpd-modal-charges').val() || "").trim() : (html.find('#ncpd-add-charges').val() || "").trim();
                     const bounty  = useModal ? (html.find('#ncpd-modal-bounty').val()  || "").trim() : (html.find('#ncpd-add-bounty').val()  || "").trim();
                     const status  = useModal ? (html.find('#ncpd-modal-status').val()  || "Known to police").trim() : (html.find('#ncpd-add-status').val() || "Known to police").trim();
@@ -5465,6 +5483,11 @@ class AgentOSApplication extends Application {
                     list.push({
                         id: "rap_" + foundry.utils.randomID(),
                         name, charges, bounty, status, notes, mugshot,
+                        // NuNu packaging: a bounty knows who is paying it, and a debt claim
+                        // pays the finder a tenth of the debt for bringing the debtor back alive.
+                        kind: useModal ? (html.find('#ncpd-modal-kind').val() || "bounty") : (html.find('#ncpd-add-kind').val() || "bounty"),
+                        source: (useModal ? (html.find('#ncpd-modal-source').val() || "") : (html.find('#ncpd-add-source').val() || "")).trim(),
+                        debt: (useModal ? (html.find('#ncpd-modal-debt').val() || "") : (html.find('#ncpd-add-debt').val() || "")).trim(),
                         createdAt: Date.now()
                     });
                     await game.settings.set("VirtualAgent", "ncpdRapSheets", JSON.stringify(list));
@@ -5478,11 +5501,12 @@ class AgentOSApplication extends Application {
                     this._ncpdActiveId = null;
                     this._ncpdSearch = "";
                     ["ncpd-add-name","ncpd-add-charges","ncpd-add-bounty","ncpd-add-status","ncpd-add-notes",
-                     "ncpd-modal-name","ncpd-modal-charges","ncpd-modal-bounty","ncpd-modal-status","ncpd-modal-notes","ncpd-modal-mugshot"].forEach(id => {
+                     "ncpd-modal-name","ncpd-modal-charges","ncpd-modal-bounty","ncpd-modal-status","ncpd-modal-notes","ncpd-modal-mugshot",
+                     "ncpd-add-source","ncpd-add-debt","ncpd-modal-source","ncpd-modal-debt"].forEach(id => {
                         html.find(`#${id}`).val("");
                         if (this._composerDrafts) this._composerDrafts[id] = "";
                     });
-                    ui.notifications.info(`AGPD: Filed rap sheet for "${name}".`);
+                    ui.notifications.info(`Bounties: filed "${name}".`);
                     this.render(true);
                     break;
                 }

@@ -1428,7 +1428,7 @@
                     <div class="app-header" style="background: rgba(58, 134, 255, 0.10); border-bottom: 2px solid #3a86ff; box-shadow: inset 0 -3px 0 0 #f8e800; display: flex; align-items: center; justify-content: space-between;">
                         <div data-action="back-to-home" style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; min-width: 0;">
                             <i class="fas fa-chevron-left" style="color: #3a86ff;"></i>
-                            <h3 style="color: #3a86ff; text-shadow: 0 0 6px rgba(58,134,255,0.5); margin: 0;">AGPD // Crime Database</h3>
+                            <h3 style="color: #3a86ff; text-shadow: 0 0 6px rgba(58,134,255,0.5); margin: 0;">Bounties</h3>
                         </div>
                         {{#if isGM}}
                         <button type="button" data-action="ncpd-modal-open" title="File a new rap sheet" style="background: rgba(58,134,255,0.18); border: 1px solid #3a86ff; color: #3a86ff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus"></i></button>
@@ -1465,7 +1465,9 @@
                         <input type="text" data-action="ncpd-search" class="agent-search-input" placeholder="Search names, charges, notes..." value="{{ncpdSearch}}" data-preserve-draft style="width: 100%; box-sizing: border-box; background: #111; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 3px; font-family: monospace; font-size: 0.75rem;">
                     </div>
                     <div data-preserve-scroll-container="ncpd-list" style="flex: 1; overflow-y: auto; padding: 10px;">
-                        {{#each ncpdRapSheetsView}}
+                        {{#if bountyList.length}}
+                        <div style="font-size:0.55rem; color:#7f8a99; letter-spacing:.14em; text-transform:uppercase; margin:2px 0 6px;">Bounties</div>
+                        {{#each bountyList}}
                         <div data-action="ncpd-open-record" data-record-id="{{this.id}}" style="padding: 10px; margin-bottom: 8px; background: rgba(58,134,255,0.08); border-left: 3px solid #3a86ff; border-radius: 4px; cursor: pointer; display: flex; gap: 10px; align-items: center;">
                             {{!-- Patch5.5.12: thumb mugshot. Falls back to mystery-man if unset. --}}
                             <img src="{{#if this.mugshot}}{{this.mugshot}}{{else}}icons/svg/mystery-man.svg{{/if}}" onerror="this.src='icons/svg/mystery-man.svg'" style="flex: 0 0 36px; width: 36px; height: 44px; object-fit: cover; border: 1px solid #3a86ff; border-radius: 3px; background: #000;">
@@ -1474,12 +1476,32 @@
                                     <strong style="color: #fff;">{{this.name}}</strong>
                                     {{#if this.bounty}}<span style="color: var(--creds-gold); font-size: 0.7rem;">{{this.bounty}}</span>{{/if}}
                                 </div>
+                                {{#if this.source}}<div style="font-size: 0.55rem; color: #7f8a99; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.source}}</div>{{/if}}
                                 {{#if this.charges}}<div style="font-size: 0.65rem; color: #aaa; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{this.charges}}</div>{{/if}}
                             </div>
                         </div>
-                        {{else}}
-                        <div style="text-align: center; padding: 30px; color: #666; font-size: 0.75rem;"><i class="fas fa-fingerprint" style="font-size: 1.5rem; margin-bottom: 8px; display: block; color: #3a86ff;"></i>{{#if ncpdSearch}}No matching records.{{else}}No rap sheets on file.{{#if isGM}} Tap + to file one.{{/if}}{{/if}}</div>
                         {{/each}}
+                        {{/if}}
+                        {{#if debtList.length}}
+                        <div style="font-size:0.55rem; color:#7f8a99; letter-spacing:.14em; text-transform:uppercase; margin:2px 0 6px;">Debt Claims</div>
+                        {{#each debtList}}
+                        <div data-action="ncpd-open-record" data-record-id="{{this.id}}" style="padding: 10px; margin-bottom: 8px; background: rgba(58,134,255,0.08); border-left: 3px solid #3a86ff; border-radius: 4px; cursor: pointer; display: flex; gap: 10px; align-items: center;">
+                            {{!-- Patch5.5.12: thumb mugshot. Falls back to mystery-man if unset. --}}
+                            <img src="{{#if this.mugshot}}{{this.mugshot}}{{else}}icons/svg/mystery-man.svg{{/if}}" onerror="this.src='icons/svg/mystery-man.svg'" style="flex: 0 0 36px; width: 36px; height: 44px; object-fit: cover; border: 1px solid #3a86ff; border-radius: 3px; background: #000;">
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <strong style="color: #fff;">{{this.name}}</strong>
+                                    {{#if this.bounty}}<span style="color: var(--creds-gold); font-size: 0.7rem;">{{this.bounty}}</span>{{/if}}
+                                </div>
+                                {{#if this.source}}<div style="font-size: 0.55rem; color: #7f8a99; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.source}}</div>{{/if}}
+                                {{#if this.charges}}<div style="font-size: 0.65rem; color: #aaa; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{this.charges}}</div>{{/if}}
+                            </div>
+                        </div>
+                        {{/each}}
+                        {{/if}}
+                        {{#unless bountyList.length}}{{#unless debtList.length}}
+                        <div style="text-align: center; padding: 30px; color: #666; font-size: 0.75rem;"><i class="fas fa-fingerprint" style="font-size: 1.5rem; margin-bottom: 8px; display: block;"></i>Nothing posted.{{#if isGM}}<br>Tap + to post a bounty or a debt claim.{{/if}}</div>
+                        {{/unless}}{{/unless}}
                     </div>
                     {{/if}}
 
@@ -2114,10 +2136,17 @@
                         {{!-- Patch5.5 (Ryouhi / community): NCPD Crime Database admin --}}
                         {{#if isGM}}
                         <div class="admin-section">
-                            <div class="admin-section-title">AGPD Crime Database</div>
-                            <div class="admin-hint" style="margin-bottom: 8px;">File rap sheets the table can look up from the AGPD app. Pick a wanted tier and the bounty fills itself; both stay editable.</div>
+                            <div class="admin-section-title">Bounties and Debt Claims</div>
+                            <div class="admin-hint" style="margin-bottom: 8px;">File rap sheets the table can look up from the AGPD app. A bounty carries a wanted tier; a debt claim pays the finder a tenth of the debt for bringing them back alive. Every entry names who posted it.</div>
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom: 6px;">
                                 <input type="text" id="ncpd-add-name" class="admin-input datapool-input" placeholder="Name *" data-preserve-draft style="box-sizing:border-box;">
+                                {{!-- NuNu packaging: bounty or debt claim, and who is paying. --}}
+                                <select id="ncpd-add-kind" class="admin-input datapool-input" style="box-sizing:border-box;">
+                                    <option value="bounty">Bounty</option>
+                                    <option value="debt">Debt claim</option>
+                                </select>
+                                <input type="text" id="ncpd-add-source" class="admin-input datapool-input" placeholder="Posted by (AGPD, a fixer, a gang…)" data-preserve-draft style="box-sizing:border-box;">
+                                <input type="text" id="ncpd-add-debt" class="admin-input datapool-input" placeholder="Debt owed (eb)" data-preserve-draft style="box-sizing:border-box; display:none;">
                                 {{!-- NuNu packaging: wanted tiers from the campaign's bounty table; picking one fills the bounty. --}}
                                 <select id="ncpd-add-status" class="admin-input datapool-input" style="box-sizing:border-box;">
                                     <option value="">Status (none)</option><option value="Tier: F">Tier: F</option><option value="Tier: E">Tier: E</option><option value="Tier: D">Tier: D</option><option value="Tier: C">Tier: C</option><option value="Tier: B">Tier: B</option><option value="Tier: A">Tier: A (legendary)</option>
@@ -2127,7 +2156,7 @@
                             </div>
                             <textarea id="ncpd-add-notes" class="admin-input admin-textarea datapool-input" rows="2" placeholder="Notes (priors, MO, last known location…)" data-preserve-draft style="width:100%; box-sizing:border-box; margin-bottom: 6px;"></textarea>
                             <div class="admin-inline-group" style="margin-bottom: 10px;">
-                                <button type="button" class="admin-btn admin-btn-cyan" data-action="ncpd-add-record"><i class="fas fa-fingerprint"></i> FILE RAP SHEET</button>
+                                <button type="button" class="admin-btn admin-btn-cyan" data-action="ncpd-add-record"><i class="fas fa-fingerprint"></i> POST IT</button>
                             </div>
                             {{#if ncpdRapSheets.length}}
                             <div style="background:#181a1f; border:1px solid #2a2d33; border-radius:4px; padding:6px; max-height:200px; overflow-y:auto;">
