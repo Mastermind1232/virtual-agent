@@ -137,6 +137,34 @@
     const ownerActor = () => { const u = ownerUser(); return u?.character ?? actorOf(u?.getFlag(ID, "lastActorUuid")) ?? null; };
 
     /* ---------------------------------------------------------------- */
+    /*  The Agent's own contact list                                     */
+    /*                                                                   */
+    /*  An operator on the roster is someone the owner can call, so they */
+    /*  get a Messenger contact too. Dropping them leaves the thread      */
+    /*  alone: the history is still worth keeping.                        */
+    /* ---------------------------------------------------------------- */
+
+    async function giveContact(runnerName, img) {
+        if (!game.user.isGM) return;                  // only a GM can write another user's flags
+        const owner = ownerUser(); if (!owner) return;
+        const key = String(runnerName).trim().toLowerCase();
+        const same = (c) => String(c.originalName || c.name || "").trim().toLowerCase() === key;
+
+        const gmList = game.user.getFlag(ID, "customContacts") || [];
+        const existing = gmList.find(same);
+        const record = {
+            id: existing?.id ?? `npc_${uid()}`,
+            name: runnerName, originalName: runnerName,
+            avatar: (img && img !== "icons/svg/mystery-man.svg") ? img : (existing?.avatar ?? null),
+            ownerId: game.user.id,
+            targetUserIds: [...new Set([...(existing?.targetUserIds ?? []), owner.id])],
+        };
+        await game.user.setFlag(ID, "customContacts", [...gmList.filter((c) => !same(c)), record]);
+        const theirs = owner.getFlag(ID, "customContacts") || [];
+        await owner.setFlag(ID, "customContacts", [...theirs.filter((c) => !same(c)), record]);
+    }
+
+    /* ---------------------------------------------------------------- */
     /*  Client standing                                                  */
     /* ---------------------------------------------------------------- */
 
@@ -590,6 +618,7 @@
                         if (!actor) return ui.notifications.warn("That actor is gone.");
                         const tier = Number(f.tier.value) || 0;
                         await saveRunners([...runners(), { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier, completed: TIERS[tier].gigs }]);
+                        await giveContact(actor.name, actor.img);
                         ui.notifications.info(`Operator: ${esc(actor.name)} is now one of your operators.`);
                         app?.render(true);
                     },
@@ -731,5 +760,7 @@
         }
 
         resolveDue().catch(console.error);
+        // Operators added before this version never got a contact; give them one now.
+        if (game.user.isGM) for (const r of runners()) giveContact(r.name, r.img).catch(console.error);
     });
 })();
