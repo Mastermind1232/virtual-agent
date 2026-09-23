@@ -22,16 +22,19 @@
 .agent-chassis .agent-top-bezel { position: relative; }
 .agent-chassis .agent-top-bezel::after { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 32px; cursor: move; }
 
-/* NuNu packaging: a contact's role, as a small boxed label under their name. */
+/* NuNu packaging: a contact's faction, coloured by where they stand.
+   Green for an ally, red for an enemy, grey for anyone in between. */
 #agent-view-rep .rep-role {
     display: inline-block;
     margin-top: 3px;
     padding: 1px 6px;
-    border: 1px solid rgba(100, 255, 218, .45);
+    border: 1px solid currentColor;
     border-radius: 3px;
-    color: #64ffda;
     font-size: .5rem;
     font-weight: 700;
     letter-spacing: .1em;
     text-transform: uppercase;
+    color: #8b9183;
 }
+#agent-view-rep .rep-role.rep-allied { color: #64ffda; }
+#agent-view-rep .rep-role.rep-hostile { color: #ff3366; }

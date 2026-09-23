@@ -285,7 +285,22 @@ class AgentOSApplication extends Application {
                 // Leaked into this user's flag from a previous targeting; ignore.
                 return;
             }
+            if (!game.user.isGM && Array.isArray(c.targetUserIds) && c.targetUserIds.length > 1) {
+                // Their half of a shared contact, under the same id the GM uses for it.
+                c = { ...c, id: `${c.id}__${game.user.id}`, targetUserIds: [game.user.id] };
+            }
             c.active = npcStatuses[c.id] !== false;
+            // NuNu packaging: a contact several players share is several conversations.
+            // On the GM's phone that becomes one row per player, each with its own thread,
+            // so two players texting the same NPC never land in one another's messages.
+            const targets = Array.isArray(c.targetUserIds) ? c.targetUserIds.filter((id) => game.users.get(id)) : [];
+            if (game.user.isGM && targets.length > 1) {
+                for (const uid of targets) {
+                    const u = game.users.get(uid);
+                    contacts.push({ ...c, id: `${c.id}__${uid}`, name: `${c.originalName || c.name} (${VA_displayName(u)})`, ownerId: uid, targetUserIds: [uid] });
+                }
+                return;
+            }
             contacts.push(c);
         });
 
@@ -295,6 +310,11 @@ class AgentOSApplication extends Application {
             agentMessages.forEach(m => {
                 let tid = m.flags.VirtualAgent.threadId;
                 let exists = contacts.find(c => c.id === tid);
+                if (!exists && String(tid).includes("__")) {
+                    // A split thread whose contact is already listed; nothing to invent.
+                    const base = String(tid).split("__")[0];
+                    if (contacts.some(c => String(c.id).startsWith(`${base}__`) || c.id === base)) return;
+                }
 
                 let npcName = m.flags.VirtualAgent.targetName || m.flags.VirtualAgent.overrideName || "Unknown NPC";
                 let ownerUsr = m.author?.isGM ? null : m.author;
@@ -2001,7 +2021,8 @@ class AgentOSApplication extends Application {
                 name: c.name,
                 avatar: c.avatar || null,
                 isPlayer: !String(c.id).startsWith("npc_"),
-                faction: _contactMeta[c.id]?.role || VA_roleOf(game.users.get(c.id)?.character) || "",
+                faction: _contactMeta[c.id]?.faction || "",
+                standing: _contactMeta[c.id]?.standing || "neutral",
             }));
 
         // Patch3 (CommanderCrunch69): sort option for the Fixers app.
@@ -2035,7 +2056,8 @@ class AgentOSApplication extends Application {
         }
         data.repSortOptions = [
             { id: "alpha",    label: "A → Z" },
-            { id: "faction",  label: "By role" }
+            { id: "standing", label: "By alignment" },
+            { id: "faction",  label: "By faction" }
         ];
 
         // ════════════════════════════════════════════════════════════════════
@@ -5928,14 +5950,20 @@ class AgentOSApplication extends Application {
                     if (!id) break;
                     let cur = {};
                     try { const raw = game.settings.get("VirtualAgent", "contactMeta"); cur = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {}); } catch (e) { cur = {}; }
-                    const role = cur[id]?.role || "";
+                    const faction = cur[id]?.faction || "";
+                    const standing = cur[id]?.standing || "neutral";
+                    const opt = (v, label) => `<option value="${v}"${v === standing ? " selected" : ""}>${label}</option>`;
                     new Dialog({
-                        title: `Role: ${who}`,
-                        content: `<form><div class="form-group"><label>Role</label><input type="text" name="role" value="${_agentEscHTML(role)}" placeholder="Fixer, Ripperdoc, Detective…"></div></form>`,
+                        title: who,
+                        content: `<form>
+                            <div class="form-group"><label>Faction</label><input type="text" name="faction" value="${_agentEscHTML(faction)}" placeholder="AGPD, The Bunnies, Fenixxx…"></div>
+                            <div class="form-group"><label>Alignment</label><select name="standing">${opt("allied", "Ally")}${opt("neutral", "Neutral")}${opt("hostile", "Enemy")}</select></div>
+                        </form>`,
                         buttons: {
                             save: { label: "Save", callback: async (h) => {
-                                const v = h[0].querySelector('[name="role"]').value.trim();
-                                cur[id] = { ...(cur[id] || {}), role: v };
+                                const v = h[0].querySelector('[name="faction"]').value.trim();
+                                const st = h[0].querySelector('[name="standing"]').value;
+                                cur[id] = { ...(cur[id] || {}), faction: v, standing: st };
                                 await game.settings.set("VirtualAgent", "contactMeta", JSON.stringify(cur));
                                 this.render(true);
                             } },
