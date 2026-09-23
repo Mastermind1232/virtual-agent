@@ -1,3 +1,13 @@
+/* NuNu packaging: housing and lifestyle from the campaign's Economic Tables.
+   Both are monthly, and together they are what the 28th charges. */
+const VA_HOUSING = [
+    ["Living on the Street", ""], ["Living on the Street in a Vehicle", ""],
+    ["Cube Hotel", "500"], ["Flats Cargo Container", "500"], ["Cargo Container", "1000"],
+    ["Studio Apartment", "1500"], ["Two-Bedroom Apartment", "2500"], ["Corporate Conapt", "5000"],
+    ["Upscale Conapt", "12500"], ["Luxury Penthouse", "25000"], ["Tribeca Mansion", ""],
+];
+const VA_LIFESTYLE = [["Kibble", "100"], ["Generic Prepak", "300"], ["Good Prepak", "600"], ["Fresh Food", "1500"]];
+const VA_LIFESTYLE_COST = Object.fromEntries(VA_LIFESTYLE);
 /* NuNu packaging: a character's Role in Cyberpunk RED is an Item of type "role",
    not `system.externalData.role`, which does not exist in the system's data model.
    Upstream reads the missing field, so every Agent ID reads "Citizen". */
@@ -1259,7 +1269,8 @@ class AgentOSApplication extends Application {
                         ownerKind: 'user', ownerId: u.id, userId: u.id,
                         name: handle,
                         housingStatus: u.getFlag("VirtualAgent", "housingStatus") || "",
-                        housingRent: u.getFlag("VirtualAgent", "housingRent") || ""
+                        housingRent: u.getFlag("VirtualAgent", "housingRent") || "",
+                        lifestyle: u.getFlag("VirtualAgent", "lifestyle") || ""
                     });
                 } else {
                     for (const a of ownedActors) {
@@ -1269,7 +1280,9 @@ class AgentOSApplication extends Application {
                             housingStatus: a.getFlag("VirtualAgent", "housingStatus")
                                 || u.getFlag("VirtualAgent", "housingStatus") || "",
                             housingRent: a.getFlag("VirtualAgent", "housingRent")
-                                || u.getFlag("VirtualAgent", "housingRent") || ""
+                                || u.getFlag("VirtualAgent", "housingRent") || "",
+                            lifestyle: a.getFlag("VirtualAgent", "lifestyle")
+                                || u.getFlag("VirtualAgent", "lifestyle") || ""
                         });
                     }
                 }
@@ -2200,6 +2213,11 @@ class AgentOSApplication extends Application {
             || housingUser?.getFlag?.("VirtualAgent", "housingStatus") || "";
         data.housingRent = housingActor?.getFlag?.("VirtualAgent", "housingRent")
             || housingUser?.getFlag?.("VirtualAgent", "housingRent") || "";
+        data.lifestyleName = housingActor?.getFlag?.("VirtualAgent", "lifestyle")
+            || housingUser?.getFlag?.("VirtualAgent", "lifestyle") || "";
+        data.lifestyleCost = VA_LIFESTYLE_COST[data.lifestyleName] || "";
+        data.housingOptions = VA_HOUSING.map(([name, rent]) => ({ name, rent }));
+        data.lifestyleOptions = VA_LIFESTYLE.map(([name, cost]) => ({ name, cost }));
         // Patch5.5.20: render block when EITHER field is set (was: only housingStatus).
         data.housingHasAny = !!(data.housingStatus || data.housingRent);
 
@@ -2837,6 +2855,13 @@ class AgentOSApplication extends Application {
 
         // NuNu packaging: choosing a wanted tier fills the bounty from the campaign's
         // bounty table. Tier A is open-ended, so it seeds the floor and waits for a number.
+        // NuNu packaging: picking a home fills its monthly rent, still editable after.
+        html.on("change", "[data-housing-row] select.va-housing", (ev) => {
+            const rent = $(ev.currentTarget).find("option:selected").data("rent");
+            const row = $(ev.currentTarget).closest("[data-housing-row]");
+            if (rent !== undefined && rent !== "") row.find("input.va-rent").val(String(rent));
+        });
+
         html.on("change", "#ncpd-add-status", (ev) => {
             const payouts = { "Tier: F": "100", "Tier: E": "500", "Tier: D": "1000", "Tier: C": "1500", "Tier: B": "2000", "Tier: A": "3000" };
             const field = html.find("#ncpd-add-bounty");
@@ -5741,6 +5766,8 @@ class AgentOSApplication extends Application {
                         const prevR = target.getFlag("VirtualAgent", "housingRent") || "";
                         if (status !== prevS) await target.setFlag("VirtualAgent", "housingStatus", status);
                         if (rent !== prevR) await target.setFlag("VirtualAgent", "housingRent", rent);
+                        const life = (html.find(`#housing-life-${ownerKind}-${ownerId}`).val() || "").trim();
+                        if (life !== (target.getFlag("VirtualAgent", "lifestyle") || "")) await target.setFlag("VirtualAgent", "lifestyle", life);
                     }
                     ui.notifications.info("Housing: roster updated.");
                     this.render(true);

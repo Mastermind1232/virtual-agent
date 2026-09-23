@@ -1105,10 +1105,7 @@
                                     <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">Role</div>
                                     <div style="font-size: 0.8rem; color: #eee;">{{idViewRole}}</div>
                                 </div>
-                                <div>
-                                    <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">Handle</div>
-                                    <div style="font-size: 0.8rem; color: #eee;">{{idViewHandle}}</div>
-                                </div>
+                                {{!-- NuNu packaging: Handle removed from the ID card. --}}
                                 <div>
                                     <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">SIN Status</div>
                                     <div style="font-size: 0.8rem; color: {{#if (eq idViewSinStatus 'No SIN')}}#ff3333{{else}}#eee{{/if}};">{{idViewSinStatus}}</div>
@@ -1133,6 +1130,11 @@
                                 <div style="font-size: 0.55rem; color: #4488ff; text-transform: uppercase; letter-spacing: 1px;"><i class="fas fa-home"></i> Housing</div>
                                 <div style="font-size: 0.8rem; color: #eee; margin-top: 2px;">{{#if housingStatus}}{{housingStatus}}{{else}}<span style="color:#888; font-style:italic;">(no address on file)</span>{{/if}}</div>
                                 {{#if housingRent}}<div style="font-size: 0.65rem; color: var(--creds-gold); margin-top: 4px;">Rent: {{housingRent}}</div>{{/if}}
+                                {{#if lifestyleName}}
+                                <div style="font-size: 0.55rem; color: #4488ff; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px;"><i class="fas fa-utensils"></i> Lifestyle</div>
+                                <div style="font-size: 0.8rem; color: #eee; margin-top: 2px;">{{lifestyleName}}</div>
+                                {{#if lifestyleCost}}<div style="font-size: 0.65rem; color: var(--creds-gold); margin-top: 4px;">{{lifestyleCost}}eb a month</div>{{/if}}
+                                {{/if}}
                             </div>
                             {{/if}}
 
@@ -2131,7 +2133,7 @@
                                 <input type="text" id="ncpd-add-name" class="admin-input datapool-input" placeholder="Name *" data-preserve-draft style="box-sizing:border-box;">
                                 {{!-- NuNu packaging: wanted tiers from the campaign's bounty table; picking one fills the bounty. --}}
                                 <select id="ncpd-add-status" class="admin-input datapool-input" style="box-sizing:border-box;">
-                                    <option value="">Status (none)</option><option value="Tier: F">Tier: F</option><option value="Tier: E">Tier: E</option><option value="Tier: D">Tier: D</option><option value="Tier: C">Tier: C</option><option value="Tier: B">Tier: B</option><option value="Tier: A">Tier: A (legendary)</option><option value="KIA">KIA</option>
+                                    <option value="">Status (none)</option><option value="Tier: F">Tier: F</option><option value="Tier: E">Tier: E</option><option value="Tier: D">Tier: D</option><option value="Tier: C">Tier: C</option><option value="Tier: B">Tier: B</option><option value="Tier: A">Tier: A (legendary)</option>
                                 </select>
                                 <input type="text" id="ncpd-add-bounty" class="admin-input datapool-input" placeholder="Bounty (5,000eb)" data-preserve-draft style="box-sizing:border-box;">
                                 <input type="text" id="ncpd-add-charges" class="admin-input datapool-input" placeholder="Charges (comma-separated)" data-preserve-draft style="box-sizing:border-box;">
@@ -2282,8 +2284,15 @@
                                 <div class="admin-row-info" style="flex: 0 0 32%; min-width: 0;">
                                     <div class="admin-row-label" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{this.name}}</div>
                                 </div>
-                                <input type="text" id="housing-status-{{this.ownerKind}}-{{this.ownerId}}" value="{{this.housingStatus}}" placeholder="(no housing on file)" class="admin-input" style="flex: 1 1 auto !important; min-width: 0 !important;" data-preserve-draft>
-                                <input type="text" id="housing-rent-{{this.ownerKind}}-{{this.ownerId}}" value="{{this.housingRent}}" placeholder="rent (optional)" class="admin-input" style="flex: 0 0 32% !important; min-width: 0 !important;" data-preserve-draft>
+                                <select id="housing-status-{{this.ownerKind}}-{{this.ownerId}}" class="admin-input va-housing" style="flex: 1 1 0; min-width: 0;">
+                                    <option value="">(no housing on file)</option>
+                                    {{#each ../housingOptions}}<option value="{{this.name}}" data-rent="{{this.rent}}" {{#if (eq this.name ../this.housingStatus)}}selected{{/if}}>{{this.name}}{{#if this.rent}} — {{this.rent}}eb{{/if}}</option>{{/each}}
+                                </select>
+                                <input type="text" id="housing-rent-{{this.ownerKind}}-{{this.ownerId}}" value="{{this.housingRent}}" placeholder="rent" class="admin-input va-rent" style="flex: 0 0 22%; min-width: 0;">
+                                <select id="housing-life-{{this.ownerKind}}-{{this.ownerId}}" class="admin-input" style="flex: 1 1 0; min-width: 0;">
+                                    <option value="">(no lifestyle)</option>
+                                    {{#each ../lifestyleOptions}}<option value="{{this.name}}" {{#if (eq this.name ../this.lifestyle)}}selected{{/if}}>{{this.name}} — {{this.cost}}eb</option>{{/each}}
+                                </select>
                             </div>
                             {{/each}}
                             <button type="button" class="admin-btn admin-btn-cyan" data-action="save-housing" style="margin-top: 8px;"><i class="fas fa-home"></i> SAVE HOUSING</button>
