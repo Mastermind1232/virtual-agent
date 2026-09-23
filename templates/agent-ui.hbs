@@ -1398,9 +1398,6 @@
                                         {{#if this.faction}}<div class="rep-role">{{this.faction}}</div>{{/if}}
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 6px;">
-                                        <span class="rep-standing-badge rep-standing-{{this.standing}}" style="font-size: 0.55rem; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">
-                                            {{this.standing}}
-                                        </span>
                                         {{!-- Patch4.7 (Gotto): jump to a Messenger thread for this fixer. --}}
                                         <i class="fas fa-comment-dots" data-action="rep-open-messenger" data-npc-id="{{this.id}}" data-npc-name="{{this.name}}" title="Message {{this.name}}" style="cursor: pointer; color: var(--neon-cyan); font-size: 0.65rem;"></i>
                                         {{#if ../isGM}}
@@ -1410,14 +1407,6 @@
                                         {{/if}}
                                     </div>
                                 </div>
-                                {{#if ../isGM}}
-                                <div style="display: flex; gap: 3px; margin-top: 4px;">
-                                    <button type="button" class="rep-btn {{#if (eq this.standing 'allied')}}rep-btn-active{{/if}}" data-action="rep-set-standing" data-npc-id="{{this.id}}" data-standing="allied" style="font-size: 0.5rem; padding: 2px 6px; background: {{#if (eq this.standing 'allied')}}rgba(68,255,68,0.2){{else}}rgba(0,0,0,0.3){{/if}}; border: 1px solid {{#if (eq this.standing 'allied')}}#44ff44{{else}}#444{{/if}}; color: {{#if (eq this.standing 'allied')}}#44ff44{{else}}#888{{/if}}; cursor: pointer; border-radius: 3px; font-family: monospace;">ALLIED</button>
-                                    <button type="button" class="rep-btn {{#if (eq this.standing 'friendly')}}rep-btn-active{{/if}}" data-action="rep-set-standing" data-npc-id="{{this.id}}" data-standing="friendly" style="font-size: 0.5rem; padding: 2px 6px; background: {{#if (eq this.standing 'friendly')}}rgba(100,255,218,0.2){{else}}rgba(0,0,0,0.3){{/if}}; border: 1px solid {{#if (eq this.standing 'friendly')}}#64ffda{{else}}#444{{/if}}; color: {{#if (eq this.standing 'friendly')}}#64ffda{{else}}#888{{/if}}; cursor: pointer; border-radius: 3px; font-family: monospace;">FRIENDLY</button>
-                                    <button type="button" class="rep-btn {{#if (eq this.standing 'neutral')}}rep-btn-active{{/if}}" data-action="rep-set-standing" data-npc-id="{{this.id}}" data-standing="neutral" style="font-size: 0.5rem; padding: 2px 6px; background: {{#if (eq this.standing 'neutral')}}rgba(255,204,0,0.2){{else}}rgba(0,0,0,0.3){{/if}}; border: 1px solid {{#if (eq this.standing 'neutral')}}#ffcc00{{else}}#444{{/if}}; color: {{#if (eq this.standing 'neutral')}}#ffcc00{{else}}#888{{/if}}; cursor: pointer; border-radius: 3px; font-family: monospace;">NEUTRAL</button>
-                                    <button type="button" class="rep-btn {{#if (eq this.standing 'hostile')}}rep-btn-active{{/if}}" data-action="rep-set-standing" data-npc-id="{{this.id}}" data-standing="hostile" style="font-size: 0.5rem; padding: 2px 6px; background: {{#if (eq this.standing 'hostile')}}rgba(255,50,50,0.2){{else}}rgba(0,0,0,0.3){{/if}}; border: 1px solid {{#if (eq this.standing 'hostile')}}#ff3333{{else}}#444{{/if}}; color: {{#if (eq this.standing 'hostile')}}#ff3333{{else}}#888{{/if}}; cursor: pointer; border-radius: 3px; font-family: monospace;">HOSTILE</button>
-                                </div>
-                                {{/if}}
                             </div>
                             {{/each}}
                         {{else}}

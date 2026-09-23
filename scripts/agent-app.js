@@ -2002,7 +2002,6 @@ class AgentOSApplication extends Application {
                 avatar: c.avatar || null,
                 isPlayer: !String(c.id).startsWith("npc_"),
                 faction: _contactMeta[c.id]?.role || VA_roleOf(game.users.get(c.id)?.character) || "",
-                standing: _contactMeta[c.id]?.standing || "neutral",
             }));
 
         // Patch3 (CommanderCrunch69): sort option for the Fixers app.
@@ -2036,7 +2035,6 @@ class AgentOSApplication extends Application {
         data.repSortOptions = [
             { id: "default",  label: "Default order" },
             { id: "alpha",    label: "A → Z" },
-            { id: "standing", label: "By attitude" },
             { id: "faction",  label: "By role" }
         ];
 
