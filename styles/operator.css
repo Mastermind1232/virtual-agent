@@ -105,3 +105,10 @@
 .nunu-contacts .nc-operator:has(input:checked) { border-color: #9ef01a; background: rgba(158,240,26,.08); }
 .nunu-contacts .nc-operator input { margin: 0; flex: 0 0 auto; }
 .nunu-contacts .nc-operator .nc-op-note { margin-left: auto; font-size: 11px; color: #9aa5ae; }
+
+/* NuNu packaging: a contact is a person in the world, so it points at an actor sheet.
+   One that does not yet is flagged, since their skills and portrait come from there. */
+.nunu-contacts .nc-warn { border: 1px solid #b4762a; border-radius: 3px; padding: 0 5px; font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ffb454; }
+.nunu-contacts .nc-actor-field select { border-color: #3c5578; }
+.nunu-contacts .nc-hint { color: #737d86; font-size: 10px; }
+.nunu-contacts .nc-fields input[readonly] { background: #151a20; color: #9aa5ae; }

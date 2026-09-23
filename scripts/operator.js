@@ -725,11 +725,11 @@
     const rosterHas = (name) => runners().some((r) => r.name.trim().toLowerCase() === String(name).trim().toLowerCase());
 
     /** Put someone on the roster. Their usable skills come from an actor sheet, so one has to exist. */
-    async function rosterAdd(name) {
+    async function rosterAdd(name, uuid = "") {
         if (!game.user.isGM) return false;
         const key = String(name).trim().toLowerCase();
         if (rosterHas(key)) return true;
-        const actor = game.actors.find((a) => a.name.trim().toLowerCase() === key);
+        const actor = actorOf(uuid) ?? game.actors.find((a) => a.name.trim().toLowerCase() === key);
         if (!actor) { ui.notifications.warn(`Operator: no actor called "${name}", and an operator's skills come from their sheet.`); return false; }
         await saveRunners([...runners(), { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier: 0, completed: 0 }]);
         await giveContact(actor.name, actor.img);

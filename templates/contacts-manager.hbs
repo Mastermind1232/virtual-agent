@@ -23,6 +23,7 @@
                     <span class="nc-chip" style="color: {{this.standingColour}};">{{#if this.faction}}{{this.faction}}{{else}}Unaffiliated{{/if}}</span>
                     {{#if this.role}}<span class="nc-role">{{this.role}}</span>{{/if}}
                     <span class="nc-standing">{{this.standingLabel}}</span>
+                    {{#unless this.hasActor}}<span class="nc-warn">needs an actor</span>{{/unless}}
                 </span>
             </span>
             <span class="nc-holders">{{#if this.holderNames}}{{this.holderNames}}{{else}}on nobody's phone{{/if}}</span>
@@ -31,7 +32,13 @@
         {{#if this.open}}
         <div class="nc-edit">
             <div class="nc-fields">
-                <label>Name<input type="text" data-field="name" value="{{this.name}}"></label>
+                <label class="nc-actor-field">Actor sheet
+                    <select data-field="actor">
+                        <option value="">Not linked yet</option>
+                        {{#each ../actors}}<option value="{{this.uuid}}" {{#if (eq this.uuid ../this.actorUuid)}}selected{{/if}}>{{this.name}}</option>{{/each}}
+                    </select>
+                </label>
+                <label>Name{{#if this.hasActor}} <span class="nc-hint">from the sheet</span>{{/if}}<input type="text" data-field="name" value="{{this.name}}" {{#if this.hasActor}}readonly{{/if}}></label>
                 <label>Affiliation<input type="text" data-field="faction" value="{{this.faction}}" placeholder="AGPD, Fenixxx, The Bunnies…"></label>
                 <label>Role
                     <select data-field="role">
@@ -47,7 +54,7 @@
                 <label class="nc-operator">
                     <input type="checkbox" data-field="operator" {{#if this.isOperator}}checked{{/if}}>
                     <span>Works for the Operator</span>
-                    <span class="nc-op-note">{{#if this.isOperator}}on the roster{{else}}{{#if this.hasActor}}can be sent on gigs{{else}}needs an actor of this name first{{/if}}{{/if}}</span>
+                    <span class="nc-op-note">{{#if this.isOperator}}on the roster{{else}}{{#if this.hasActor}}can be sent on gigs{{else}}link an actor first{{/if}}{{/if}}</span>
                 </label>
                 <label class="nc-avatar">Portrait
                     <span class="nc-avatar-row">

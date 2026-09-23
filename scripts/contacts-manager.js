@@ -27,6 +27,9 @@
     /** The ten Roles of Cyberpunk RED. Most people have none, so the list starts empty. */
     const ROLES = ["Exec", "Fixer", "Lawman", "Media", "Medtech", "Netrunner", "Nomad", "Rockerboy", "Solo", "Tech"];
 
+    /** The actor a contact is, when one is linked and still exists. */
+    const linkedActor = (uuid) => { try { const a = uuid ? fromUuidSync(uuid) : null; return a?.documentName === "Actor" ? a : null; } catch (e) { return null; } };
+
     const readMeta = () => {
         try { const raw = game.settings.get(ID, "contactMeta"); return typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {}); }
         catch (e) { return {}; }
@@ -53,6 +56,7 @@
             faction: meta[c.id]?.faction || "",
             standing: meta[c.id]?.standing || "neutral",
             role: meta[c.id]?.role || "",
+            actorUuid: meta[c.id]?.actorUuid || "",
         }));
     }
 
@@ -105,10 +109,16 @@
             list.sort(order[this.sort] ?? order.name);
 
             const party = players().map((u) => ({ id: u.id, name: whoIs(u), img: u.character?.img || "icons/svg/mystery-man.svg" }));
+            const playerActorIds = new Set(players().map((u) => u.character?.id).filter(Boolean));
+            const actors = game.actors
+                .filter((a) => !playerActorIds.has(a.id))
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((a) => ({ uuid: a.uuid, name: a.name }));
             return {
                 sort: this.sort,
                 standings: STANDINGS,
                 roles: ROLES,
+                actors,
                 party,
                 editing: this.editing,
                 contacts: list.map((c) => ({
@@ -118,7 +128,8 @@
                     holderNames: c.holders.map((id) => game.users.get(id)).filter(Boolean).map(whoIs).join(", "),
                     party: party.map((p) => ({ ...p, has: c.holders.includes(p.id) })),
                     isOperator: !!globalThis.VirtualAgentOperator?.rosterHas?.(c.name),
-                    hasActor: !!game.actors.find((a) => a.name.trim().toLowerCase() === c.name.trim().toLowerCase()),
+                    actor: linkedActor(c.actorUuid),
+                    hasActor: !!linkedActor(c.actorUuid),
                     open: this.editing === c.id,
                 })),
             };
@@ -137,7 +148,7 @@
 
             html.on("click", "[data-new]", async () => {
                 const id = `npc_${foundry.utils.randomID()}`;
-                await save({ id, name: "New contact", avatar: null, holders: [] });
+                await save({ id, name: "Unlinked contact", avatar: null, holders: [] });
                 this.editing = id;
                 this.render(true);
             });
@@ -145,8 +156,11 @@
             html.on("click", "[data-save]", async (ev) => {
                 const id = ev.currentTarget.dataset.save;
                 const card = $(ev.currentTarget).closest("[data-card]");
-                const name = (card.find("[data-field=name]").val() || "").trim() || "Unnamed";
-                const avatar = (card.find("[data-field=avatar]").val() || "").trim();
+                const actorUuid = card.find("[data-field=actor]").val() || "";
+                const actor = linkedActor(actorUuid);
+                // A linked actor is the source of truth for who this is.
+                const name = actor?.name || (card.find("[data-field=name]").val() || "").trim() || "Unnamed";
+                const avatar = actor?.img && actor.img !== "icons/svg/mystery-man.svg" ? actor.img : (card.find("[data-field=avatar]").val() || "").trim();
                 const faction = (card.find("[data-field=faction]").val() || "").trim();
                 const stand = card.find("[data-field=standing]").val() || "neutral";
                 const role = card.find("[data-field=role]").val() || "";
@@ -160,12 +174,14 @@
                 if (OP?.rosterAdd) {
                     const wantsOperator = card.find("[data-field=operator]").is(":checked");
                     const onRoster = OP.rosterHas(name);
-                    if (wantsOperator && !onRoster) await OP.rosterAdd(name);
-                    else if (!wantsOperator && onRoster) await OP.rosterRemove(name);
+                    if (wantsOperator && !onRoster) {
+                        if (actor) await OP.rosterAdd(actor.name, actor.uuid);
+                        else ui.notifications.warn("Link this contact to an actor first: an operator's usable skills come from their sheet.");
+                    } else if (!wantsOperator && onRoster) await OP.rosterRemove(name);
                 }
 
                 const meta = readMeta();
-                meta[id] = { ...(meta[id] || {}), faction, standing: stand, role };
+                meta[id] = { ...(meta[id] || {}), faction, standing: stand, role, actorUuid };
                 await writeMeta(meta);
                 ui.notifications.info(`Contacts: ${name} saved.`);
                 this.editing = null;
@@ -179,6 +195,14 @@
                 await remove(id);
                 this.editing = null;
                 this.render(true);
+            });
+
+            html.on("change", "[data-field=actor]", (ev) => {
+                const a = linkedActor(ev.currentTarget.value);
+                if (!a) return;
+                const card = $(ev.currentTarget).closest("[data-card]");
+                card.find("[data-field=name]").val(a.name);
+                if (a.img && a.img !== "icons/svg/mystery-man.svg") card.find("[data-field=avatar]").val(a.img);
             });
 
             html.on("click", "[data-browse]", async (ev) => {
