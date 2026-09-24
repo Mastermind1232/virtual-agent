@@ -65,8 +65,9 @@
 .nunu-contacts .nc-edit { border-top: 1px solid #242a33; padding: 12px 11px; }
 .nunu-contacts .nc-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .nunu-contacts .nc-fields label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #b6c0c9; }
-.nunu-contacts .nc-fields input,
+.nunu-contacts .nc-fields input:not([type="checkbox"]),
 .nunu-contacts .nc-fields select { background: #1a1f26; color: #e6e9ee; border: 1px solid #2c333c; border-radius: 4px; padding: 5px 7px; height: 28px; font-size: 12px; }
+.nunu-contacts .nc-fields input[type="checkbox"] { width: 14px; height: 14px; flex: 0 0 auto; }
 .nunu-contacts .nc-avatar { grid-column: 1 / -1; }
 .nunu-contacts .nc-avatar-row { display: flex; gap: 5px; }
 .nunu-contacts .nc-avatar-row input { flex: 1; }
@@ -95,16 +96,16 @@
 
 /* NuNu packaging: placeholders and empty selects were unreadable against the dark panel. */
 .nunu-contacts input::placeholder { color: #737d86; opacity: 1; }
-.nunu-contacts .nc-fields input,
+.nunu-contacts .nc-fields input:not([type="checkbox"]),
 .nunu-contacts .nc-fields select { color: #f0f3f6; }
 .nunu-contacts .nc-person { color: #e6e9ee; }
 .nunu-contacts .nc-empty { color: #9aa5ae; }
 
 /* Whether this contact also works for the Operator. */
-.nunu-contacts .nc-operator { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; background: #1a1f26; border: 1px solid #242a33; border-radius: 4px; padding: 7px 9px; font-size: 12px; color: #e6e9ee; cursor: pointer; }
-.nunu-contacts .nc-operator:has(input:checked) { border-color: #9ef01a; background: rgba(158,240,26,.08); }
-.nunu-contacts .nc-operator input { margin: 0; flex: 0 0 auto; }
-.nunu-contacts .nc-operator .nc-op-note { margin-left: auto; font-size: 11px; color: #9aa5ae; }
+.nunu-contacts .nc-fields label.nc-operator { grid-column: 1 / -1; flex-direction: row; display: flex; align-items: center; gap: 8px; background: #1a1f26; border: 1px solid #242a33; border-radius: 4px; padding: 7px 9px; font-size: 12px; color: #e6e9ee; cursor: pointer; }
+.nunu-contacts .nc-fields label.nc-operator:has(input:checked) { border-color: #9ef01a; background: rgba(158,240,26,.08); }
+.nunu-contacts .nc-fields label.nc-operator input { margin: 0; flex: 0 0 auto; }
+.nunu-contacts .nc-fields label.nc-operator .nc-op-note { margin-left: auto; font-size: 11px; color: #9aa5ae; }
 
 /* NuNu packaging: a contact is a person in the world, so it points at an actor sheet.
    One that does not yet is flagged, since their skills and portrait come from there. */
