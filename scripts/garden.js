@@ -326,6 +326,7 @@
                 <b>${esc(post.authorName)}</b> published: &ldquo;${esc(post.headline)}&rdquo;
                 ${backing || "<br>Nothing the public can check."}</div>`,
         });
+        await believability(post.id);
         return post.id;
     }
 
@@ -346,7 +347,7 @@
         }
         if (!post) return ui.notifications.warn("The story has not finished going up. Use the Roll button on the post.");
         if (post.believed != null) return;
-        if (!isAuthor(post)) return ui.notifications.warn("That is not your story to roll for.");
+        if (!isAuthor(post) && !game.user.isGM) return;
         if (!game.user.isGM && !activeGM()) return ui.notifications.warn("No GM is connected, so the roll cannot be recorded. Try when one is.");
 
         busy.add(postId);
@@ -359,23 +360,27 @@
             const roll = await new Roll("1d10").evaluate();
             const believed = roll.total <= target;
 
-            await roll.toMessage({
-                speaker: ChatMessage.getSpeaker({ actor }),
-                flavor: `Believability &middot; Credibility Rank ${rank}, ${base} in 10${post.bonus ? `, +${post.bonus} for evidence, so ${target} in 10` : ""}`,
-            });
-
             const gained = believed ? await gainFollowers(actor, rank) : 0;
+            const gmIds = game.users.filter((u) => u.isGM).map((u) => u.id);
 
+            // What she is told: whether it landed, and what it brought in. No dice.
             await ChatMessage.create({
-                whisper: [...game.users.filter((u) => u.isGM).map((u) => u.id), game.user.id],
+                whisper: [...gmIds, game.user.id],
                 content: `<div style="font-family: monospace; font-size:.8rem; border-left:3px solid ${ACCENT}; padding-left:8px;">
                     <span style="color:${ACCENT}; letter-spacing:2px;">THE GARDEN</span><br>
                     &ldquo;${esc(post.headline)}&rdquo;<br>
                     ${believed
                         ? `<b style="color:#64ffda;">The city believes it.</b>`
                         : `<b style="color:#ff3366;">The city does not buy it.</b>`}
-                    Rolled ${roll.total} against ${target}.
-                    ${gained ? `<br><b style="color:#64ffda;">+${commas(gained)}</b> to the Hyph Squad, now ${commas(followers(actor))}.` : ""}</div>`,
+                    ${gained ? `<br><b>${esc(actor?.name || game.user.name)}</b>'s following grows to <b style="color:#64ffda;">${commas(followers(actor))}</b>.` : ""}</div>`,
+            });
+
+            // What you are told: the arithmetic behind it.
+            if (gmIds.length) await ChatMessage.create({
+                whisper: gmIds,
+                content: `<div style="font-family:monospace;font-size:.72rem;color:#8b9183;border-left:3px solid #3a3f36;padding-left:8px;">
+                    Believability &middot; Rank ${rank} is ${base} in 10${post.bonus ? `, +${post.bonus} for evidence, so ${target} in 10` : ""}.
+                    Rolled <b>${roll.total}</b>, so it ${believed ? "lands" : "does not"}.${gained ? ` Followers +${commas(gained)}.` : ""}</div>`,
             });
 
             await request({ op: "believed", postId, believed, rolled: roll.total, target, gained });
@@ -439,8 +444,8 @@
             : `<div style="font-size:.65rem;color:#5a5f54;padding:10px 0;">Nobody has said anything yet.</div>`;
 
         const bel = post.believed == null
-            ? (mine ? `<div style="margin-top:9px;"><button type="button" data-action="gd-roll" data-post="${esc(post.id)}" style="font-family:inherit;width:100%;background:rgba(255,20,147,.14);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.68rem;padding:6px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;">Roll Believability</button></div>`
-                   : `<div style="margin-top:9px;font-size:.62rem;color:#5a5f54;">Not yet out in the city.</div>`)
+            ? (game.user.isGM ? `<div style="margin-top:9px;"><button type="button" data-action="gd-roll" data-post="${esc(post.id)}" style="font-family:inherit;width:100%;background:rgba(255,20,147,.14);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.68rem;padding:6px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;">Believability was never rolled. Roll it.</button></div>`
+                   : "")
             : `<div style="margin-top:9px;font-size:.62rem;color:${post.believed ? "#64ffda" : "#ff3366"};letter-spacing:.06em;text-transform:uppercase;">
                 ${post.believed ? "The city believes it" : "The city does not buy it"}
                 <span style="color:#5a5f54;text-transform:none;letter-spacing:0;">
@@ -524,7 +529,7 @@
                     <div data-group="hard" style="display:${draft.hardOn ? "block" : "none"};margin-top:4px;">${rows}</div>
                 </div>
 
-                <p style="font-size:.8em;opacity:.7;">The headline is the whole post. The two bonuses are separate conditions and stack, so a story that does both is +3. You roll Believability yourself once it is up, and the city will carry one story a week.</p>
+                <p style="font-size:.8em;opacity:.7;">The headline is the whole post. The two bonuses are separate conditions and stack, so a story that does both is +3. Whether the city buys it is settled the moment it goes up, and the city will carry one story a week.</p>
             </form>`,
             buttons: {
                 post: { label: "Publish", callback: async (h) => {
@@ -546,7 +551,6 @@
                         hard: kept.hardOn ? kept.hard : [],
                     });
                     app?.render(true);
-                    if (postId) rollPrompt(app, postId, kept.headline);
                 } },
                 cancel: { label: "Cancel" },
             },
@@ -561,20 +565,6 @@
                 bind("hardOn", "hard");
             },
         }, { width: 460 }).render(true);
-    }
-
-    /** She makes her own roll, and finds out the moment she does. */
-    function rollPrompt(app, postId, headline) {
-        new Dialog({
-            title: "Believability",
-            content: `<p style="margin:0 0 6px;">&ldquo;${esc(headline)}&rdquo; is up.</p>
-                <p style="font-size:.85em;opacity:.75;margin:0;">Roll to see whether the city buys it. Luck cannot be spent on this. A story that lands brings in 1d10 x 10 x your Credibility Rank cubed in followers. You can leave it and roll from the post later.</p>`,
-            buttons: {
-                roll: { label: "Roll Believability", callback: async () => { await believability(postId); app?.render(true); } },
-                later: { label: "Later" },
-            },
-            default: "roll",
-        }, { width: 400 }).render(true);
     }
 
     function commentDialog(app, postId) {
