@@ -147,55 +147,83 @@
         }
     }
 
-    async function publish(headline, evidence = 0) {
+    async function publish(headline, evidence) {
         const actor = actorOf(game.user);
+        const bonus = (evidence.simple ? 1 : 0) + (evidence.hard.length ? 2 : 0);
+        const id = uid();
         const list = posts();
         list.push({
-            id: uid(),
+            id,
             headline,
             authorName: actor?.name || game.user.name,
             credibility: credibility(actor),
             posted: today(),
             evidence,
+            bonus,
+            believed: null,
             comments: [],
         });
         await request({ op: "savePosts", value: list });
 
-        const whisper = game.users.filter((u) => u.isGM).map((u) => u.id);
+        const backing = [
+            evidence.simple ? `<br>Plain evidence: ${esc(evidence.simple)}` : "",
+            evidence.hard.length ? `<br>Hard evidence:<br>${evidence.hard.map((e, i) => `&nbsp;${i + 1}. ${esc(e)}`).join("<br>")}` : "",
+        ].join("");
+
         await ChatMessage.create({
-            whisper,
+            whisper: game.users.filter((u) => u.isGM).map((u) => u.id),
             content: `<div style="font-family: monospace; font-size: .8rem; border-left: 3px solid ${ACCENT}; padding-left: 8px;">
                 <span style="color:${ACCENT}; letter-spacing:2px;">THE GARDEN</span><br>
-                <b>${esc(actor?.name || game.user.name)}</b> published: &ldquo;${esc(headline)}&rdquo;</div>`,
+                <b>${esc(actor?.name || game.user.name)}</b> published: &ldquo;${esc(headline)}&rdquo;
+                ${backing || "<br>Nothing the public can check."}</div>`,
         });
-        await believability(actor, headline, evidence);
+        return id;
     }
 
     /** Believability: a flat d10 under the threshold for her Credibility Rank. Rolled on
         publishing, and again whenever it matters whether a particular person believes it. */
     const BELIEVABILITY = { 1: 2, 2: 2, 3: 3, 4: 3, 5: 4, 6: 4, 7: 5, 8: 5, 9: 6, 10: 7 };
 
-    async function believability(actor, headline, evidence = 0) {
+    async function believability(postId) {
+        const actor = actorOf(game.user);
+
+        // A player's publish goes to the GM over the socket, so the world setting can be
+        // a moment behind the click. Wait for the story to land rather than roll on nothing.
+        let post = posts().find((p) => p.id === postId);
+        for (let n = 0; !post && n < 20; n++) {
+            await new Promise((r) => setTimeout(r, 100));
+            post = posts().find((p) => p.id === postId);
+        }
+        if (!post) return ui.notifications.warn("The story has not finished going up. Use the Roll button on the post.");
+        if (post.believed != null) return;
+
         const rank = credibility(actor);
         const base = BELIEVABILITY[rank] ?? 2;
-        const target = Math.min(10, base + (Number(evidence) || 0));
+        const target = Math.min(10, base + (post.bonus || 0));
         const roll = await new Roll("1d10").evaluate();
         const believed = roll.total <= target;
 
         await roll.toMessage({
             speaker: ChatMessage.getSpeaker({ actor }),
-            flavor: `Believability &middot; Credibility Rank ${rank}, ${base} in 10${evidence ? ` and +${evidence} for evidence, so ${target} in 10` : ""}`,
+            flavor: `Believability &middot; Credibility Rank ${rank}, ${base} in 10${post.bonus ? `, +${post.bonus} for evidence, so ${target} in 10` : ""}`,
         });
         await ChatMessage.create({
             whisper: [...game.users.filter((u) => u.isGM).map((u) => u.id), game.user.id],
             content: `<div style="font-family: monospace; font-size:.8rem; border-left:3px solid ${ACCENT}; padding-left:8px;">
                 <span style="color:${ACCENT}; letter-spacing:2px;">THE GARDEN</span><br>
-                &ldquo;${esc(headline)}&rdquo;<br>
+                &ldquo;${esc(post.headline)}&rdquo;<br>
                 ${believed
                     ? `<b style="color:#64ffda;">The city believes it.</b>`
                     : `<b style="color:#ff3366;">The city does not buy it.</b>`}
                 Rolled ${roll.total} against ${target}.</div>`,
         });
+
+        const list = posts();
+        const i = list.findIndex((p) => p.id === postId);
+        if (i >= 0) {
+            list[i] = { ...list[i], believed, rolled: roll.total, target };
+            await request({ op: "savePosts", value: list });
+        }
         return believed;
     }
 
@@ -252,6 +280,13 @@
             ? post.comments.map((c) => commentRow(post, c, mine)).join("")
             : `<div style="font-size:.65rem;color:#5a5f54;padding:10px 0;">Nobody has said anything yet.</div>`;
 
+        const bel = post.believed == null
+            ? (mine ? `<div style="margin-top:9px;"><button type="button" data-action="gd-roll" data-post="${post.id}" style="font-family:inherit;width:100%;background:rgba(255,20,147,.14);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.68rem;padding:6px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;">Roll Believability</button></div>`
+                   : `<div style="margin-top:9px;font-size:.62rem;color:#5a5f54;">Not yet out in the city.</div>`)
+            : `<div style="margin-top:9px;font-size:.62rem;color:${post.believed ? "#64ffda" : "#ff3366"};letter-spacing:.06em;text-transform:uppercase;">
+                ${post.believed ? "The city believes it" : "The city does not buy it"}
+                <span style="color:#5a5f54;text-transform:none;letter-spacing:0;"> &middot; rolled ${post.rolled} against ${post.target}</span></div>`;
+
         const gmTools = game.user.isGM
             ? `<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
                 <button type="button" data-action="gd-add-comment" data-post="${post.id}" style="font-family:inherit;background:rgba(255,20,147,.14);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:pointer;">Add comment</button>
@@ -260,7 +295,7 @@
             : "";
 
         return `<div style="background:rgba(255,255,255,.03);border:1px solid ${ACCENT};border-radius:6px;padding:10px;margin-bottom:8px;">
-            ${head}<div style="margin-top:8px;">${comments}</div>${gmTools}</div>`;
+            ${head}${bel}<div style="margin-top:8px;">${comments}</div>${gmTools}</div>`;
     }
 
     function html(app) {
@@ -285,31 +320,80 @@
     /*  Dialogs                                                          */
     /* ---------------------------------------------------------------- */
 
+    /** The book asks for "more than 4 distinct pieces", so the hard-evidence box wants five. */
+    const HARD_PIECES = 5;
+
     function headlineDialog(app) {
+        const rows = Array.from({ length: HARD_PIECES }, (_, i) =>
+            `<input type="text" name="hard${i}" placeholder="Piece ${i + 1}" style="margin-top:3px;">`).join("");
+
         new Dialog({
             title: "Publish to the Garden",
             content: `<form>
                 <div class="form-group"><label>Headline</label><input type="text" name="headline" placeholder="What you are telling the city."></div>
+
                 <div class="form-group" style="display:block;">
-                    <label>Backed by</label>
-                    <label style="font-weight:normal;display:block;margin-top:3px;"><input type="checkbox" name="plain"> A piece of evidence an ordinary reader gets at a glance <b>(+1)</b></label>
-                    <label style="font-weight:normal;display:block;"><input type="checkbox" name="hard"> Five or more distinct pieces of hard evidence <b>(+2)</b></label>
-                    <p style="font-size:.75em;opacity:.6;margin:3px 0 0;">Separate conditions. Dense evidence nobody can read is the second without the first.</p>
+                    <label><input type="checkbox" name="simpleOn"> Verifiable Evidence (Simple) <b>+1</b></label>
+                    <p style="font-size:.72em;opacity:.6;margin:2px 0 0;">One piece an ordinary reader understands at a glance.</p>
+                    <div data-group="simple" style="display:none;margin-top:4px;">
+                        <input type="text" name="simple" placeholder="What it is">
+                    </div>
                 </div>
-                <p style="font-size:.8em;opacity:.7;">The headline is the whole post. What the city says back depends on what you chose to say. Believability is rolled as soon as it goes up, and the city will carry one story a week.</p>
+
+                <div class="form-group" style="display:block;">
+                    <label><input type="checkbox" name="hardOn"> Verifiable Evidence <b>+2</b></label>
+                    <p style="font-size:.72em;opacity:.6;margin:2px 0 0;">${HARD_PIECES} distinct pieces of hard evidence. All ${HARD_PIECES} have to be filled in.</p>
+                    <div data-group="hard" style="display:none;margin-top:4px;">${rows}</div>
+                </div>
+
+                <p style="font-size:.8em;opacity:.7;">The headline is the whole post. The two bonuses are separate conditions and stack, so a story that does both is +3. You roll Believability yourself once it is up, and the city will carry one story a week.</p>
             </form>`,
             buttons: {
                 post: { label: "Publish", callback: async (h) => {
                     const f = h[0].querySelector("form");
-                    const v = f.headline.value.trim();
-                    if (!v) return ui.notifications.warn("A headline is the post; there has to be one.");
-                    await publish(v, (f.plain.checked ? 1 : 0) + (f.hard.checked ? 2 : 0));
+                    const headline = f.headline.value.trim();
+                    if (!headline) return ui.notifications.warn("A headline is the post; there has to be one.");
+
+                    const simple = f.simpleOn.checked ? f.simple.value.trim() : "";
+                    if (f.simpleOn.checked && !simple) return ui.notifications.warn("Say what the simple piece of evidence is, or untick that box.");
+
+                    const hard = [];
+                    if (f.hardOn.checked) {
+                        for (let i = 0; i < HARD_PIECES; i++) hard.push(f[`hard${i}`].value.trim());
+                        if (hard.some((v) => !v)) return ui.notifications.warn(`All ${HARD_PIECES} pieces have to be filled in, or untick that box.`);
+                    }
+
+                    const postId = await publish(headline, { simple, hard });
                     app?.render(true);
+                    rollPrompt(app, postId, headline);
                 } },
                 cancel: { label: "Cancel" },
             },
             default: "post",
-        }, { width: 440 }).render(true);
+            render: (h) => {
+                const f = h[0].querySelector("form");
+                const bind = (box, group) => {
+                    const el = f.querySelector(`[data-group="${group}"]`);
+                    f[box].addEventListener("change", () => { el.style.display = f[box].checked ? "block" : "none"; });
+                };
+                bind("simpleOn", "simple");
+                bind("hardOn", "hard");
+            },
+        }, { width: 460 }).render(true);
+    }
+
+    /** She makes her own roll, and finds out the moment she does. */
+    function rollPrompt(app, postId, headline) {
+        new Dialog({
+            title: "Believability",
+            content: `<p style="margin:0 0 6px;">&ldquo;${esc(headline)}&rdquo; is up.</p>
+                <p style="font-size:.85em;opacity:.75;margin:0;">Roll to see whether the city buys it. Luck cannot be spent on this. You can leave it and roll from the post later.</p>`,
+            buttons: {
+                roll: { label: "Roll Believability", callback: async () => { await believability(postId); app?.render(true); } },
+                later: { label: "Later" },
+            },
+            default: "roll",
+        }, { width: 400 }).render(true);
     }
 
     function commentDialog(app, postId) {
@@ -380,6 +464,10 @@
                     if (wait) { ui.notifications.warn(`The city is still carrying your last story. ${wait} day${wait === 1 ? "" : "s"} to go.`); break; }
                     headlineDialog(app); break;
                 }
+
+                case "gd-roll":
+                    await believability(postId);
+                    app.render(true); break;
 
                 case "gd-add-comment":
                     if (game.user.isGM) commentDialog(app, postId); break;
