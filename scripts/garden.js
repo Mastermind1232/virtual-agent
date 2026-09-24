@@ -147,7 +147,7 @@
         }
     }
 
-    async function publish(headline) {
+    async function publish(headline, evidence = 0) {
         const actor = actorOf(game.user);
         const list = posts();
         list.push({
@@ -156,6 +156,7 @@
             authorName: actor?.name || game.user.name,
             credibility: credibility(actor),
             posted: today(),
+            evidence,
             comments: [],
         });
         await request({ op: "savePosts", value: list });
@@ -167,22 +168,23 @@
                 <span style="color:${ACCENT}; letter-spacing:2px;">THE GARDEN</span><br>
                 <b>${esc(actor?.name || game.user.name)}</b> published: &ldquo;${esc(headline)}&rdquo;</div>`,
         });
-        await believability(actor, headline);
+        await believability(actor, headline, evidence);
     }
 
     /** Believability: a flat d10 under the threshold for her Credibility Rank. Rolled on
         publishing, and again whenever it matters whether a particular person believes it. */
     const BELIEVABILITY = { 1: 2, 2: 2, 3: 3, 4: 3, 5: 4, 6: 4, 7: 5, 8: 5, 9: 6, 10: 7 };
 
-    async function believability(actor, headline) {
+    async function believability(actor, headline, evidence = 0) {
         const rank = credibility(actor);
-        const target = BELIEVABILITY[rank] ?? 2;
+        const base = BELIEVABILITY[rank] ?? 2;
+        const target = Math.min(10, base + (Number(evidence) || 0));
         const roll = await new Roll("1d10").evaluate();
         const believed = roll.total <= target;
 
         await roll.toMessage({
             speaker: ChatMessage.getSpeaker({ actor }),
-            flavor: `Believability &middot; Credibility Rank ${rank}, ${target} in 10`,
+            flavor: `Believability &middot; Credibility Rank ${rank}, ${base} in 10${evidence ? ` and +${evidence} for evidence, so ${target} in 10` : ""}`,
         });
         await ChatMessage.create({
             whisper: [...game.users.filter((u) => u.isGM).map((u) => u.id), game.user.id],
@@ -288,13 +290,21 @@
             title: "Publish to the Garden",
             content: `<form>
                 <div class="form-group"><label>Headline</label><input type="text" name="headline" placeholder="What you are telling the city."></div>
+                <div class="form-group"><label>Backed by</label>
+                    <select name="evidence">
+                        <option value="0">Nothing the public can check</option>
+                        <option value="1">One piece of verifiable evidence</option>
+                        <option value="3">More than four distinct pieces</option>
+                    </select>
+                </div>
                 <p style="font-size:.8em;opacity:.7;">The headline is the whole post. What the city says back depends on what you chose to say. Believability is rolled as soon as it goes up, and the city will carry one story a week.</p>
             </form>`,
             buttons: {
                 post: { label: "Publish", callback: async (h) => {
-                    const v = h[0].querySelector('[name="headline"]').value.trim();
+                    const f = h[0].querySelector("form");
+                    const v = f.headline.value.trim();
                     if (!v) return ui.notifications.warn("A headline is the post; there has to be one.");
-                    await publish(v);
+                    await publish(v, Number(f.evidence.value) || 0);
                     app?.render(true);
                 } },
                 cancel: { label: "Cancel" },
