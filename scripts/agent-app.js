@@ -1176,6 +1176,10 @@ class AgentOSApplication extends Application {
         }
         // NuNu packaging: the Operator app is its own file and sits outside Application Access:
         // it shows on the GM's phone and on the one player named in the Operator setting.
+        // NuNu packaging: the Garden draws itself too.
+        try { data.gardenHtml = globalThis.VirtualAgentGarden?.html(this) ?? ""; }
+        catch (e) { console.error("Garden |", e); data.gardenHtml = `<div style="padding:30px 14px;text-align:center;color:#ff3366;font-size:.75rem;">The Garden could not draw. See the console.</div>`; }
+
         const OP = globalThis.VirtualAgentOperator;
         data.operatorHtml = "";
         if (OP?.visible()) {
@@ -2938,6 +2942,11 @@ class AgentOSApplication extends Application {
             const action = $(ev.currentTarget).data('action');
 
             // NuNu packaging: the Operator app answers its own actions.
+            if (typeof action === "string" && action.startsWith("gd-")) {
+                await globalThis.VirtualAgentGarden?.onClick(this, action, ev);
+                return;
+            }
+
             if (typeof action === "string" && action.startsWith("op-")) {
                 await globalThis.VirtualAgentOperator?.onClick(this, action, ev, html);
                 return;

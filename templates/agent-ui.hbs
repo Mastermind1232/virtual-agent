@@ -1634,81 +1634,9 @@
                 {{!-- ════════════════════════════════════════════════════════
                       Patch5.5: THE GARDEN (dating)
                       ════════════════════════════════════════════════════════ --}}
-                <div id="agent-view-garden" class="agent-app-view agent-view" style="display: {{#if (eq currentView 'garden')}}flex{{else}}none{{/if}}; height: 100%; position: relative;">
-                    {{!-- Patch5.5.3 canon: Cyberpunk neon magenta. Patch5.5.5: GM + button. --}}
-                    <div class="app-header" style="background: rgba(255, 20, 147, 0.10); border-bottom: 2px solid #ff1493; box-shadow: inset 0 0 12px rgba(255, 20, 147, 0.15); display: flex; align-items: center; justify-content: space-between;">
-                        <div data-action="back-to-home" style="display: flex; align-items: center; gap: 8px; cursor: pointer; flex: 1; min-width: 0;">
-                            <i class="fas fa-chevron-left" style="color: #ff1493;"></i>
-                            <h3 style="color: #ff1493; text-shadow: 0 0 6px rgba(255,20,147,0.5); margin: 0;">The Garden // Matches</h3>
-                        </div>
-                        <button type="button" data-action="garden-modal-open" title="Add a Garden profile" style="background: rgba(255,20,147,0.18); border: 1px solid #ff1493; color: #ff1493; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;"><i class="fas fa-plus"></i></button>
-                    </div>
-                    {{#if gardenActiveProfile}}
-                    <div data-preserve-scroll-container="garden-detail" style="padding: 12px; flex: 1; overflow-y: auto;">
-                        <button type="button" data-action="garden-close-profile" style="background: transparent; border: 1px solid #ff1493; color: #ff1493; padding: 4px 10px; font-family: monospace; font-size: 0.65rem; cursor: pointer; border-radius: 3px; margin-bottom: 10px;"><i class="fas fa-chevron-left"></i> BACK TO MATCHES</button>
-                        <div style="background: rgba(0,0,0,0.5); border: 1px solid #ff1493; border-radius: 12px; padding: 14px; text-align: center;">
-                            <img src="{{#if gardenActiveProfile.photo}}{{gardenActiveProfile.photo}}{{else}}icons/svg/mystery-man.svg{{/if}}" onerror="this.src='icons/svg/mystery-man.svg'" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 2px solid #ff1493; box-shadow: 0 0 12px rgba(255,20,147,0.45); margin: 0 auto 10px auto; display: block; background: #222;">
-                            <div style="font-size: 1.2rem; color: #fff; font-weight: bold;">{{gardenActiveProfile.name}}{{#if gardenActiveProfile.age}}<span style="color: #ff1493;">, {{gardenActiveProfile.age}}</span>{{/if}}</div>
-                            {{#if gardenActiveProfile.availability}}<div style="font-size: 0.6rem; color: #ff1493; letter-spacing: 1px; margin-top: 4px;">{{gardenActiveProfile.availability}}</div>{{/if}}
-                            {{#if gardenActiveProfile.bio}}<div style="font-size: 0.8rem; color: #ddd; margin-top: 12px; text-align: left; white-space: pre-wrap;">{{gardenActiveProfile.bio}}</div>{{/if}}
-                            {{#if gardenActiveProfile.interests}}<div style="font-size: 0.65rem; color: #aaa; margin-top: 10px; text-align: left;"><strong style="color: #ff1493;">Interests:</strong> {{gardenActiveProfile.interests}}</div>{{/if}}
-                            <button type="button" data-action="garden-message-profile" data-profile-id="{{gardenActiveProfile.id}}" style="margin-top: 14px; background: rgba(255,20,147,0.22); color: #ff1493; border: 1px solid #ff1493; padding: 8px 16px; font-family: monospace; font-weight: bold; cursor: pointer; border-radius: 4px;"><i class="fas fa-comment-dots"></i> MESSAGE</button>
-                        </div>
-                    </div>
-                    {{else}}
-                    <div data-preserve-scroll-container="garden-list" style="flex: 1; overflow-y: auto; padding: 10px;">
-                        {{#each gardenProfilesView}}
-                        <div data-action="garden-open-profile" data-profile-id="{{this.id}}" style="padding: 10px; margin-bottom: 8px; background: rgba(255,20,147,0.08); border: 1px solid #ff1493; border-radius: 8px; cursor: pointer; display: flex; gap: 10px; align-items: center;">
-                            <img src="{{#if this.photo}}{{this.photo}}{{else}}icons/svg/mystery-man.svg{{/if}}" onerror="this.src='icons/svg/mystery-man.svg'" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid #ff1493; flex-shrink: 0; background: #222;">
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="color: #fff; font-weight: bold;">{{this.name}}{{#if this.age}}<span style="color: #ff1493;">, {{this.age}}</span>{{/if}}</div>
-                                {{#if this.bio}}<div style="font-size: 0.65rem; color: #aaa; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{this.bio}}</div>{{/if}}
-                            </div>
-                        </div>
-                        {{else}}
-                        <div style="text-align: center; padding: 30px; color: #666; font-size: 0.75rem;"><i class="fas fa-seedling" style="font-size: 1.5rem; margin-bottom: 8px; display: block; color: #ff1493;"></i>{{#if isGM}}No Garden profiles yet. Tap + to plant one.{{else}}No profiles yet — tap + to add yours.{{/if}}</div>
-                        {{/each}}
-                    </div>
-                    {{/if}}
+                {{!-- NuNu packaging: the Garden is the Data Pool's social network, rendered by scripts/garden.js --}}
+                <div id="agent-view-garden" class="agent-app-view agent-view" style="display: {{#if (eq currentView 'garden')}}flex{{else}}none{{/if}}; height: 100%; flex-direction: column; overflow: hidden;">{{{gardenHtml}}}</div>
 
-                    {{!-- Patch5.5.5: Garden add-profile modal --}}
-                    {{#if showGardenAddModal}}
-                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 14px;">
-                        <div style="background: #0a0a0f; border: 2px solid #ff1493; border-radius: 10px; padding: 14px; width: 94%; max-width: 380px; max-height: 86%; overflow-y: auto; box-shadow: 0 0 30px rgba(255,20,147,0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div style="font-family: monospace; color: #ff1493; letter-spacing: 2px; font-size: 0.7rem;">ADD GARDEN PROFILE</div>
-                                <button type="button" data-action="garden-modal-close" aria-label="Close" style="background: transparent; border: none; color: #888; cursor: pointer; padding: 4px; line-height: 1; font-size: 0.9rem;"><i class="fas fa-times"></i></button>
-                            </div>
-                            <div style="display:grid; grid-template-columns: 2fr 1fr; gap:6px; margin-bottom: 8px;">
-                                <input type="text" id="garden-modal-name" placeholder="Display name *" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; box-sizing:border-box;">
-                                <input type="text" id="garden-modal-age" placeholder="Age" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; box-sizing:border-box;">
-                            </div>
-                            <input type="text" id="garden-modal-availability" placeholder="Active / Off / Hidden" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom: 8px;">
-                            <label class="admin-label" style="font-size: 0.6rem; color: #ccc;">Photo (optional)</label>
-                            {{!-- 1.8.0: players upload from their own computer (native OS file dialog) into a
-                                  dedicated world folder — they never open Foundry's file browser, so GM assets
-                                  stay out of sight. The path field + FilePicker browse remain GM-only. --}}
-                            <div style="display: {{#if isGM}}grid{{else}}flex{{/if}}; grid-template-columns: 1fr auto auto; gap: 4px; align-items: stretch; margin-bottom: 4px; min-width: 0;">
-                                {{#if isGM}}
-                                <input type="text" id="garden-modal-photo" placeholder="Image path (optional)" data-preserve-draft style="min-width: 0; width: 100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem;">
-                                <button type="button" class="pick-garden-photo" title="Browse for photo (Forge-compatible)" style="background: rgba(255,20,147,0.18); border: 1px solid #ff1493; color: #ff1493; padding: 6px 12px; border-radius: 3px; cursor: pointer; white-space: nowrap;"><i class="fas fa-folder-open"></i></button>
-                                {{/if}}
-                                <button type="button" class="garden-photo-upload" title="Upload a photo from your computer" style="{{#if isGM}}flex: 0 0 auto;{{else}}flex: 1;{{/if}} background: rgba(255,20,147,0.18); border: 1px solid #ff1493; color: #ff1493; padding: 6px 12px; border-radius: 3px; cursor: pointer; white-space: nowrap; font-family: monospace; font-size: 0.65rem;"><i class="fas fa-upload"></i>{{#unless isGM}} UPLOAD PHOTO{{/unless}}</button>
-                                <input type="file" class="garden-photo-file" accept="image/png,image/jpeg,image/webp,image/gif" style="display: none;">
-                            </div>
-                            <div class="garden-photo-status" style="font-family: monospace; font-size: 0.58rem; color: #ff1493; min-height: 12px; margin-bottom: 6px;">{{#if gardenPendingPhoto}}&#10003; {{gardenPendingPhoto}} attached{{/if}}</div>
-                            <textarea id="garden-modal-bio" rows="3" placeholder="Bio" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom: 8px; resize:none;"></textarea>
-                            <input type="text" id="garden-modal-interests" placeholder="Interests (comma-separated)" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom: 10px;">
-                            <div style="display: flex; gap: 6px;">
-                                <button type="button" data-action="garden-modal-close" style="flex:1; padding:8px; background:rgba(255,51,85,0.1); border:1px solid #ff3355; color:#ff3355; font-family:monospace; font-size:0.7rem; cursor:pointer; border-radius:4px;">CANCEL</button>
-                                <button type="button" data-action="garden-add-profile" style="flex:1; padding:8px; background:rgba(255,20,147,0.18); border:1px solid #ff1493; color:#ff1493; font-family:monospace; font-size:0.7rem; font-weight:bold; cursor:pointer; border-radius:4px;"><i class="fas fa-seedling"></i> ADD</button>
-                            </div>
-                        </div>
-                    </div>
-                    {{/if}}
-                </div>
-
-                <!-- AUCTION HOUSE VIEW -->
                 <div id="agent-view-auction" class="agent-app-view agent-view" style="display: {{#if (eq currentView 'auction')}}flex{{else}}none{{/if}}; height: 100%;">
                     <div class="app-header" style="justify-content: space-between;">
                         <span style="display: flex; align-items: center; gap: 10px; cursor: pointer;" data-action="{{#if (eq auctionView 'detail')}}auction-back-to-list{{else}}back-to-home{{/if}}">
@@ -2232,39 +2160,7 @@
                         </div>
                         {{/if}}
 
-                        {{!-- Patch5.5: The Garden (dating) admin --}}
-                        {{#if isGM}}
-                        <div class="admin-section">
-                            <div class="admin-section-title">The Garden — Profiles</div>
-                            <div class="admin-hint" style="margin-bottom: 8px;">Plant NPC profiles. Players match + can DM straight from the app — message lands in their Messenger thread.</div>
-                            <div style="display:grid; grid-template-columns: 2fr 1fr 2fr; gap:6px; margin-bottom: 6px;">
-                                <input type="text" id="garden-add-name" class="admin-input datapool-input" placeholder="Display name *" data-preserve-draft style="box-sizing:border-box;">
-                                <input type="text" id="garden-add-age" class="admin-input datapool-input" placeholder="Age" data-preserve-draft style="box-sizing:border-box;">
-                                <input type="text" id="garden-add-availability" class="admin-input datapool-input" placeholder="Active / Off / Hidden" data-preserve-draft style="box-sizing:border-box;">
-                            </div>
-                            <div style="display: flex; gap:6px; margin-bottom: 6px;">
-                                <input type="text" id="garden-add-photo" class="admin-input datapool-input" placeholder="Photo path (icons/svg/... or modules/VirtualAgent/...)" data-preserve-draft style="flex:1; box-sizing:border-box;">
-                            </div>
-                            <textarea id="garden-add-bio" class="admin-input admin-textarea datapool-input" rows="2" placeholder="Bio" data-preserve-draft style="width:100%; box-sizing:border-box; margin-bottom: 6px;"></textarea>
-                            <input type="text" id="garden-add-interests" class="admin-input datapool-input" placeholder="Interests (comma-separated)" data-preserve-draft style="width:100%; box-sizing:border-box; margin-bottom: 6px;">
-                            <div class="admin-inline-group" style="margin-bottom: 10px;">
-                                <button type="button" class="admin-btn admin-btn-cyan" data-action="garden-add-profile"><i class="fas fa-seedling"></i> ADD PROFILE</button>
-                            </div>
-                            {{#if gardenProfiles.length}}
-                            <div style="background:#181a1f; border:1px solid #2a2d33; border-radius:4px; padding:6px; max-height:200px; overflow-y:auto;">
-                                {{#each gardenProfiles}}
-                                <div style="display:flex; gap:8px; padding:5px; border-bottom:1px solid #222; align-items:center; font-family:monospace; font-size:0.65rem;">
-                                    <span style="flex:1; color:#ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{this.name}}{{#if this.age}}, {{this.age}}{{/if}}</span>
-                                    <span style="color:#ff77aa;">{{this.availability}}</span>
-                                    <i class="fas fa-times" data-action="garden-delete-profile" data-profile-id="{{this.id}}" style="cursor:pointer; color:#ff3355;"></i>
-                                </div>
-                                {{/each}}
-                            </div>
-                            {{else}}
-                            <div class="admin-hint" style="color:#555;">No profiles yet.</div>
-                            {{/if}}
-                        </div>
-                        {{/if}}
+                        {{!-- NuNu packaging: the Garden is a publishing app now, managed from inside it. --}}
 
                         {{!-- Patch5.5.3: Map indicators moved to the Maps app (Ryouhi UX:
                               click-to-place instead of GMs typing x/y coordinates).
