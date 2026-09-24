@@ -268,6 +268,7 @@
             }
             case "addComment": {
                 const i = findPost();
+                if (i >= 0 && (list[i].comments || []).length >= MAX_COMMENTS) break;
                 if (i >= 0) { list[i] = { ...list[i], comments: [...(list[i].comments || []), saneComment(msg.comment)] }; changed = true; }
                 break;
             }
@@ -464,7 +465,7 @@
 
         const gmTools = game.user.isGM
             ? `<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-                <button type="button" data-action="gd-add-comment" data-post="${esc(post.id)}" style="font-family:inherit;background:rgba(255,20,147,.14);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:pointer;">Add comment</button>
+                <button type="button" data-action="gd-add-comment" data-post="${esc(post.id)}" ${comments.length >= MAX_COMMENTS ? "disabled" : ""} style="font-family:inherit;background:${comments.length >= MAX_COMMENTS ? "transparent" : "rgba(255,20,147,.14)"};border:1px solid ${comments.length >= MAX_COMMENTS ? "#553" : ACCENT};color:${comments.length >= MAX_COMMENTS ? "#775" : ACCENT};border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:${comments.length >= MAX_COMMENTS ? "default" : "pointer"};">${comments.length >= MAX_COMMENTS ? `${MAX_COMMENTS} comments, the most a story gets` : "Add comment"}</button>
                 <button type="button" data-action="gd-drop-post" data-post="${esc(post.id)}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:pointer;">Delete post</button>
                </div>`
             : "";
@@ -507,6 +508,9 @@
     /* ---------------------------------------------------------------- */
     /*  Dialogs                                                          */
     /* ---------------------------------------------------------------- */
+
+    /** The city answers a story twice and then moves on. */
+    const MAX_COMMENTS = 2;
 
     /** The book asks for "more than 4 distinct pieces", so the hard-evidence box wants five. */
     const HARD_PIECES = 5;
@@ -597,6 +601,7 @@
 
                     const post = posts().find((p) => p.id === postId);
                     if (!post) return reject("That story is no longer there.");
+                    if ((post.comments || []).length >= MAX_COMMENTS) return reject(`A story gets ${MAX_COMMENTS} comments and no more.`);
 
                     await request({ op: "addComment", postId, comment: {
                         id: uid(), who: f.who.value.trim(), text,
@@ -671,8 +676,12 @@
                 case "gd-followers":
                     if (game.user.isGM) followersDialog(app); break;
 
-                case "gd-add-comment":
-                    if (game.user.isGM) commentDialog(app, postId); break;
+                case "gd-add-comment": {
+                    if (!game.user.isGM) break;
+                    const post = posts().find((p) => p.id === postId);
+                    if ((post?.comments || []).length >= MAX_COMMENTS) { ui.notifications.warn(`A story gets ${MAX_COMMENTS} comments and no more.`); break; }
+                    commentDialog(app, postId); break;
+                }
 
                 case "gd-toggle": {
                     const cid = $t.data("comment");
