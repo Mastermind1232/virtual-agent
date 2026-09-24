@@ -89,12 +89,12 @@
     /** Whose following the header shows: her own to her, hers to everybody else. */
     const squadActor = () => (canPublish() ? actorOf(game.user) : actorOf(mediaUser()));
 
-    /** A story the city believes brings in 1d10 x 10 x Credibility Rank squared, so a
-        rank is worth far more than the one below it. */
+    /** A story the city believes brings in 1d10 x 10 x Credibility Rank cubed. The ladder
+        runs from one neighborhood to the whole world, so the gain climbs that steeply too. */
     async function gainFollowers(actor, rank) {
         if (!actor || rank < 1) return 0;
         const roll = await new Roll("1d10").evaluate();
-        const gained = roll.total * 10 * rank * rank;
+        const gained = roll.total * 10 * rank * rank * rank;
         const next = followers(actor) + gained;
         try { await actor.setFlag(ID, "gardenFollowers", next); }
         catch (e) { await request({ op: "setFollowers", actorUuid: actor.uuid, value: next }); }
@@ -568,7 +568,7 @@
         new Dialog({
             title: "Believability",
             content: `<p style="margin:0 0 6px;">&ldquo;${esc(headline)}&rdquo; is up.</p>
-                <p style="font-size:.85em;opacity:.75;margin:0;">Roll to see whether the city buys it. Luck cannot be spent on this. A story that lands brings in 1d10 x 10 x your Credibility Rank squared in followers. You can leave it and roll from the post later.</p>`,
+                <p style="font-size:.85em;opacity:.75;margin:0;">Roll to see whether the city buys it. Luck cannot be spent on this. A story that lands brings in 1d10 x 10 x your Credibility Rank cubed in followers. You can leave it and roll from the post later.</p>`,
             buttons: {
                 roll: { label: "Roll Believability", callback: async () => { await believability(postId); app?.render(true); } },
                 later: { label: "Later" },
@@ -626,7 +626,7 @@
             title: "The Hyph Squad",
             content: `<form><div class="form-group"><label>${esc(actor.name)}'s followers</label>
                 <input type="number" name="n" min="0" step="1" value="${followers(actor)}"></div>
-                <p style="font-size:.8em;opacity:.7;margin:0;">A story the city believes adds 1d10 x 10 x her Credibility Rank squared on its own.</p></form>`,
+                <p style="font-size:.8em;opacity:.7;margin:0;">A story the city believes adds 1d10 x 10 x her Credibility Rank cubed on its own.</p></form>`,
             buttons: {
                 save: { label: "Save", callback: async (h) => {
                     await actor.setFlag(ID, "gardenFollowers", num(h[0].querySelector('[name="n"]').value, 0, 1e12));
