@@ -293,8 +293,8 @@
                 <div class="form-group"><label>Backed by</label>
                     <select name="evidence">
                         <option value="0">Nothing the public can check</option>
-                        <option value="1">One piece of verifiable evidence</option>
-                        <option value="3">More than four distinct pieces</option>
+                        <option value="1">A piece of verifiable evidence the masses get (+1)</option>
+                        <option value="3">More than four distinct pieces (+1 and +2, so +3)</option>
                     </select>
                 </div>
                 <p style="font-size:.8em;opacity:.7;">The headline is the whole post. What the city says back depends on what you chose to say. Believability is rolled as soon as it goes up, and the city will carry one story a week.</p>
