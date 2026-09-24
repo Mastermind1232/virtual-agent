@@ -40,11 +40,15 @@
                 </label>
                 <label>Name{{#if this.hasActor}} <span class="nc-hint">from the sheet</span>{{/if}}<input type="text" data-field="name" value="{{this.name}}" {{#if this.hasActor}}readonly{{/if}}></label>
                 <label>Affiliation<input type="text" data-field="faction" value="{{this.faction}}" placeholder="AGPD, Fenixxx, The Bunnies…"></label>
-                <label>Role
+                <label>Role{{#if this.roleFromSheet}} <span class="nc-hint">from the sheet</span>{{/if}}
+                    {{#if this.roleFromSheet}}
+                    <input type="text" data-field="role" value="{{this.role}}" readonly>
+                    {{else}}
                     <select data-field="role">
                         <option value="">N/A</option>
                         {{#each ../roles}}<option value="{{this}}" {{#if (eq this ../this.role)}}selected{{/if}}>{{this}}</option>{{/each}}
                     </select>
+                    {{/if}}
                 </label>
                 <label>Attitude to the party
                     <select data-field="standing">

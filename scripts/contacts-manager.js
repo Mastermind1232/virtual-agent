@@ -27,6 +27,10 @@
     /** The ten Roles of Cyberpunk RED. Most people have none, so the list starts empty. */
     const ROLES = ["Exec", "Fixer", "Lawman", "Media", "Medtech", "Netrunner", "Nomad", "Rockerboy", "Solo", "Tech"];
 
+    /** What an actor's sheet says their Role is. The Role item is preferred over the free
+        text field beside the name, because that item is what carries their rank. */
+    const roleOnSheet = (actor) => (actor?.itemTypes?.role ?? [])[0]?.name || actor?.system?.roleInfo?.activeRole || "";
+
     /** The actor a contact is, when one is linked and still exists. */
     const linkedActor = (uuid) => { try { const a = uuid ? fromUuidSync(uuid) : null; return a?.documentName === "Actor" ? a : null; } catch (e) { return null; } };
 
@@ -61,7 +65,7 @@
             holders: [...c.holders],
             faction: meta[c.id]?.faction || "",
             standing: meta[c.id]?.standing || "neutral",
-            role: meta[c.id]?.role || "",
+            role: roleOnSheet(actor) || meta[c.id]?.role || "",
             actorUuid: meta[c.id]?.actorUuid || "",
         }; });
     }
@@ -159,6 +163,7 @@
                     party: party.map((p) => ({ ...p, has: c.holders.includes(p.id) })),
                     isOperator: !!globalThis.VirtualAgentOperator?.rosterHas?.(c.name),
                     actor: linkedActor(c.actorUuid),
+                    roleFromSheet: !!roleOnSheet(linkedActor(c.actorUuid)),
                     hasActor: !!linkedActor(c.actorUuid),
                     open: this.editing === c.id,
                 })),
@@ -193,7 +198,7 @@
                 const avatar = actor?.img && actor.img !== "icons/svg/mystery-man.svg" ? actor.img : (card.find("[data-field=avatar]").val() || "").trim();
                 const faction = (card.find("[data-field=faction]").val() || "").trim();
                 const stand = card.find("[data-field=standing]").val() || "neutral";
-                const role = card.find("[data-field=role]").val() || "";
+                const role = roleOnSheet(actor) ? "" : (card.find("[data-field=role]").val() || "");
                 const holders = card.find("[data-holder]:checked").toArray().map((el) => el.dataset.holder);
 
                 await save({ id, name, avatar, holders });
