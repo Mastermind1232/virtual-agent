@@ -50,21 +50,51 @@
             }
         };
         for (const u of game.users) collect(u);
-        return [...byId.values()].map((c) => ({
+        return [...byId.values()].map((c) => {
+            // A linked actor is who this person is. The stored copy is only a cache, so a
+            // rename or a new portrait on the sheet shows here without anything being re-saved.
+            const actor = linkedActor(meta[c.id]?.actorUuid);
+            return {
             ...c,
+            name: actor?.name || c.name,
+            avatar: (actor?.img && actor.img !== "icons/svg/mystery-man.svg") ? actor.img : c.avatar,
             holders: [...c.holders],
             faction: meta[c.id]?.faction || "",
             standing: meta[c.id]?.standing || "neutral",
             role: meta[c.id]?.role || "",
             actorUuid: meta[c.id]?.actorUuid || "",
-        }));
+        }; });
+    }
+
+    /* ---------------------------------------------------------------- */
+
+    /** The phone reads the stored copy rather than the sheet, so when a linked actor is
+        renamed or re-portrayed the copy on every device is rewritten to match. */
+    async function syncFromActors(only = null) {
+        if (!game.user.isGM) return;
+        const meta = readMeta();
+        for (const c of allContacts()) {
+            const uuid = meta[c.id]?.actorUuid;
+            if (!uuid || (only && uuid !== only)) continue;
+            const actor = linkedActor(uuid);
+            if (!actor) continue;
+            const avatar = (actor.img && actor.img !== "icons/svg/mystery-man.svg") ? actor.img : (c.avatar || null);
+
+            // Only touch the flags when the stored copy has actually drifted.
+            const stale = game.users.some((u) => (u.getFlag(ID, "customContacts") || [])
+                .some((r) => r.id === c.id && (r.name !== actor.name || r.originalName !== actor.name || (r.avatar || null) !== avatar)));
+            if (stale) await save({ id: c.id, name: actor.name, avatar, holders: c.holders });
+        }
     }
 
     /** Writes a contact to exactly the players who should hold it, and nobody else. */
     async function save({ id, name, avatar, holders }) {
         const record = (targets) => ({ id, name, originalName: name, avatar: avatar || null, isPlayer: false, ownerId: game.user.id, targetUserIds: targets });
+        // The GM's own list is the book, so it keeps the record whether or not anybody
+        // holds the number. Writing it only when somebody does meant a new contact, and any
+        // contact whose last holder was unticked, vanished from the world with no warning.
         const gmList = (game.user.getFlag(ID, "customContacts") || []).filter((c) => c.id !== id);
-        if (holders.length) gmList.push(record(holders));
+        gmList.push(record(holders));
         await game.user.setFlag(ID, "customContacts", gmList);
 
         for (const u of players()) {
@@ -214,7 +244,19 @@
 
     /* ---------------------------------------------------------------- */
 
-    globalThis.VirtualAgentContacts = { open: () => new ContactsManager().render(true), allContacts, save, remove };
+    globalThis.VirtualAgentContacts = { open: () => new ContactsManager().render(true), allContacts, save, remove, syncFromActors };
+
+    // Renaming or re-portraying an actor updates every contact pointing at it.
+    Hooks.on("updateActor", (actor, changes) => {
+        if (!game.user.isGM) return;
+        if (!("name" in changes) && !("img" in changes)) return;
+        syncFromActors(actor.uuid).catch((e) => console.error("Contacts |", e));
+    });
+
+    // Anything that drifted while nobody was watching is put right on load.
+    Hooks.once("ready", () => {
+        if (game.user.isGM) syncFromActors().catch((e) => console.error("Contacts |", e));
+    });
 
     Hooks.on("renderActorDirectory", (app, html) => {
         if (!game.user.isGM) return;
