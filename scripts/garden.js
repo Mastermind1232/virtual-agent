@@ -10,6 +10,11 @@
  *  Some comments are written in code, meant for her and nobody else.
  *  Everyone can see that a coded comment exists and read its text; only
  *  she can Decipher it, and a failed attempt waits out the day.
+ *
+ *  Posts live in one world setting. Only a GM can write a world
+ *  setting, so every change is relayed to the GM as a small targeted
+ *  operation and the GM re-reads before applying it. Relaying the whole
+ *  array instead would mean the last writer silently erased the other.
  * ------------------------------------------------------------------ */
 
 (() => {
@@ -18,12 +23,24 @@
 
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const uid = () => foundry.utils.randomID();
+    const num = (v, lo, hi) => Math.max(lo, Math.min(hi, Math.floor(Number(v) || 0)));
+    const commas = (n) => Number(n || 0).toLocaleString();
 
     const calendar = () => game.modules.get("nunu-calendar")?.api ?? null;
     const dateKey = (d) => d ? `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}` : "";
-    const today = () => dateKey(calendar()?.getDate?.());
+
+    /** A real-world day, tagged so it can never be mistaken for an in-game date. */
+    const realKey = () => { const n = new Date(); return `real:${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`; };
+
+    /** Today. The in-game date when the calendar is running, otherwise the real one, so
+        "a failed attempt waits out the day" still means something with the calendar off. */
+    const today = () => dateKey(calendar()?.getDate?.()) || realKey();
+
+    const isGameDay = (k) => typeof k === "string" && /^\d{4}-\d{2}-\d{2}$/.test(k);
+
     const prettyDate = (k) => {
-        const cal = calendar(); if (!cal || !k) return k ?? "";
+        if (!isGameDay(k)) return "";
+        const cal = calendar(); if (!cal) return k;
         const [y, m, d] = k.split("-").map(Number);
         return cal.shortDate ? cal.shortDate({ y, m, d }) : k;
     };
@@ -33,6 +50,7 @@
         catch (e) { return []; }
     };
     const savePosts = (v) => game.settings.set(ID, "gardenPosts", JSON.stringify(v));
+    const redraw = () => { const a = globalThis.AgentDeviceApp?.ui; if (a?.rendered) a.render(true); };
 
     /* ---------------------------------------------------------------- */
     /*  Who publishes                                                    */
@@ -52,26 +70,63 @@
     const canPublish = () => isMedia(game.user);
     const mediaUser = () => game.users.find((u) => !u.isGM && isMedia(u)) ?? null;
 
-    /** Days since a date key, or null when the calendar is not running. */
+    /** Her own Credibility Rank, off the Media role item on the sheet. */
+    const credibility = (actor) => num((actor?.itemTypes?.role ?? [])[0]?.system?.rank, 0, 10);
+
+    /** The post is hers when her user id is on it. Posts written before this was recorded
+        fall back to "any credentialed Media", which is how they already behaved. */
+    const isAuthor = (post) => post?.authorUserId ? post.authorUserId === game.user.id : canPublish();
+
+    /* ---------------------------------------------------------------- */
+    /*  The Hyph Squad                                                   */
+    /*                                                                   */
+    /*  Followers live on the character sheet, so they survive anything  */
+    /*  that happens to the world settings and the GM can edit them.     */
+    /* ---------------------------------------------------------------- */
+
+    const followers = (actor) => num(actor?.getFlag?.(ID, "gardenFollowers"), 0, 1e12);
+
+    /** Whose following the header shows: her own to her, hers to everybody else. */
+    const squadActor = () => (canPublish() ? actorOf(game.user) : actorOf(mediaUser()));
+
+    /** A story the city believes brings in 1d10 x 10 x Credibility Rank. */
+    async function gainFollowers(actor, rank) {
+        if (!actor || rank < 1) return 0;
+        const roll = await new Roll("1d10").evaluate();
+        const gained = roll.total * 10 * rank;
+        const next = followers(actor) + gained;
+        try { await actor.setFlag(ID, "gardenFollowers", next); }
+        catch (e) { await request({ op: "setFollowers", actorUuid: actor.uuid, value: next }); }
+        return gained;
+    }
+
+    /* ---------------------------------------------------------------- */
+    /*  One story a week                                                 */
+    /* ---------------------------------------------------------------- */
+
+    /** Days between an in-game date key and today, or null when either is not an in-game date. */
     const daysSince = (k) => {
-        const t = calendar()?.getDate?.(); if (!t || !k) return null;
+        const t = calendar()?.getDate?.();
+        if (!t || !isGameDay(k)) return null;
         const [y, m, d] = k.split("-").map(Number);
         return Math.round((Date.UTC(t.y, t.m - 1, t.d) - Date.UTC(y, m - 1, d)) / 86400000);
     };
 
-    /** The city will carry one story a week. Anything more and none of them land. */
+    /** The city will carry one story a week. Anything more and none of them land.
+        Keyed on the user rather than the character's name, so renaming the character or
+        opening the Agent as somebody else does not hand her a second story. */
     function nextPublishIn() {
-        const mine = posts().filter((p) => p.authorName === (actorOf(game.user)?.name || game.user.name));
-        const last = mine[mine.length - 1];
-        if (!last?.posted) return 0;
-        const since = daysSince(last.posted);
-        return since === null ? 0 : Math.max(0, 7 - since);
+        const me = game.user.id;
+        const fallbackName = actorOf(game.user)?.name || game.user.name;
+        const mine = posts().filter((p) => (p.authorUserId ? p.authorUserId === me : p.authorName === fallbackName));
+        // The newest story that carries a real in-game date is what the clock runs from.
+        // One published with the calendar off has no date and cannot start it.
+        for (let i = mine.length - 1; i >= 0; i--) {
+            const since = daysSince(mine[i].posted);
+            if (since !== null) return num(7 - since, 0, 7);
+        }
+        return 0;
     }
-
-    const credibility = (actor) => {
-        const role = (actor?.itemTypes?.role ?? [])[0];
-        return Number(role?.system?.rank) || 0;
-    };
 
     /* ---------------------------------------------------------------- */
     /*  Deciphering                                                      */
@@ -88,44 +143,49 @@
     /** True when a failed attempt has not yet waited out the day. */
     const lockedToday = (comment) => !!comment.failedOn && comment.failedOn === today();
 
+    /** Rolls in flight, so a second click cannot spend a second d10 on the same thing. */
+    const busy = new Set();
+
     async function decipher(postId, commentId) {
+        const tag = `d:${postId}:${commentId}`;
+        if (busy.has(tag)) return;
+
         const actor = actorOf(game.user);
         if (!actor) return ui.notifications.warn("No character is assigned, so there is nothing to roll.");
 
-        const list = posts();
-        const post = list.find((p) => p.id === postId);
+        const post = posts().find((p) => p.id === postId);
         const comment = post?.comments?.find((c) => c.id === commentId);
         if (!comment || comment.deciphered) return;
+        if (!isAuthor(post)) return;
         if (lockedToday(comment)) return ui.notifications.warn("You have already worked at this one today. Try again tomorrow.");
+        // The result has to be recordable before the die is spent, or a failed attempt is
+        // announced to the table and then forgotten, and she can simply try again.
+        if (!game.user.isGM && !activeGM()) return ui.notifications.warn("No GM is connected, so the attempt cannot be recorded. Try when one is.");
 
-        const total = skillTotal(actor, "Deduction");
-        const roll = await new Roll("1d10").evaluate();
-        const sum = roll.total + total;
-        const dv = Number(comment.dv) || 15;
-        const won = sum >= dv;
+        busy.add(tag);
+        try {
+            const total = skillTotal(actor, "Deduction");
+            const roll = await new Roll("1d10").evaluate();
+            const sum = roll.total + total;
+            const dv = num(comment.dv, 1, 30) || 15;
+            const beat = sum >= dv;
 
-        await roll.toMessage({
-            speaker: ChatMessage.getSpeaker({ actor }),
-            flavor: `Deciphering a comment on "${esc(post.headline)}" &middot; Deduction ${total} + ${roll.total} = ${sum}`,
-        });
+            await roll.toMessage({
+                speaker: ChatMessage.getSpeaker({ actor }),
+                whisper: [game.user.id, ...game.users.filter((u) => u.isGM).map((u) => u.id)],
+                flavor: `Deciphering a comment on &ldquo;${esc(post.headline)}&rdquo; &middot; Deduction ${total} + ${roll.total} = ${sum}`,
+            });
 
-        const i = list.findIndex((p) => p.id === postId);
-        const j = list[i].comments.findIndex((c) => c.id === commentId);
-        list[i].comments[j] = won
-            ? { ...comment, deciphered: true, failedOn: "" }
-            : { ...comment, failedOn: today() };
-        await request({ op: "savePosts", value: list });
+            await request({ op: "decipher", postId, commentId, won: beat, failedOn: beat ? "" : today() });
 
-        ui.notifications[won ? "info" : "warn"](won
-            ? "You read what they were actually saying."
-            : "It does not come apart. Sleep on it.");
+            ui.notifications[beat ? "info" : "warn"](beat
+                ? "You read what they were actually saying."
+                : "It does not come apart. Sleep on it.");
+        } finally { busy.delete(tag); }
     }
 
     /* ---------------------------------------------------------------- */
     /*  Writes                                                           */
-    /*                                                                   */
-    /*  Posts live in a world setting, which only a GM can write, so a    */
-    /*  player's publishing and deciphering is relayed over the socket.   */
     /* ---------------------------------------------------------------- */
 
     const SOCKET = `module.${ID}`;
@@ -133,58 +193,147 @@
     const isActiveGM = () => activeGM()?.id === game.user.id;
 
     async function request(payload) {
-        if (game.user.isGM) return apply(payload);
-        if (!activeGM()) return ui.notifications.warn("No GM is connected, so the Garden cannot record that.");
+        if (game.user.isGM) return apply({ ...payload, userId: game.user.id });
+        if (!activeGM()) { ui.notifications.warn("No GM is connected, so the Garden cannot record that."); return false; }
         game.socket.emit(SOCKET, { garden: true, ...payload, userId: game.user.id });
+        return true;
     }
 
+    /* Everything that arrives here is shaped by a client, so every field is coerced to
+       the type and range it is supposed to have before it is stored. */
+    const str = (v, max) => String(v ?? "").slice(0, max);
+
+    const sanePost = (p) => ({
+        id: str(p?.id, 40) || uid(),
+        headline: str(p?.headline, 300),
+        authorName: str(p?.authorName, 120),
+        authorUserId: str(p?.authorUserId, 40),
+        credibility: num(p?.credibility, 0, 10),
+        posted: str(p?.posted, 24),
+        evidence: {
+            simple: str(p?.evidence?.simple, 400),
+            hard: Array.isArray(p?.evidence?.hard) ? p.evidence.hard.slice(0, 10).map((e) => str(e, 400)) : [],
+        },
+        bonus: num(p?.bonus, 0, 3),
+        believed: null,
+        comments: [],
+    });
+
+    const saneComment = (c) => ({
+        id: str(c?.id, 40) || uid(),
+        who: str(c?.who, 60) || "anon",
+        text: str(c?.text, 2000),
+        coded: !!c?.coded,
+        intent: str(c?.intent, 2000),
+        dv: num(c?.dv, 1, 30) || 15,
+        deciphered: false,
+        failedOn: "",
+    });
+
+    /** The GM's side. Re-reads the stored list every time, so two people working at once
+        cannot stamp over each other's work the way a whole-array write would. */
     async function apply(msg) {
-        if (!game.user.isGM) return;
-        if (msg.op === "savePosts") {
-            await savePosts(msg.value);
-            const app = globalThis.AgentDeviceApp?.ui;
-            if (app?.rendered) app.render(true);
+        if (!game.user.isGM) return false;
+        const list = posts();
+        let changed = false;
+
+        const findPost = () => list.findIndex((p) => p.id === msg.postId);
+
+        switch (msg.op) {
+            case "addPost": {
+                const post = sanePost(msg.post);
+                if (!list.some((p) => p.id === post.id)) { list.push(post); changed = true; }
+                break;
+            }
+            case "believed": {
+                const i = findPost();
+                if (i >= 0 && list[i].believed == null) {
+                    list[i] = { ...list[i], believed: !!msg.believed, rolled: num(msg.rolled, 0, 10), target: num(msg.target, 0, 10), gained: num(msg.gained, 0, 1e9) };
+                    changed = true;
+                }
+                break;
+            }
+            case "decipher": {
+                const i = findPost();
+                const comments = i < 0 ? [] : (list[i].comments || []);
+                const j = comments.findIndex((c) => c.id === msg.commentId);
+                if (j >= 0 && !comments[j].deciphered) {
+                    const next = [...comments];
+                    next[j] = msg.won ? { ...next[j], deciphered: true, failedOn: "" } : { ...next[j], failedOn: str(msg.failedOn, 24) };
+                    list[i] = { ...list[i], comments: next };
+                    changed = true;
+                }
+                break;
+            }
+            case "addComment": {
+                const i = findPost();
+                if (i >= 0) { list[i] = { ...list[i], comments: [...(list[i].comments || []), saneComment(msg.comment)] }; changed = true; }
+                break;
+            }
+            case "setFollowers": {
+                // Not a post change, but it travels the same road so a player's roll can
+                // record its gain even when the sheet is not theirs to write.
+                const actor = await fromUuid(str(msg.actorUuid, 120)).catch(() => null);
+                if (actor?.documentName === "Actor") await actor.setFlag(ID, "gardenFollowers", num(msg.value, 0, 1e12));
+                break;
+            }
+            case "dropPost": {
+                const i = findPost();
+                if (i >= 0) { list.splice(i, 1); changed = true; }
+                break;
+            }
+            case "dropComment": {
+                const i = findPost();
+                if (i >= 0) { list[i] = { ...list[i], comments: (list[i].comments || []).filter((c) => c.id !== msg.commentId) }; changed = true; }
+                break;
+            }
         }
+
+        if (changed) await savePosts(list);
+        redraw();
+        return changed;
     }
+
+    /* ---------------------------------------------------------------- */
+    /*  Publishing                                                       */
+    /* ---------------------------------------------------------------- */
 
     async function publish(headline, evidence) {
         const actor = actorOf(game.user);
-        const bonus = (evidence.simple ? 1 : 0) + (evidence.hard.length ? 2 : 0);
-        const id = uid();
-        const list = posts();
-        list.push({
-            id,
+        const post = sanePost({
+            id: uid(),
             headline,
             authorName: actor?.name || game.user.name,
+            authorUserId: game.user.id,
             credibility: credibility(actor),
             posted: today(),
             evidence,
-            bonus,
-            believed: null,
-            comments: [],
+            bonus: (evidence.simple ? 1 : 0) + (evidence.hard.length ? 2 : 0),
         });
-        await request({ op: "savePosts", value: list });
+
+        if (!await request({ op: "addPost", post })) return null;
 
         const backing = [
-            evidence.simple ? `<br>Plain evidence: ${esc(evidence.simple)}` : "",
-            evidence.hard.length ? `<br>Hard evidence:<br>${evidence.hard.map((e, i) => `&nbsp;${i + 1}. ${esc(e)}`).join("<br>")}` : "",
+            post.evidence.simple ? `<br>Plain evidence: ${esc(post.evidence.simple)}` : "",
+            post.evidence.hard.length ? `<br>Hard evidence:<br>${post.evidence.hard.map((e, i) => `&nbsp;${i + 1}. ${esc(e)}`).join("<br>")}` : "",
         ].join("");
 
         await ChatMessage.create({
             whisper: game.users.filter((u) => u.isGM).map((u) => u.id),
             content: `<div style="font-family: monospace; font-size: .8rem; border-left: 3px solid ${ACCENT}; padding-left: 8px;">
                 <span style="color:${ACCENT}; letter-spacing:2px;">THE GARDEN</span><br>
-                <b>${esc(actor?.name || game.user.name)}</b> published: &ldquo;${esc(headline)}&rdquo;
+                <b>${esc(post.authorName)}</b> published: &ldquo;${esc(post.headline)}&rdquo;
                 ${backing || "<br>Nothing the public can check."}</div>`,
         });
-        return id;
+        return post.id;
     }
 
-    /** Believability: a flat d10 under the threshold for her Credibility Rank. Rolled on
-        publishing, and again whenever it matters whether a particular person believes it. */
+    /** Believability: a flat d10 at or under the threshold for her Credibility Rank. */
     const BELIEVABILITY = { 1: 2, 2: 2, 3: 3, 4: 3, 5: 4, 6: 4, 7: 5, 8: 5, 9: 6, 10: 7 };
 
     async function believability(postId) {
+        if (busy.has(postId)) return;
+
         const actor = actorOf(game.user);
 
         // A player's publish goes to the GM over the socket, so the world setting can be
@@ -196,35 +345,41 @@
         }
         if (!post) return ui.notifications.warn("The story has not finished going up. Use the Roll button on the post.");
         if (post.believed != null) return;
+        if (!isAuthor(post)) return ui.notifications.warn("That is not your story to roll for.");
+        if (!game.user.isGM && !activeGM()) return ui.notifications.warn("No GM is connected, so the roll cannot be recorded. Try when one is.");
 
-        const rank = credibility(actor);
-        const base = BELIEVABILITY[rank] ?? 2;
-        const target = Math.min(10, base + (post.bonus || 0));
-        const roll = await new Roll("1d10").evaluate();
-        const believed = roll.total <= target;
+        busy.add(postId);
+        try {
+            // The rank frozen onto the story when it went up, so ranking up afterwards does
+            // not change how the city received something already published.
+            const rank = num(post.credibility, 0, 10) || credibility(actor);
+            const base = BELIEVABILITY[rank] ?? 2;
+            const target = num(base + num(post.bonus, 0, 3), 0, 10);
+            const roll = await new Roll("1d10").evaluate();
+            const believed = roll.total <= target;
 
-        await roll.toMessage({
-            speaker: ChatMessage.getSpeaker({ actor }),
-            flavor: `Believability &middot; Credibility Rank ${rank}, ${base} in 10${post.bonus ? `, +${post.bonus} for evidence, so ${target} in 10` : ""}`,
-        });
-        await ChatMessage.create({
-            whisper: [...game.users.filter((u) => u.isGM).map((u) => u.id), game.user.id],
-            content: `<div style="font-family: monospace; font-size:.8rem; border-left:3px solid ${ACCENT}; padding-left:8px;">
-                <span style="color:${ACCENT}; letter-spacing:2px;">THE GARDEN</span><br>
-                &ldquo;${esc(post.headline)}&rdquo;<br>
-                ${believed
-                    ? `<b style="color:#64ffda;">The city believes it.</b>`
-                    : `<b style="color:#ff3366;">The city does not buy it.</b>`}
-                Rolled ${roll.total} against ${target}.</div>`,
-        });
+            await roll.toMessage({
+                speaker: ChatMessage.getSpeaker({ actor }),
+                flavor: `Believability &middot; Credibility Rank ${rank}, ${base} in 10${post.bonus ? `, +${post.bonus} for evidence, so ${target} in 10` : ""}`,
+            });
 
-        const list = posts();
-        const i = list.findIndex((p) => p.id === postId);
-        if (i >= 0) {
-            list[i] = { ...list[i], believed, rolled: roll.total, target };
-            await request({ op: "savePosts", value: list });
-        }
-        return believed;
+            const gained = believed ? await gainFollowers(actor, rank) : 0;
+
+            await ChatMessage.create({
+                whisper: [...game.users.filter((u) => u.isGM).map((u) => u.id), game.user.id],
+                content: `<div style="font-family: monospace; font-size:.8rem; border-left:3px solid ${ACCENT}; padding-left:8px;">
+                    <span style="color:${ACCENT}; letter-spacing:2px;">THE GARDEN</span><br>
+                    &ldquo;${esc(post.headline)}&rdquo;<br>
+                    ${believed
+                        ? `<b style="color:#64ffda;">The city believes it.</b>`
+                        : `<b style="color:#ff3366;">The city does not buy it.</b>`}
+                    Rolled ${roll.total} against ${target}.
+                    ${gained ? `<br><b style="color:#64ffda;">+${commas(gained)}</b> to the Hyph Squad, now ${commas(followers(actor))}.` : ""}</div>`,
+            });
+
+            await request({ op: "believed", postId, believed, rolled: roll.total, target, gained });
+            return believed;
+        } finally { busy.delete(postId); }
     }
 
     /* ---------------------------------------------------------------- */
@@ -244,13 +399,13 @@
             : (c.deciphered ? `<span style="font-size:.5rem;border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;padding:0 5px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;">read</span>` : "");
 
         const button = (mine && coded)
-            ? `<button type="button" data-action="gd-decipher" data-post="${post.id}" data-comment="${c.id}" ${locked ? "disabled" : ""}
+            ? `<button type="button" data-action="gd-decipher" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" ${locked ? "disabled" : ""}
                  style="font-family:inherit;margin-top:6px;background:${locked ? "transparent" : "rgba(155,109,255,.15)"};border:1px solid ${locked ? "#463a5c" : "#9b6dff"};color:${locked ? "#6c6280" : "#9b6dff"};border-radius:3px;font-size:.65rem;padding:3px 10px;cursor:${locked ? "default" : "pointer"};">
                  ${locked ? "Nothing more today" : "Decipher"}</button>`
             : "";
 
         const gm = game.user.isGM
-            ? `<button type="button" data-action="gd-drop-comment" data-post="${post.id}" data-comment="${c.id}" title="Delete"
+            ? `<button type="button" data-action="gd-drop-comment" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" title="Delete"
                  style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.65rem;cursor:pointer;padding:0 0 0 6px;">&times;</button>`
             : "";
 
@@ -263,55 +418,72 @@
 
     function postCard(post, view) {
         const open = view.postId === post.id;
-        const mine = canPublish();
-        const unread = (post.comments || []).filter((c) => c.coded && !c.deciphered).length;
+        const mine = isAuthor(post);
+        const comments = post.comments || [];
+        const unread = comments.filter((c) => c.coded && !c.deciphered).length;
+        const when = prettyDate(post.posted);
 
-        const head = `<div data-action="gd-open" data-post="${post.id}" style="cursor:pointer;">
+        const head = `<div data-action="gd-open" data-post="${esc(post.id)}" style="cursor:pointer;">
             <div style="color:#fff;font-size:.9rem;font-weight:700;line-height:1.3;">${esc(post.headline)}</div>
             <div style="font-size:.6rem;color:#7f8a99;margin-top:3px;">
-                ${esc(post.authorName)}${post.posted ? ` &middot; ${esc(prettyDate(post.posted))}` : ""}
-                &middot; ${(post.comments || []).length} comment${(post.comments || []).length === 1 ? "" : "s"}
+                ${esc(post.authorName)}${when ? ` &middot; ${esc(when)}` : ""}
+                &middot; ${comments.length} comment${comments.length === 1 ? "" : "s"}
                 ${unread && mine ? ` &middot; <span style="color:#9b6dff;">${unread} in code</span>` : ""}
             </div></div>`;
 
         if (!open) return `<div style="background:rgba(255,255,255,.03);border:1px solid #222;border-radius:6px;padding:10px;margin-bottom:8px;">${head}</div>`;
 
-        const comments = (post.comments || []).length
-            ? post.comments.map((c) => commentRow(post, c, mine)).join("")
+        const rows = comments.length
+            ? comments.map((c) => commentRow(post, c, mine)).join("")
             : `<div style="font-size:.65rem;color:#5a5f54;padding:10px 0;">Nobody has said anything yet.</div>`;
 
         const bel = post.believed == null
-            ? (mine ? `<div style="margin-top:9px;"><button type="button" data-action="gd-roll" data-post="${post.id}" style="font-family:inherit;width:100%;background:rgba(255,20,147,.14);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.68rem;padding:6px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;">Roll Believability</button></div>`
+            ? (mine ? `<div style="margin-top:9px;"><button type="button" data-action="gd-roll" data-post="${esc(post.id)}" style="font-family:inherit;width:100%;background:rgba(255,20,147,.14);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.68rem;padding:6px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;">Roll Believability</button></div>`
                    : `<div style="margin-top:9px;font-size:.62rem;color:#5a5f54;">Not yet out in the city.</div>`)
             : `<div style="margin-top:9px;font-size:.62rem;color:${post.believed ? "#64ffda" : "#ff3366"};letter-spacing:.06em;text-transform:uppercase;">
                 ${post.believed ? "The city believes it" : "The city does not buy it"}
-                <span style="color:#5a5f54;text-transform:none;letter-spacing:0;"> &middot; rolled ${post.rolled} against ${post.target}</span></div>`;
+                <span style="color:#5a5f54;text-transform:none;letter-spacing:0;">
+                    ${Number.isFinite(Number(post.rolled)) && Number.isFinite(Number(post.target)) ? ` &middot; rolled ${esc(post.rolled)} against ${esc(post.target)}` : ""}
+                    ${post.gained ? ` &middot; +${esc(commas(post.gained))} followers` : ""}</span></div>`;
 
         const gmTools = game.user.isGM
             ? `<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-                <button type="button" data-action="gd-add-comment" data-post="${post.id}" style="font-family:inherit;background:rgba(255,20,147,.14);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:pointer;">Add comment</button>
-                <button type="button" data-action="gd-drop-post" data-post="${post.id}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:pointer;">Delete post</button>
+                <button type="button" data-action="gd-add-comment" data-post="${esc(post.id)}" style="font-family:inherit;background:rgba(255,20,147,.14);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:pointer;">Add comment</button>
+                <button type="button" data-action="gd-drop-post" data-post="${esc(post.id)}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:pointer;">Delete post</button>
                </div>`
             : "";
 
         return `<div style="background:rgba(255,255,255,.03);border:1px solid ${ACCENT};border-radius:6px;padding:10px;margin-bottom:8px;">
-            ${head}${bel}<div style="margin-top:8px;">${comments}</div>${gmTools}</div>`;
+            ${head}${bel}<div style="margin-top:8px;">${rows}</div>${gmTools}</div>`;
     }
 
     function html(app) {
         const view = app._garden ?? (app._garden = { postId: null });
         const list = posts().slice().reverse();
+        const wait = canPublish() ? nextPublishIn() : 0;
 
         const body = list.length
             ? list.map((p) => postCard(p, view)).join("")
-            : `<div style="text-align:center;color:#5a5f54;font-size:.7rem;padding:34px 12px;">Nothing published yet.${canPublish() ? " Tap + to write a headline." : ""}</div>`;
+            : `<div style="text-align:center;color:#5a5f54;font-size:.7rem;padding:34px 12px;">Nothing published yet.${canPublish() ? " Tap + to post a story." : ""}</div>`;
+
+        const squad = squadActor();
+        const count = squad ? followers(squad) : 0;
+        const squadLine = squad
+            ? `<div style="font-size:.58rem;color:#7f8a99;letter-spacing:.04em;margin-top:1px;">
+                 <b style="color:${ACCENT};">${esc(commas(count))}</b> followers
+                 ${game.user.isGM ? `<button type="button" data-action="gd-followers" title="Set the follower count" style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.58rem;cursor:pointer;padding:0 0 0 4px;">edit</button>` : ""}
+               </div>`
+            : "";
 
         return `<div class="app-header drag-handle" style="justify-content:space-between;">
                 <span data-action="back-to-home" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
                     <i class="fas fa-chevron-left" style="color:${ACCENT};"></i>
-                    <h3 style="color:${ACCENT};margin:0;">The Garden</h3>
+                    <span style="display:flex;flex-direction:column;line-height:1.15;">
+                        <h3 style="color:${ACCENT};margin:0;">The Garden</h3>
+                        ${squadLine}
+                    </span>
                 </span>
-                ${canPublish() ? `<button type="button" data-action="gd-new" title="${nextPublishIn() ? `The city is still carrying your last story. ${nextPublishIn()} day${nextPublishIn() === 1 ? "" : "s"} to go.` : "Write a headline"}" ${nextPublishIn() ? "disabled" : ""} style="font-family:inherit;background:rgba(255,20,147,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:${nextPublishIn() ? "default" : "pointer"};font-size:.9rem;opacity:${nextPublishIn() ? ".4" : "1"};">+</button>` : ""}
+                ${canPublish() ? `<button type="button" data-action="gd-new" title="${wait ? `The city is still carrying your last story. ${wait} day${wait === 1 ? "" : "s"} to go.` : "Post a story"}" ${wait ? "disabled" : ""} style="font-family:inherit;background:rgba(255,20,147,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:${wait ? "default" : "pointer"};font-size:.9rem;opacity:${wait ? ".4" : "1"};">+</button>` : ""}
             </div>
             <div style="flex:1;overflow-y:auto;padding:10px;">${body}</div>`;
     }
@@ -322,28 +494,33 @@
 
     /** The book asks for "more than 4 distinct pieces", so the hard-evidence box wants five. */
     const HARD_PIECES = 5;
+    const EMPTY_DRAFT = { headline: "", simpleOn: false, simple: "", hardOn: false, hard: [] };
 
-    function headlineDialog(app) {
+    /** Foundry closes a dialog as soon as a button is pressed, so a rejected form is
+        re-opened with everything still in it rather than thrown away. */
+    function headlineDialog(app, draft = EMPTY_DRAFT) {
+        const reject = (msg, next) => { ui.notifications.warn(msg); setTimeout(() => headlineDialog(app, next), 0); };
+
         const rows = Array.from({ length: HARD_PIECES }, (_, i) =>
-            `<input type="text" name="hard${i}" placeholder="Piece ${i + 1}" style="margin-top:3px;">`).join("");
+            `<input type="text" name="hard${i}" value="${esc(draft.hard?.[i] ?? "")}" placeholder="Piece ${i + 1}" style="margin-top:3px;">`).join("");
 
         new Dialog({
-            title: "Publish to the Garden",
+            title: "Post a story",
             content: `<form>
-                <div class="form-group"><label>Headline</label><input type="text" name="headline" placeholder="What you are telling the city."></div>
+                <div class="form-group"><label>Headline</label><input type="text" name="headline" value="${esc(draft.headline)}" placeholder="What you are telling the city."></div>
 
                 <div class="form-group" style="display:block;">
-                    <label><input type="checkbox" name="simpleOn"> Verifiable Evidence (Simple) <b>+1</b></label>
+                    <label><input type="checkbox" name="simpleOn" ${draft.simpleOn ? "checked" : ""}> Verifiable Evidence (Simple) <b>+1</b></label>
                     <p style="font-size:.72em;opacity:.6;margin:2px 0 0;">One piece an ordinary reader understands at a glance.</p>
-                    <div data-group="simple" style="display:none;margin-top:4px;">
-                        <input type="text" name="simple" placeholder="What it is">
+                    <div data-group="simple" style="display:${draft.simpleOn ? "block" : "none"};margin-top:4px;">
+                        <input type="text" name="simple" value="${esc(draft.simple)}" placeholder="What it is">
                     </div>
                 </div>
 
                 <div class="form-group" style="display:block;">
-                    <label><input type="checkbox" name="hardOn"> Verifiable Evidence <b>+2</b></label>
+                    <label><input type="checkbox" name="hardOn" ${draft.hardOn ? "checked" : ""}> Verifiable Evidence <b>+2</b></label>
                     <p style="font-size:.72em;opacity:.6;margin:2px 0 0;">${HARD_PIECES} distinct pieces of hard evidence. All ${HARD_PIECES} have to be filled in.</p>
-                    <div data-group="hard" style="display:none;margin-top:4px;">${rows}</div>
+                    <div data-group="hard" style="display:${draft.hardOn ? "block" : "none"};margin-top:4px;">${rows}</div>
                 </div>
 
                 <p style="font-size:.8em;opacity:.7;">The headline is the whole post. The two bonuses are separate conditions and stack, so a story that does both is +3. You roll Believability yourself once it is up, and the city will carry one story a week.</p>
@@ -351,21 +528,24 @@
             buttons: {
                 post: { label: "Publish", callback: async (h) => {
                     const f = h[0].querySelector("form");
-                    const headline = f.headline.value.trim();
-                    if (!headline) return ui.notifications.warn("A headline is the post; there has to be one.");
+                    const kept = {
+                        headline: f.headline.value.trim(),
+                        simpleOn: f.simpleOn.checked,
+                        simple: f.simple.value.trim(),
+                        hardOn: f.hardOn.checked,
+                        hard: Array.from({ length: HARD_PIECES }, (_, i) => f[`hard${i}`].value.trim()),
+                    };
 
-                    const simple = f.simpleOn.checked ? f.simple.value.trim() : "";
-                    if (f.simpleOn.checked && !simple) return ui.notifications.warn("Say what the simple piece of evidence is, or untick that box.");
+                    if (!kept.headline) return reject("A headline is the post; there has to be one.", kept);
+                    if (kept.simpleOn && !kept.simple) return reject("Say what the simple piece of evidence is, or untick that box.", kept);
+                    if (kept.hardOn && kept.hard.some((v) => !v)) return reject(`All ${HARD_PIECES} pieces have to be filled in, or untick that box.`, kept);
 
-                    const hard = [];
-                    if (f.hardOn.checked) {
-                        for (let i = 0; i < HARD_PIECES; i++) hard.push(f[`hard${i}`].value.trim());
-                        if (hard.some((v) => !v)) return ui.notifications.warn(`All ${HARD_PIECES} pieces have to be filled in, or untick that box.`);
-                    }
-
-                    const postId = await publish(headline, { simple, hard });
+                    const postId = await publish(kept.headline, {
+                        simple: kept.simpleOn ? kept.simple : "",
+                        hard: kept.hardOn ? kept.hard : [],
+                    });
                     app?.render(true);
-                    rollPrompt(app, postId, headline);
+                    if (postId) rollPrompt(app, postId, kept.headline);
                 } },
                 cancel: { label: "Cancel" },
             },
@@ -387,7 +567,7 @@
         new Dialog({
             title: "Believability",
             content: `<p style="margin:0 0 6px;">&ldquo;${esc(headline)}&rdquo; is up.</p>
-                <p style="font-size:.85em;opacity:.75;margin:0;">Roll to see whether the city buys it. Luck cannot be spent on this. You can leave it and roll from the post later.</p>`,
+                <p style="font-size:.85em;opacity:.75;margin:0;">Roll to see whether the city buys it. Luck cannot be spent on this. A story that lands brings in 1d10 x 10 x your Credibility Rank followers. You can leave it and roll from the post later.</p>`,
             buttons: {
                 roll: { label: "Roll Believability", callback: async () => { await believability(postId); app?.render(true); } },
                 later: { label: "Later" },
@@ -397,6 +577,7 @@
     }
 
     function commentDialog(app, postId) {
+        const reject = (msg) => ui.notifications.warn(msg);
         new Dialog({
             title: "Add a comment",
             content: `<form>
@@ -411,21 +592,15 @@
                 add: { label: "Add", callback: async (h) => {
                     const f = h[0].querySelector("form");
                     const text = f.text.value.trim();
-                    if (!text) return ui.notifications.warn("The comment needs something in it.");
-                    const list = posts();
-                    const i = list.findIndex((p) => p.id === postId);
-                    if (i < 0) return;
-                    list[i].comments = [...(list[i].comments || []), {
-                        id: uid(),
-                        who: f.who.value.trim() || "anon",
-                        text,
-                        coded: f.coded.checked,
-                        intent: f.intent.value.trim(),
-                        dv: Math.max(1, Number(f.dv.value) || 15),
-                        deciphered: false,
-                        failedOn: "",
-                    }];
-                    await savePosts(list);
+                    if (!text) return reject("The comment needs something in it.");
+
+                    const post = posts().find((p) => p.id === postId);
+                    if (!post) return reject("That story is no longer there.");
+
+                    await request({ op: "addComment", postId, comment: {
+                        id: uid(), who: f.who.value.trim(), text,
+                        coded: f.coded.checked, intent: f.intent.value.trim(), dv: f.dv.value,
+                    } });
 
                     // The Media hears the city answer even with the phone shut.
                     const who = mediaUser();
@@ -433,7 +608,7 @@
                         whisper: [who.id, ...game.users.filter((u) => u.isGM).map((u) => u.id)],
                         content: `<div style="font-family: monospace; font-size:.8rem; border-left:3px solid ${ACCENT}; padding-left:8px;">
                             <span style="color:${ACCENT}; letter-spacing:2px;">THE GARDEN</span><br>
-                            A new comment on &ldquo;${esc(list[i].headline)}&rdquo;.</div>`,
+                            A new comment on &ldquo;${esc(post.headline)}&rdquo;.</div>`,
                     });
                     app?.render(true);
                 } },
@@ -441,6 +616,25 @@
             },
             default: "add",
         }, { width: 460 }).render(true);
+    }
+
+    function followersDialog(app) {
+        const actor = squadActor();
+        if (!actor) return ui.notifications.warn("No Media character is set up, so there is no following to edit.");
+        new Dialog({
+            title: "The Hyph Squad",
+            content: `<form><div class="form-group"><label>${esc(actor.name)}'s followers</label>
+                <input type="number" name="n" min="0" step="1" value="${followers(actor)}"></div>
+                <p style="font-size:.8em;opacity:.7;margin:0;">A story the city believes adds 1d10 x 10 x her Credibility Rank on its own.</p></form>`,
+            buttons: {
+                save: { label: "Save", callback: async (h) => {
+                    await actor.setFlag(ID, "gardenFollowers", num(h[0].querySelector('[name="n"]').value, 0, 1e12));
+                    app?.render(true);
+                } },
+                cancel: { label: "Cancel" },
+            },
+            default: "save",
+        }, { width: 380 }).render(true);
     }
 
     /* ---------------------------------------------------------------- */
@@ -465,32 +659,36 @@
                     headlineDialog(app); break;
                 }
 
-                case "gd-roll":
+                case "gd-roll": {
+                    // Taken out of service on the first click, so a double-click cannot
+                    // spend a second d10 while the first one is still in the air.
+                    ev.currentTarget.disabled = true;
                     await believability(postId);
                     app.render(true); break;
+                }
+
+                case "gd-followers":
+                    if (game.user.isGM) followersDialog(app); break;
 
                 case "gd-add-comment":
                     if (game.user.isGM) commentDialog(app, postId); break;
 
                 case "gd-decipher":
+                    ev.currentTarget.disabled = true;
                     await decipher(postId, $t.data("comment"));
                     app.render(true); break;
 
                 case "gd-drop-post": {
                     if (!game.user.isGM) break;
                     if (!await Dialog.confirm({ title: "Delete post", content: "<p>Remove this headline and everything said under it?</p>" })) break;
-                    await savePosts(posts().filter((p) => p.id !== postId));
+                    await request({ op: "dropPost", postId });
                     view.postId = null; app.render(true); break;
                 }
 
                 case "gd-drop-comment": {
                     if (!game.user.isGM) break;
-                    const cid = $t.data("comment");
-                    const list = posts();
-                    const i = list.findIndex((p) => p.id === postId);
-                    if (i < 0) break;
-                    list[i].comments = (list[i].comments || []).filter((c) => c.id !== cid);
-                    await savePosts(list); app.render(true); break;
+                    await request({ op: "dropComment", postId, commentId: $t.data("comment") });
+                    app.render(true); break;
                 }
             }
         } catch (err) {
@@ -506,7 +704,7 @@
     Hooks.once("init", () => {
         game.settings.register(ID, "gardenPosts", {
             scope: "world", config: false, type: String, default: "[]",
-            onChange: () => { const a = globalThis.AgentDeviceApp?.ui; if (a?.rendered) a.render(true); },
+            onChange: () => redraw(),
         });
     });
 
@@ -515,5 +713,7 @@
             if (!msg?.garden || !isActiveGM()) return;
             apply(msg).catch((e) => { console.error("Garden |", e); ui.notifications.error(`The Garden: ${e.message}`); });
         });
+        // A day passing is what lifts a failed Decipher, so the phone has to notice.
+        Hooks.on("nunuCalendar.dateChanged", () => redraw());
     });
 })();
