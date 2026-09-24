@@ -18,7 +18,7 @@
     const whoIs = (u) => u.character?.name || u.name;
 
     const STANDINGS = [
-        { id: "allied", label: "Ally", colour: "#64ffda" },
+        { id: "allied", label: "Ally", colour: "#6eb475" },
         { id: "neutral", label: "Neutral", colour: "#8b9183" },
         { id: "hostile", label: "Enemy", colour: "#ff3366" },
     ];
