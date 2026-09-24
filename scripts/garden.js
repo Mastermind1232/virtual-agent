@@ -392,22 +392,32 @@
     /*  Markup                                                           */
     /* ---------------------------------------------------------------- */
 
-    function commentRow(post, c, mine) {
+    function commentRow(post, c, mine, raw) {
         const coded = c.coded && !c.deciphered;
         const locked = lockedToday(c);
+        // Once she has cracked it she reads the meaning by default, and can flip back to
+        // what the commenter actually wrote.
+        const showingRaw = raw.has(c.id);
         const body = c.deciphered
-            ? `<div style="font-size:.7rem;color:#ddd;white-space:pre-wrap;">${esc(c.text)}</div>
-               <div style="margin-top:5px;padding:6px 8px;border-left:2px solid ${ACCENT};background:rgba(255,20,147,.07);font-size:.7rem;color:#fff;white-space:pre-wrap;">${esc(c.intent)}</div>`
+            ? (showingRaw
+                ? `<div style="font-size:.7rem;color:#b9a7c4;white-space:pre-wrap;font-family:monospace;letter-spacing:.5px;">${esc(c.text)}</div>`
+                : `<div style="padding:6px 8px;border-left:2px solid ${ACCENT};background:rgba(255,20,147,.07);font-size:.7rem;color:#fff;white-space:pre-wrap;">${esc(c.intent)}</div>`)
             : `<div style="font-size:.7rem;color:${coded ? "#b9a7c4" : "#ddd"};white-space:pre-wrap;${coded ? "font-family:monospace;letter-spacing:.5px;" : ""}">${esc(c.text)}</div>`;
 
         const tag = coded
             ? `<span style="font-size:.5rem;border:1px solid #9b6dff;color:#9b6dff;border-radius:3px;padding:0 5px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;">coded</span>`
             : (c.deciphered ? `<span style="font-size:.5rem;border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;padding:0 5px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;">read</span>` : "");
 
-        const button = (mine && coded)
-            ? `<button type="button" data-action="gd-decipher" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" ${locked ? "disabled" : ""}
-                 style="font-family:inherit;margin-top:6px;background:${locked ? "transparent" : "rgba(155,109,255,.15)"};border:1px solid ${locked ? "#463a5c" : "#9b6dff"};color:${locked ? "#6c6280" : "#9b6dff"};border-radius:3px;font-size:.65rem;padding:3px 10px;cursor:${locked ? "default" : "pointer"};">
-                 ${locked ? "Nothing more today" : "Decipher"}</button>`
+        const chip = (label, action, disabled, tone) =>
+            `<button type="button" data-action="${action}" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" ${disabled ? "disabled" : ""}
+               style="font-family:inherit;margin-top:6px;background:${disabled ? "transparent" : tone.bg};border:1px solid ${disabled ? "#463a5c" : tone.line};color:${disabled ? "#6c6280" : tone.ink};border-radius:3px;font-size:.65rem;padding:3px 10px;cursor:${disabled ? "default" : "pointer"};">${label}</button>`;
+
+        const PURPLE = { bg: "rgba(155,109,255,.15)", line: "#9b6dff", ink: "#9b6dff" };
+        const QUIET = { bg: "transparent", line: "#3a3f36", ink: "#8b9183" };
+
+        const button = !mine ? ""
+            : coded ? chip(locked ? "Nothing more today" : "Decipher", "gd-decipher", locked, PURPLE)
+            : c.deciphered ? chip(showingRaw ? "Show what it means" : "Show what they wrote", "gd-toggle", false, QUIET)
             : "";
 
         const gm = game.user.isGM
@@ -440,7 +450,7 @@
         if (!open) return `<div style="background:rgba(255,255,255,.03);border:1px solid #222;border-radius:6px;padding:10px;margin-bottom:8px;">${head}</div>`;
 
         const rows = comments.length
-            ? comments.map((c) => commentRow(post, c, mine)).join("")
+            ? comments.map((c) => commentRow(post, c, mine, view.raw ?? new Set())).join("")
             : `<div style="font-size:.65rem;color:#5a5f54;padding:10px 0;">Nobody has said anything yet.</div>`;
 
         const bel = post.believed == null
@@ -464,7 +474,7 @@
     }
 
     function html(app) {
-        const view = app._garden ?? (app._garden = { postId: null });
+        const view = app._garden ?? (app._garden = { postId: null, raw: new Set() });
         const list = posts().slice().reverse();
         const wait = canPublish() ? nextPublishIn() : 0;
 
@@ -633,7 +643,7 @@
     /* ---------------------------------------------------------------- */
 
     async function onClick(app, action, ev) {
-        const view = app._garden ?? (app._garden = { postId: null });
+        const view = app._garden ?? (app._garden = { postId: null, raw: new Set() });
         const $t = $(ev.currentTarget);
         const postId = $t.data("post");
 
@@ -663,6 +673,13 @@
 
                 case "gd-add-comment":
                     if (game.user.isGM) commentDialog(app, postId); break;
+
+                case "gd-toggle": {
+                    const cid = $t.data("comment");
+                    if (!view.raw) view.raw = new Set();
+                    view.raw.has(cid) ? view.raw.delete(cid) : view.raw.add(cid);
+                    app.render(true); break;
+                }
 
                 case "gd-decipher":
                     ev.currentTarget.disabled = true;
