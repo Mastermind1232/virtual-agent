@@ -290,12 +290,11 @@
             title: "Publish to the Garden",
             content: `<form>
                 <div class="form-group"><label>Headline</label><input type="text" name="headline" placeholder="What you are telling the city."></div>
-                <div class="form-group"><label>Backed by</label>
-                    <select name="evidence">
-                        <option value="0">Nothing the public can check</option>
-                        <option value="1">A piece of verifiable evidence the masses get (+1)</option>
-                        <option value="3">More than four distinct pieces (+1 and +2, so +3)</option>
-                    </select>
+                <div class="form-group" style="display:block;">
+                    <label>Backed by</label>
+                    <label style="font-weight:normal;display:block;margin-top:3px;"><input type="checkbox" name="plain"> A piece of evidence an ordinary reader gets at a glance <b>(+1)</b></label>
+                    <label style="font-weight:normal;display:block;"><input type="checkbox" name="hard"> Five or more distinct pieces of hard evidence <b>(+2)</b></label>
+                    <p style="font-size:.75em;opacity:.6;margin:3px 0 0;">Separate conditions. Dense evidence nobody can read is the second without the first.</p>
                 </div>
                 <p style="font-size:.8em;opacity:.7;">The headline is the whole post. What the city says back depends on what you chose to say. Believability is rolled as soon as it goes up, and the city will carry one story a week.</p>
             </form>`,
@@ -304,7 +303,7 @@
                     const f = h[0].querySelector("form");
                     const v = f.headline.value.trim();
                     if (!v) return ui.notifications.warn("A headline is the post; there has to be one.");
-                    await publish(v, Number(f.evidence.value) || 0);
+                    await publish(v, (f.plain.checked ? 1 : 0) + (f.hard.checked ? 2 : 0));
                     app?.render(true);
                 } },
                 cancel: { label: "Cancel" },
