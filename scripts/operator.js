@@ -589,7 +589,7 @@
                 const passed = done.passed;
                 mark = passed ? "&#10003;" : "&#10007;";
                 colour = done.assisted ? "#22ddff" : (passed ? ACCENT : "#ff3366");
-                note = done.assisted ? "you covered it" : esc(done.by === "nobody" ? "uncovered" : done.by);
+                note = !passed ? "Failed" : (done.assisted ? "Completed (assist)" : "Completed");
             } else {
                 mark = "&#9633;";
                 colour = covered ? "#8a8f84" : "#8a6060";
