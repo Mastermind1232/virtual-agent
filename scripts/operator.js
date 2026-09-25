@@ -496,7 +496,7 @@
 
             const gmTools = canEdit()
                 ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
-                    ${g.status === "open" ? `<button type="button" data-action="op-edit-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #4a5a2e;color:#b6c98a;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">EDIT</button>` : ""}
+                    ${g.status !== "done" ? `<button type="button" data-action="op-edit-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #4a5a2e;color:#b6c98a;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">EDIT</button>` : ""}
                     ${g.status === "assigned" ? `<button type="button" data-action="op-resolve" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">RESOLVE NOW</button>` : ""}
                     ${clientThread(g.client) ? `<button type="button" data-action="op-text-owner" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.12);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;"><i class="fas fa-comment-dots"></i> Text as ${esc(g.client)}</button>` : ""}
                     <button type="button" data-action="op-delete-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">DELETE</button>
@@ -615,8 +615,9 @@
     /*  Dialogs                                                          */
     /* ---------------------------------------------------------------- */
 
-    /** A gig runs a week, always. */
-    const GIG_DAYS = 7;
+    /** A day per skill check, then a day for the job itself to land. A three skill gig
+        runs four days. The GM can still say otherwise on the form. */
+    const gigDays = (skillCount) => Math.max(2, (Number(skillCount) || 1) + 1);
 
     /** Every skill name known to the world, for the gig form's autocomplete. */
     function skillNames() {
@@ -723,6 +724,7 @@
                 <datalist id="op-client-list">${clients.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
                 <div class="form-group"><label>Brief</label><textarea name="brief" rows="2" placeholder="What the client says.">${esc(existing?.brief ?? "")}</textarea></div>
                 <div class="form-group"><label>Payout (eb)</label><input type="number" name="payout" value="${Number(existing?.payout ?? 500)}" min="0" step="50"></div>
+                <div class="form-group"><label>Days${edit ? " left" : ""}</label><input type="number" name="days" value="${edit ? (daysUntil(existing.due) ?? gigDays(existing?.skills?.length)) : gigDays(1)}" min="1" step="1"></div>
                 <hr><label style="font-size:.8em;opacity:.7;">Skills, one to five</label>${rows}
             </form>`,
             buttons: {
@@ -744,8 +746,9 @@
                         const fields = {
                             title: f.title.value.trim() || "Untitled gig", client,
                             brief: f.brief.value.trim(), payout: Math.max(0, Number(f.payout.value) || 0),
-                            // Editing keeps the deadline it already had; a new gig runs a week.
-                            skills, due: edit ? existing.due : dateKey(addDays(t, GIG_DAYS)),
+                            // Editing a gig no longer slides its deadline forward on its own,
+                            // but the days left are editable so a drifted one can be repaired.
+                            skills, due: dateKey(addDays(t, Math.max(1, Number(f.days.value) || gigDays(skills.length)))),
                         };
 
                         const all = gigs();
@@ -766,6 +769,20 @@
                 cancel: { label: "Cancel" },
             },
             default: "post",
+            render: (h) => {
+                const f = h[0].querySelector("form");
+                if (!f?.days) return;
+                let touched = false;
+                f.days.addEventListener("input", () => { touched = true; });
+                const recount = () => {
+                    if (touched) return;
+                    let n = 0;
+                    for (let i = 0; i < 5; i++) if (f[`skill${i}`]?.value.trim()) n++;
+                    f.days.value = gigDays(n);
+                };
+                for (let i = 0; i < 5; i++) f[`skill${i}`]?.addEventListener("input", recount);
+                recount();
+            },
         }, { width: 420 }).render(true);
     }
 
