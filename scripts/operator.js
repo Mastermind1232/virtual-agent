@@ -788,8 +788,7 @@
 
         new Dialog({
             title: "Short a skill",
-            content: `<p><b>${esc(hired.name)}</b> can't cover <b>${list}</b>.</p>
-                <p style="font-size:.9em;opacity:.7;">${many ? "Cover one, or leave them." : "Cover it, or leave it."}</p>`,
+            content: `<p><b>${esc(hired.name)}</b> can't cover <b>${list}</b>. They may need an assist partway through.</p>`,
             buttons,
             default: "later",
         }, { width: 420 }).render(true);
