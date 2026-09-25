@@ -945,9 +945,10 @@
                     // A gig with nobody on it fails every skill when it comes due, and
                     // says nothing about why, so the warning has to happen here.
                     const live = gigs().filter((g) => g.runnerId === id && g.status === "assigned");
+                    const one = live.length === 1;
                     const warning = live.length
-                        ? `<p style="color:#ff9900;"><b>${esc(who?.name ?? "They")} is on ${live.length} gig${live.length === 1 ? "" : "s"} right now:</b> ${live.map((g) => esc(g.title)).join(", ")}.</p>
-                           <p>Dropping ${live.length === 1 ? "it" : "them"} leaves nobody on the job, and ${live.length === 1 ? "it fails" : "they fail"} when the deadline comes.</p>`
+                        ? `<p style="color:#ff9900;"><b>${esc(who?.name ?? "They")} is on ${one ? "a gig" : `${live.length} gigs`} right now:</b> ${live.map((g) => esc(g.title)).join(", ")}.</p>
+                           <p>Drop anyway? ${one ? "It fails" : "They fail"} with nobody on ${one ? "it" : "them"}.</p>`
                         : "";
                     if (!await Dialog.confirm({ title: "Drop operator", content: `${warning}<p>Drop this operator? Their gig history goes with them.</p>` })) break;
                     await saveRunners(runners().filter((r) => r.id !== id));
