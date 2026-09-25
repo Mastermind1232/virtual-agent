@@ -27,6 +27,16 @@
     /** The ten Roles of Cyberpunk RED. Most people have none, so the list starts empty. */
     const ROLES = ["Exec", "Fixer", "Lawman", "Media", "Medtech", "Netrunner", "Nomad", "Rockerboy", "Solo", "Tech"];
 
+    const PLACEHOLDER = /^icons\/svg\/(mystery-man|cowled)\.svg$/;
+
+    /** The face to show for an actor: their token first, since that is how they appear at
+        the table, falling back to the sheet portrait. */
+    const faceOf = (actor) => {
+        const token = actor?.prototypeToken?.texture?.src;
+        if (token && !PLACEHOLDER.test(token)) return token;
+        return actor?.img && !PLACEHOLDER.test(actor.img) ? actor.img : "";
+    };
+
     /** What an actor's sheet says their Role is. The Role item is preferred over the free
         text field beside the name, because that item is what carries their rank. */
     const roleOnSheet = (actor) => (actor?.itemTypes?.role ?? [])[0]?.name || actor?.system?.roleInfo?.activeRole || "";
@@ -61,7 +71,7 @@
             return {
             ...c,
             name: actor?.name || c.name,
-            avatar: (actor?.img && actor.img !== "icons/svg/mystery-man.svg") ? actor.img : c.avatar,
+            avatar: faceOf(actor) || c.avatar,
             holders: [...c.holders],
             faction: meta[c.id]?.faction || "",
             standing: meta[c.id]?.standing || "neutral",
@@ -82,7 +92,7 @@
             if (!uuid || (only && uuid !== only)) continue;
             const actor = linkedActor(uuid);
             if (!actor) continue;
-            const avatar = (actor.img && actor.img !== "icons/svg/mystery-man.svg") ? actor.img : (c.avatar || null);
+            const avatar = faceOf(actor) || c.avatar || null;
 
             // Only touch the flags when the stored copy has actually drifted.
             const stale = game.users.some((u) => (u.getFlag(ID, "customContacts") || [])
@@ -142,7 +152,7 @@
                 standing: (a, b) => STANDINGS.findIndex((s) => s.id === a.standing) - STANDINGS.findIndex((s) => s.id === b.standing) || a.name.localeCompare(b.name) };
             list.sort(order[this.sort] ?? order.name);
 
-            const party = players().map((u) => ({ id: u.id, name: whoIs(u), img: u.character?.img || "icons/svg/mystery-man.svg" }));
+            const party = players().map((u) => ({ id: u.id, name: whoIs(u), img: faceOf(u.character) || "icons/svg/mystery-man.svg" }));
             const playerActorIds = new Set(players().map((u) => u.character?.id).filter(Boolean));
             const actors = game.actors
                 .filter((a) => !playerActorIds.has(a.id))
@@ -195,7 +205,7 @@
                 const actor = linkedActor(actorUuid);
                 // A linked actor is the source of truth for who this is.
                 const name = actor?.name || (card.find("[data-field=name]").val() || "").trim() || "Unnamed";
-                const avatar = actor?.img && actor.img !== "icons/svg/mystery-man.svg" ? actor.img : (card.find("[data-field=avatar]").val() || "").trim();
+                const avatar = faceOf(actor) || (card.find("[data-field=avatar]").val() || "").trim();
                 const faction = (card.find("[data-field=faction]").val() || "").trim();
                 const stand = card.find("[data-field=standing]").val() || "neutral";
                 const role = roleOnSheet(actor) ? "" : (card.find("[data-field=role]").val() || "");
@@ -237,7 +247,7 @@
                 if (!a) return;
                 const card = $(ev.currentTarget).closest("[data-card]");
                 card.find("[data-field=name]").val(a.name);
-                if (a.img && a.img !== "icons/svg/mystery-man.svg") card.find("[data-field=avatar]").val(a.img);
+                const face = faceOf(a); if (face) card.find("[data-field=avatar]").val(face);
             });
 
             html.on("click", "[data-browse]", async (ev) => {
@@ -254,7 +264,7 @@
     // Renaming or re-portraying an actor updates every contact pointing at it.
     Hooks.on("updateActor", (actor, changes) => {
         if (!game.user.isGM) return;
-        if (!("name" in changes) && !("img" in changes)) return;
+        if (!("name" in changes) && !("img" in changes) && !("prototypeToken" in changes)) return;
         syncFromActors(actor.uuid).catch((e) => console.error("Contacts |", e));
     });
 
