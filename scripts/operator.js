@@ -777,12 +777,17 @@
         const list = names.length > 1
             ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`
             : names[0];
-        return Dialog.confirm({
-            title: "Short a skill",
-            content: `<p><b>${esc(hired.name)}</b> can't cover <b>${list}</b>. They may need an assist partway through.</p>`,
-            yes: () => true,
-            no: () => false,
-            defaultYes: false,
+        return new Promise((resolve) => {
+            new Dialog({
+                title: "Short a skill",
+                content: `<p><b>${esc(hired.name)}</b> can't cover <b>${list}</b>. They may need an assist partway through.</p>`,
+                buttons: {
+                    commit: { label: "Commit", callback: () => resolve(true) },
+                    cancel: { label: "Cancel", callback: () => resolve(false) },
+                },
+                default: "cancel",
+                close: () => resolve(false),
+            }, { width: 400 }).render(true);
         });
     }
 
