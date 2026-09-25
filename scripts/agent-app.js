@@ -1391,6 +1391,7 @@ class AgentOSApplication extends Application {
         // matched it.
         data.threads = data.contacts.filter((c) =>
             c.id === "party_group_chat"
+            || c.isPlayer                                   // the crew is always reachable
             || (_lastActivityByContact[c.id] || 0) > 0
             || c.id === this.activeContactId
             || !!this.searchQuery);
