@@ -771,27 +771,19 @@
         } finally { _calling.delete(gigId); }
     }
 
-    /** Told at the moment of hiring, because nothing else would tell him. */
-    function shortDialog(app, gig, hired, short) {
-        const many = short.length > 1;
+    /** Sending somebody who is short a skill is allowed, but not by accident. */
+    function confirmShort(hired, short) {
         const names = short.map((sk) => esc(sk.name));
-        const list = many ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0];
-
-        const buttons = {};
-        for (const sk of short) {
-            buttons[sk.name.toLowerCase().replace(/[^a-z0-9]/g, "")] = {
-                label: many ? `Commit ${sk.name}` : "Commit",
-                callback: () => takeCall(app, gig.id, sk.name),
-            };
-        }
-        buttons.cancel = { label: "Cancel" };
-
-        new Dialog({
+        const list = names.length > 1
+            ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`
+            : names[0];
+        return Dialog.confirm({
             title: "Short a skill",
             content: `<p><b>${esc(hired.name)}</b> can't cover <b>${list}</b>. They may need an assist partway through.</p>`,
-            buttons,
-            default: "cancel",
-        }, { width: 420 }).render(true);
+            yes: () => true,
+            no: () => false,
+            defaultYes: false,
+        });
     }
 
     /** Post a new gig, or edit one that nobody has taken yet. */
@@ -982,16 +974,14 @@
 
                 case "op-assign": {
                     const runnerId = $t.data("runner");
-                    await request({ op: "assign", gigId, runnerId });
-                    // Say so now, while the choice is still fresh. Nothing else tells him,
-                    // and a skill nobody can cover fails on its own when the gig lands.
                     const gig = gigs().find((x) => x.id === gigId);
                     const hired = runners().find((r) => r.id === runnerId);
-                    if (gig && hired && !gig.assist) {
+                    if (gig && hired) {
                         const can = usableSkills(hired).map((u) => u.name.trim().toLowerCase());
                         const short = (gig.skills ?? []).filter((sk) => !can.includes(sk.name.trim().toLowerCase()));
-                        if (short.length) shortDialog(app, gig, hired, short);
+                        if (short.length && !await confirmShort(hired, short)) break;
                     }
+                    await request({ op: "assign", gigId, runnerId });
                     break;
                 }
 
