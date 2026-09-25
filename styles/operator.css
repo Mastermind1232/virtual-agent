@@ -76,6 +76,20 @@
 }
 #agent-view-rep .rep-client:hover { color: #f3ca5c; }
 
+/* What a contact says at each moment, folded away until it is wanted. */
+.nunu-contacts .nc-voice { margin: 10px 0 0; border: 1px solid #242a33; border-radius: 4px; background: #151a20; }
+.nunu-contacts .nc-voice > summary { cursor: pointer; padding: 7px 9px; font-size: 11px; color: #b6c0c9; list-style: none; }
+.nunu-contacts .nc-voice > summary::-webkit-details-marker { display: none; }
+.nunu-contacts .nc-voice > summary::before { content: "\25B8"; display: inline-block; margin-right: 6px; color: #6c7681; }
+.nunu-contacts .nc-voice[open] > summary::before { content: "\25BE"; }
+.nunu-contacts .nc-voice-count { color: #e0b341; margin-left: 4px; }
+.nunu-contacts .nc-voice-hint { margin: 0 9px 8px; font-size: 10.5px; color: #737d86; }
+.nunu-contacts .nc-voice-line { display: flex; flex-direction: column; gap: 3px; padding: 0 9px 8px; font-size: 11px; color: #b6c0c9; }
+.nunu-contacts .nc-voice-line textarea {
+    background: #1a1f26; color: #e6e9ee; border: 1px solid #2c333c; border-radius: 4px;
+    padding: 5px 7px; font-size: 12px; font-family: inherit; resize: vertical; min-height: 34px;
+}
+
 /* The client sub-box sits indented under the player who holds the number. */
 .nunu-contacts .nc-person-wrap { display: flex; flex-direction: column; gap: 3px; }
 .nunu-contacts .nc-client[hidden] { display: none !important; }

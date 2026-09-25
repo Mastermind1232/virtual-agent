@@ -68,6 +68,17 @@
                 </label>
             </div>
 
+            <details class="nc-voice">
+                <summary>What they say{{#if this.voiceCount}} <span class="nc-voice-count">{{this.voiceCount}} set</span>{{/if}}</summary>
+                <p class="nc-voice-hint">Left blank, they say nothing at that moment.</p>
+                {{#each this.voice}}
+                <label class="nc-voice-line">
+                    <span>{{this.label}}</span>
+                    <textarea data-voice="{{this.key}}" rows="2" placeholder="{{this.placeholder}}">{{this.value}}</textarea>
+                </label>
+                {{/each}}
+            </details>
+
             <div class="nc-party">
                 <span class="nc-party-label">Who has their number</span>
                 <div class="nc-party-grid">

@@ -37,6 +37,20 @@
         return actor?.img && !PLACEHOLDER.test(actor.img) ? actor.img : "";
     };
 
+    /** The moments a contact can have something to say. Left blank, they say nothing. */
+    const VOICE = [
+        { key: "clientPost",   label: "Posting a gig",        placeholder: "What they say when the work goes up." },
+        { key: "clientWin",    label: "The gig landed",       placeholder: "What they say when it works." },
+        { key: "clientLose",   label: "The gig failed",       placeholder: "What they say when it does not." },
+        { key: "opTake",       label: "Taking the job",       placeholder: "On being handed the work." },
+        { key: "opGoodDay",    label: "A good day",           placeholder: "A day that went their way." },
+        { key: "opBadDay",     label: "A bad day",            placeholder: "A day that did not." },
+        { key: "opGoodAssist", label: "A good day, assisted", placeholder: "The Fixer stepped in and it worked." },
+        { key: "opBadAssist",  label: "A bad day, assisted",  placeholder: "The Fixer stepped in and it still went wrong." },
+        { key: "opWin",        label: "The gig landed",       placeholder: "What they say when the job is done." },
+        { key: "opLose",       label: "The gig failed",       placeholder: "What they say when it is not." },
+    ];
+
     /** What an actor's sheet says their Role is. The Role item is preferred over the free
         text field beside the name, because that item is what carries their rank. */
     const roleOnSheet = (actor) => (actor?.itemTypes?.role ?? [])[0]?.name || actor?.system?.roleInfo?.activeRole || "";
@@ -76,6 +90,7 @@
             faction: meta[c.id]?.faction || "",
             standing: meta[c.id]?.standing || "neutral",
             role: roleOnSheet(actor) || meta[c.id]?.role || "",
+            voice: (meta[c.id]?.voice && typeof meta[c.id].voice === "object") ? meta[c.id].voice : {},
             actorUuid: meta[c.id]?.actorUuid || "",
             clientOf: Array.isArray(meta[c.id]?.clientOf) ? meta[c.id].clientOf : [],
         }; });
@@ -175,6 +190,8 @@
                     isOperator: !!globalThis.VirtualAgentOperator?.rosterHas?.(c.name, c.actorUuid),
                     actor: linkedActor(c.actorUuid),
                     roleFromSheet: !!roleOnSheet(linkedActor(c.actorUuid)),
+                    voice: VOICE.map((v) => ({ ...v, value: c.voice[v.key] ?? "" })),
+                    voiceCount: VOICE.filter((v) => (c.voice[v.key] ?? "").trim()).length,
                     hasActor: !!linkedActor(c.actorUuid),
                     open: this.editing === c.id,
                 })),
@@ -229,7 +246,13 @@
                 }
 
                 const meta = readMeta();
-                meta[id] = { ...(meta[id] || {}), faction, standing: stand, role, actorUuid, clientOf };
+                const voice = {};
+                for (const el of card.find("[data-voice]").toArray()) {
+                    const line = String(el.value ?? "").trim();
+                    if (line) voice[el.dataset.voice] = line;
+                }
+
+                meta[id] = { ...(meta[id] || {}), faction, standing: stand, role, actorUuid, clientOf, voice };
                 await writeMeta(meta);
                 ui.notifications.info(`Contacts: ${name} saved.`);
                 this.editing = null;

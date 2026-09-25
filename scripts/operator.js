@@ -306,6 +306,11 @@
         }
 
         await postCard(gig, runner, outcome);
+
+        // Both ends of the job have something to say about how it went, if you gave
+        // them the words for it.
+        await speak(runner?.name, success ? "opWin" : "opLose", runner?.img);
+        await speak(gig.client, success ? "clientWin" : "clientLose");
         return outcome;
     }
 
@@ -372,7 +377,7 @@
                     if (log.filter((l) => l?.die === 1).length >= 2) break;
                     log[i] = await rollEntry(gig, i);
                     changed = true;
-                    await postDay(gig, log[i], i);
+                    await postDay(gig, log[i]);
                 }
 
                 if (changed) {
@@ -389,29 +394,51 @@
         } finally { _resolving = false; }
     }
 
-    /** The operator texts in with how the day went. */
-    async function postDay(gig, line, index) {
+    /** A contact's own words for a moment, from the book. Nothing written, nothing said. */
+    function voiceLine(name, key) {
+        const who = String(name ?? "").trim().toLowerCase();
+        if (!who) return "";
+        try {
+            const raw = game.settings.get(ID, "contactMeta");
+            const meta = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+            for (const u of game.users) {
+                for (const c of (u.getFlag(ID, "customContacts") || [])) {
+                    if (String(c.originalName || c.name || "").trim().toLowerCase() !== who) continue;
+                    const line = meta[String(c.id).split("__")[0]]?.voice?.[key];
+                    if (line) return String(line);
+                }
+            }
+        } catch (e) { /* no book, no line */ }
+        return "";
+    }
+
+    /** Send one of a contact's lines as a text, if they have one for this. */
+    async function speak(name, key, avatar = null) {
+        const line = voiceLine(name, key);
         if (!line) return;
-        const runner = runners().find((r) => r.id === gig.runnerId);
-        const thread = runner ? clientThread(runner.name) : null;
+        const thread = clientThread(name);
         const owner = ownerUser();
         if (!thread || !owner) return;
-
-        const word = line.by === "nobody"
-            ? `Nobody could cover ${line.skill}.`
-            : (line.die === 1 ? `${line.skill} went badly wrong.`
-                : (line.die === 10 ? `${line.skill}, and it went better than it had any right to.`
-                    : (line.passed ? `${line.skill}, done.` : `${line.skill} did not go our way.`)));
-
         await ChatMessage.create({
-            content: `Day ${index + 1} on ${gig.title}. ${word}`,
+            content: line,
             whisper: [owner.id, ...game.users.filter((u) => u.isGM).map((u) => u.id)],
-            speaker: { alias: runner.name },
+            speaker: { alias: name },
             flags: { VirtualAgent: {
                 isAgentMessage: true, threadId: thread,
-                overrideName: runner.name, overrideAvatar: runner.img ?? null,
+                overrideName: name, overrideAvatar: avatar ?? clientFace(name) ?? null,
             } },
         });
+    }
+
+    /** The operator texts in with how the day went, in their own words. */
+    async function postDay(gig, line) {
+        if (!line) return;
+        const runner = runners().find((r) => r.id === gig.runnerId);
+        if (!runner) return;
+        const key = line.assisted
+            ? (line.passed ? "opGoodAssist" : "opBadAssist")
+            : (line.passed ? "opGoodDay" : "opBadDay");
+        await speak(runner.name, key, runner.img);
     }
     let _resolving = false;
     const _paying = new Set();
@@ -456,6 +483,7 @@
                 await saveGigs(list);
                 await ChatMessage.create({ whisper: whisperTargets(), content: `<div style="font-family:monospace;"><b style="color:${ACCENT}">OPERATOR</b><br>${esc(r.name)} took <b>${esc(list[i].title)}</b>. Due ${esc(prettyDate(list[i].due))}.</div>` });
                 renderPhone();
+                await speak(r.name, "opTake", r.img);
                 return;
             }
             case "assist": {
@@ -948,6 +976,7 @@
                         } else {
                             await saveGigs([...all, { id: uid(), ...fields, posted: dateKey(t), runnerId: null, assist: null, status: "open", outcome: null }]);
                             ui.notifications.info(`Operator: "${esc(fields.title)}" posted.`);
+                            await speak(fields.client, "clientPost");
                         }
                         app?.render(true);
                     },
