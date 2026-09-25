@@ -788,8 +788,8 @@
 
         new Dialog({
             title: "Short a skill",
-            content: `<p><b>${esc(hired.name)}</b> cannot cover <b>${list}</b> on this gig.</p>
-                <p style="font-size:.9em;opacity:.8;">${many ? "Each one fails" : "It fails"} on its own when the job lands, unless you take the call yourself. You get one call per gig${many ? ", so only one of these can be covered" : ""}, and you can make it any time before the deadline.</p>`,
+            content: `<p><b>${esc(hired.name)}</b> can't cover <b>${list}</b>.</p>
+                <p style="font-size:.9em;opacity:.7;">${many ? "Cover one, or leave them." : "Cover it, or leave it."}</p>`,
             buttons,
             default: "later",
         }, { width: 420 }).render(true);
