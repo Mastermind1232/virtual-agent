@@ -451,6 +451,7 @@
                 ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
                     ${g.status === "open" ? `<button type="button" data-action="op-edit-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #4a5a2e;color:#b6c98a;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">EDIT</button>` : ""}
                     ${g.status === "assigned" ? `<button type="button" data-action="op-resolve" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">RESOLVE NOW</button>` : ""}
+                    ${clientThread(g.client) ? `<button type="button" data-action="op-text-owner" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.12);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;"><i class="fas fa-comment-dots"></i> Text as ${esc(g.client)}</button>` : ""}
                     <button type="button" data-action="op-delete-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">DELETE</button>
                    </div>`
                 : "";
@@ -475,8 +476,11 @@
                         <span style="font-size:.65rem;opacity:.65;">${esc(g.client)}${runner ? ` &rarr; ${esc(runner.name)}` : ""}</span>
                     </span>
                 </span>
-                <span style="text-align:right;white-space:nowrap;">
-                    <span style="color:#ffd166;font-size:.8rem;">${Number(g.payout) || 0}eb</span><br>${status}
+                <span style="text-align:right;white-space:nowrap;display:flex;align-items:center;gap:8px;">
+                    ${canEdit() && clientThread(g.client) ? `<i class="fas fa-comment-dots" data-action="op-text-owner" data-gig="${g.id}" title="Message as ${esc(g.client)}" style="color:${ACCENT};font-size:.75rem;cursor:pointer;"></i>` : ""}
+                    <span>
+                        <span style="color:#ffd166;font-size:.8rem;">${Number(g.payout) || 0}eb</span><br>${status}
+                    </span>
                 </span>
             </div>${body}</div>`;
     }
@@ -584,6 +588,24 @@
             }
         } catch (e) { /* a gig without a matching contact simply has no face */ }
         return "";
+    }
+
+    /** The Messenger thread where this client talks to the Operator's owner. Contacts a
+        contact several players share are split per holder on the GM's device, so the id
+        carries the owner when more than one person has the number. */
+    function clientThread(name) {
+        const key = String(name ?? "").trim().toLowerCase();
+        const owner = ownerUser();
+        if (!key || !owner) return null;
+        for (const u of game.users) {
+            for (const c of (u.getFlag(ID, "customContacts") || [])) {
+                if (String(c.originalName || c.name || "").trim().toLowerCase() !== key) continue;
+                const targets = (Array.isArray(c.targetUserIds) ? c.targetUserIds : []).filter((id) => game.users.get(id));
+                if (!targets.includes(owner.id)) continue;
+                return targets.length > 1 ? `${c.id}__${owner.id}` : c.id;
+            }
+        }
+        return null;
     }
 
     /** The people who bring this Operator work: contacts the owner has marked as a
@@ -729,6 +751,20 @@
 
         try {
             switch (action) {
+                case "op-text-owner": {
+                    if (!canEdit()) break;
+                    const gig = gigs().find((x) => x.id === gigId);
+                    if (!gig) break;
+                    const thread = clientThread(gig.client);
+                    if (!thread) { ui.notifications.warn(`${gig.client} is not a contact the Operator's owner holds, so there is no conversation to open.`); break; }
+                    app.activeContactId = thread;
+                    app.currentView = "chat-thread";
+                    app.showAddContact = false;
+                    app.editContactId = null;
+                    app.render(true);
+                    break;
+                }
+
                 case "op-tab":
                     view.tab = $t.data("tab"); view.gigId = null; app.render(true); break;
 
