@@ -2057,20 +2057,12 @@ class AgentOSApplication extends Application {
                     if (wa !== wb) return wa - wb;
                     return String(a.name || "").localeCompare(String(b.name || ""));
                 });
-            } else if (sortMode === "faction") {
-                arr.sort((a, b) => {
-                    const fa = String(a.faction || "").toLowerCase();
-                    const fb = String(b.faction || "").toLowerCase();
-                    if (fa !== fb) return fa.localeCompare(fb);
-                    return String(a.name || "").localeCompare(String(b.name || ""));
-                });
             }
             data.npcReputations = arr;
         }
         data.repSortOptions = [
             { id: "alpha",    label: "A → Z" },
-            { id: "standing", label: "By alignment" },
-            { id: "faction",  label: "By faction" }
+            { id: "standing", label: "By attitude" }
         ];
 
         // ════════════════════════════════════════════════════════════════════
