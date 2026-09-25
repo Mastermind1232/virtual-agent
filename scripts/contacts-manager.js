@@ -77,6 +77,7 @@
             standing: meta[c.id]?.standing || "neutral",
             role: roleOnSheet(actor) || meta[c.id]?.role || "",
             actorUuid: meta[c.id]?.actorUuid || "",
+            clientOf: Array.isArray(meta[c.id]?.clientOf) ? meta[c.id].clientOf : [],
         }; });
     }
 
@@ -170,7 +171,7 @@
                     standingLabel: standing(c.standing).label,
                     standingColour: standing(c.standing).colour,
                     holderNames: c.holders.map((id) => game.users.get(id)).filter(Boolean).map(whoIs).join(", "),
-                    party: party.map((p) => ({ ...p, has: c.holders.includes(p.id) })),
+                    party: party.map((p) => ({ ...p, has: c.holders.includes(p.id), isClient: c.clientOf.includes(p.id) })),
                     isOperator: !!globalThis.VirtualAgentOperator?.rosterHas?.(c.name, c.actorUuid),
                     actor: linkedActor(c.actorUuid),
                     roleFromSheet: !!roleOnSheet(linkedActor(c.actorUuid)),
@@ -210,6 +211,8 @@
                 const stand = card.find("[data-field=standing]").val() || "neutral";
                 const role = roleOnSheet(actor) ? "" : (card.find("[data-field=role]").val() || "");
                 const holders = card.find("[data-holder]:checked").toArray().map((el) => el.dataset.holder);
+                const clientOf = card.find("[data-client]:checked").toArray().map((el) => el.dataset.client)
+                    .filter((id) => holders.includes(id));
 
                 await save({ id, name, avatar, holders });
 
@@ -226,7 +229,7 @@
                 }
 
                 const meta = readMeta();
-                meta[id] = { ...(meta[id] || {}), faction, standing: stand, role, actorUuid };
+                meta[id] = { ...(meta[id] || {}), faction, standing: stand, role, actorUuid, clientOf };
                 await writeMeta(meta);
                 ui.notifications.info(`Contacts: ${name} saved.`);
                 this.editing = null;
@@ -240,6 +243,14 @@
                 await remove(id);
                 this.editing = null;
                 this.render(true);
+            });
+
+            html.on("change", "[data-holder]", (ev) => {
+                const row = $(ev.currentTarget).closest(".nc-person-wrap");
+                const client = row.find(".nc-client");
+                const on = ev.currentTarget.checked;
+                client.prop("hidden", !on);
+                if (!on) client.find("input").prop("checked", false);
             });
 
             html.on("change", "[data-field=actor]", (ev) => {

@@ -1395,7 +1395,8 @@
                                         <div style="font-size: 0.8rem; color: #fff; font-weight: 600;">{{this.name}}</div>
                                         <div class="rep-tags"><span class="rep-role rep-{{this.standing}}">{{#if this.faction}}{{this.faction}}{{else}}Unaffiliated{{/if}}</span>{{#if this.role}}<span class="rep-role rep-job">{{this.role}}</span>{{/if}}</div>
                                     </div>
-                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        {{#if this.isClient}}<span class="rep-client">Client</span>{{/if}}
                                         {{!-- Patch4.7 (Gotto): jump to a Messenger thread for this fixer. --}}
                                         <i class="fas fa-comment-dots" data-action="rep-open-messenger" data-npc-id="{{this.id}}" data-npc-name="{{this.name}}" title="Message {{this.name}}" style="cursor: pointer; color: var(--neon-cyan); font-size: 0.65rem;"></i>
                                         {{#if ../isGM}}

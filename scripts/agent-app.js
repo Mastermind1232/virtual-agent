@@ -2036,6 +2036,12 @@ class AgentOSApplication extends Application {
                 faction: _contactMeta[VA_baseId(c.id)]?.faction || "",
                 standing: _contactMeta[VA_baseId(c.id)]?.standing || "neutral",
                 role: _contactMeta[VA_baseId(c.id)]?.role || "",
+                isClient: (() => {
+                    const of = _contactMeta[VA_baseId(c.id)]?.clientOf;
+                    if (!Array.isArray(of) || !of.length) return false;
+                    const split = String(c.id).split("__")[1];
+                    return of.includes(split || c.ownerId || game.user.id);
+                })(),
             }));
 
         // Patch3 (CommanderCrunch69): sort option for the Fixers app.
@@ -2050,6 +2056,9 @@ class AgentOSApplication extends Application {
             const arr = data.npcReputations.slice();
             if (sortMode === "alpha") {
                 arr.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+            } else if (sortMode === "clients") {
+                arr.sort((a, b) => (b.isClient ? 1 : 0) - (a.isClient ? 1 : 0)
+                    || String(a.name || "").localeCompare(String(b.name || "")));
             } else if (sortMode === "standing") {
                 arr.sort((a, b) => {
                     const wa = STANDING_WEIGHT[a.standing] ?? 99;
@@ -2062,7 +2071,8 @@ class AgentOSApplication extends Application {
         }
         data.repSortOptions = [
             { id: "standing", label: "Attitude" },
-            { id: "alpha",    label: "Alphabetical" }
+            { id: "alpha",    label: "Alphabetical" },
+            { id: "clients",  label: "Clients" }
         ];
 
         // ════════════════════════════════════════════════════════════════════

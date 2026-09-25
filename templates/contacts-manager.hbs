@@ -72,11 +72,17 @@
                 <span class="nc-party-label">Who has their number</span>
                 <div class="nc-party-grid">
                     {{#each this.party}}
-                    <label class="nc-person">
-                        <input type="checkbox" data-holder="{{this.id}}" {{#if this.has}}checked{{/if}}>
-                        <img src="{{this.img}}" alt="">
-                        <span>{{this.name}}</span>
-                    </label>
+                    <div class="nc-person-wrap">
+                        <label class="nc-person">
+                            <input type="checkbox" data-holder="{{this.id}}" {{#if this.has}}checked{{/if}}>
+                            <img src="{{this.img}}" alt="">
+                            <span>{{this.name}}</span>
+                        </label>
+                        <label class="nc-client" {{#unless this.has}}hidden{{/unless}}>
+                            <input type="checkbox" data-client="{{this.id}}" {{#if this.isClient}}checked{{/if}}>
+                            <span>Client</span>
+                        </label>
+                    </div>
                     {{/each}}
                 </div>
             </div>
