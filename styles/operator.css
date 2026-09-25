@@ -71,7 +71,10 @@
     text-decoration: underline;
     text-underline-offset: 3px;
     white-space: nowrap;
+    margin-right: 4px;
+    cursor: pointer;
 }
+#agent-view-rep .rep-client:hover { color: #f3ca5c; }
 
 /* The client sub-box sits indented under the player who holds the number. */
 .nunu-contacts .nc-person-wrap { display: flex; flex-direction: column; gap: 3px; }

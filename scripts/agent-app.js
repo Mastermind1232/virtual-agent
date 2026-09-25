@@ -6023,6 +6023,13 @@ class AgentOSApplication extends Application {
                     break;
                 }
 
+                case 'rep-open-operator': {
+                    // A client is someone whose work lands on the Operator board.
+                    this.currentView = 'operator';
+                    this.render(true);
+                    break;
+                }
+
                 case 'rep-open-messenger': {
                     // NuNu packaging: the book IS the contact list, so this is just a jump.
                     const id = String($(ev.currentTarget).data('npc-id') || "");

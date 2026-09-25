@@ -1399,7 +1399,7 @@
                                         </div>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 8px;">
-                                        {{#if this.isClient}}<span class="rep-client">Client</span>{{/if}}
+                                        {{#if this.isClient}}<span class="rep-client" data-action="rep-open-operator" title="Open the Operator board">Client</span>{{/if}}
                                         {{!-- Patch4.7 (Gotto): jump to a Messenger thread for this fixer. --}}
                                         <i class="fas fa-comment-dots" data-action="rep-open-messenger" data-npc-id="{{this.id}}" data-npc-name="{{this.name}}" title="Message {{this.name}}" style="cursor: pointer; color: var(--neon-cyan); font-size: 0.65rem;"></i>
                                         {{#if ../isGM}}
