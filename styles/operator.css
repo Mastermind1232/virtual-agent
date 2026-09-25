@@ -52,6 +52,14 @@
     color: #9aa5ae;
 }
 
+/* A contact's face, the same token the GM sees in their book. */
+#agent-view-rep .rep-who { display: flex; align-items: center; gap: 9px; min-width: 0; }
+#agent-view-rep .rep-face {
+    width: 34px; height: 34px; flex: 0 0 34px;
+    border-radius: 50%; object-fit: cover;
+    border: 1px solid #2c333c; background: #12151a;
+}
+
 /* Someone who pays for work, marked on the Fixer's own phone. Gold, because it is
    about money, and underlined rather than boxed so it does not read as another tag. */
 #agent-view-rep .rep-client {

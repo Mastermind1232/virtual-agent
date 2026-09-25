@@ -1391,9 +1391,12 @@
                             {{#each npcReputations}}
                             <div class="rep-card" style="padding: 10px; background: rgba(100,255,218,0.04); border: 1px solid #333; border-radius: 8px; margin-bottom: 8px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <div>
+                                    <div class="rep-who">
+                                        <img class="rep-face" src="{{#if this.avatar}}{{this.avatar}}{{else}}icons/svg/mystery-man.svg{{/if}}" alt="">
+                                        <div>
                                         <div style="font-size: 0.8rem; color: #fff; font-weight: 600;">{{this.name}}</div>
                                         <div class="rep-tags"><span class="rep-role rep-{{this.standing}}">{{#if this.faction}}{{this.faction}}{{else}}Unaffiliated{{/if}}</span>{{#if this.role}}<span class="rep-role rep-job">{{this.role}}</span>{{/if}}</div>
+                                        </div>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         {{#if this.isClient}}<span class="rep-client">Client</span>{{/if}}

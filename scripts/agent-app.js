@@ -2024,6 +2024,17 @@ class AgentOSApplication extends Application {
         } catch (e) { _contactMeta = {}; }
         data.contactMeta = _contactMeta;
         // NuNu packaging: the Messenger's search box does not belong to this app.
+        /** A contact's role: the one typed for a contact with no actor, otherwise the
+            Role item on the linked sheet, falling back to the free text beside its name. */
+        const _roleFor = (meta) => {
+            if (meta?.role) return meta.role;
+            try {
+                const a = meta?.actorUuid ? fromUuidSync(meta.actorUuid) : null;
+                if (a?.documentName !== "Actor") return "";
+                return (a.itemTypes?.role ?? [])[0]?.name || a.system?.roleInfo?.activeRole || "";
+            } catch (e) { return ""; }
+        };
+
         data.npcReputations = (this._getContacts({ ignoreSearch: true }) || [])
             // NuNu packaging: the crew are not contacts. They are still in the Messenger,
             // so anyone can text them; this app is the people outside the party.
@@ -2035,7 +2046,7 @@ class AgentOSApplication extends Application {
                 isPlayer: !String(c.id).startsWith("npc_"),
                 faction: _contactMeta[VA_baseId(c.id)]?.faction || "",
                 standing: _contactMeta[VA_baseId(c.id)]?.standing || "neutral",
-                role: _contactMeta[VA_baseId(c.id)]?.role || "",
+                role: _roleFor(_contactMeta[VA_baseId(c.id)]),
                 isClient: (() => {
                     const of = _contactMeta[VA_baseId(c.id)]?.clientOf;
                     if (!Array.isArray(of) || !of.length) return false;
