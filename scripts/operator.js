@@ -780,17 +780,17 @@
         const buttons = {};
         for (const sk of short) {
             buttons[sk.name.toLowerCase().replace(/[^a-z0-9]/g, "")] = {
-                label: `Take ${sk.name}`,
+                label: many ? `Commit ${sk.name}` : "Commit",
                 callback: () => takeCall(app, gig.id, sk.name),
             };
         }
-        buttons.later = { label: "Leave it" };
+        buttons.cancel = { label: "Cancel" };
 
         new Dialog({
             title: "Short a skill",
             content: `<p><b>${esc(hired.name)}</b> can't cover <b>${list}</b>. They may need an assist partway through.</p>`,
             buttons,
-            default: "later",
+            default: "cancel",
         }, { width: 420 }).render(true);
     }
 
