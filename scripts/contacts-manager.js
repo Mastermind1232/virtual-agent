@@ -171,7 +171,7 @@
                     standingColour: standing(c.standing).colour,
                     holderNames: c.holders.map((id) => game.users.get(id)).filter(Boolean).map(whoIs).join(", "),
                     party: party.map((p) => ({ ...p, has: c.holders.includes(p.id) })),
-                    isOperator: !!globalThis.VirtualAgentOperator?.rosterHas?.(c.name),
+                    isOperator: !!globalThis.VirtualAgentOperator?.rosterHas?.(c.name, c.actorUuid),
                     actor: linkedActor(c.actorUuid),
                     roleFromSheet: !!roleOnSheet(linkedActor(c.actorUuid)),
                     hasActor: !!linkedActor(c.actorUuid),
@@ -218,11 +218,11 @@
                 const OP = globalThis.VirtualAgentOperator;
                 if (OP?.rosterAdd) {
                     const wantsOperator = card.find("[data-field=operator]").is(":checked");
-                    const onRoster = OP.rosterHas(name);
+                    const onRoster = OP.rosterHas(name, actorUuid);
                     if (wantsOperator && !onRoster) {
                         if (actor) await OP.rosterAdd(actor.name, actor.uuid);
                         else ui.notifications.warn("Link this contact to an actor first: an operator's usable skills come from their sheet.");
-                    } else if (!wantsOperator && onRoster) await OP.rosterRemove(name);
+                    } else if (!wantsOperator && onRoster) await OP.rosterRemove(name, actorUuid);
                 }
 
                 const meta = readMeta();

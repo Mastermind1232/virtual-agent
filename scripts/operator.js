@@ -185,6 +185,16 @@
     const dropped = () => readJSON("operatorDropped").map(clientKey);
     const hasDropped = (client) => dropped().includes(clientKey(client));
 
+    /** The client's name as it was actually typed, for showing a stored lowercase key. */
+    const clientLabel = (key) => gigs().find((g) => clientKey(g.client) === key)?.client ?? key;
+
+    /** Put a client back in touch. Without this the list only ever grew, so a client
+        dropped by mistake stayed gone and there was nothing on screen to say so. */
+    async function restoreClient(key) {
+        if (!game.user.isGM) return;
+        await writeJSON("operatorDropped", readJSON("operatorDropped").filter((c) => clientKey(c) !== key));
+    }
+
     /* ---------------------------------------------------------------- */
     /*  Resolution                                                       */
     /* ---------------------------------------------------------------- */
@@ -498,6 +508,18 @@
                 + (done.length ? `<div style="font-size:.6rem;opacity:.45;letter-spacing:1px;margin:12px 0 6px;">CLOSED</div>${done.map((g) => gigCard(g, view)).join("")}` : "")
             : `<div style="text-align:center;opacity:.45;font-size:.7rem;padding:30px 10px;">No gigs on the board.${canEdit() ? " Tap + to post one." : ""}</div>`;
 
+        const gone = canEdit() ? dropped() : [];
+        const dropStrip = gone.length
+            ? `<div style="margin-top:14px;border-top:1px solid #2a2f24;padding-top:10px;">
+                 <div style="font-size:.6rem;opacity:.45;letter-spacing:1px;margin-bottom:6px;">CLIENTS WHO WALKED</div>
+                 ${gone.map((k) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;font-size:.7rem;">
+                     <span style="color:#ff3366;">${esc(clientLabel(k))}</span>
+                     <button type="button" data-action="op-restore-client" data-client="${esc(k)}" title="Put them back in touch"
+                       style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.6rem;padding:2px 8px;cursor:pointer;">Bring back</button>
+                   </div>`).join("")}
+               </div>`
+            : "";
+
         const crew = runners();
         const bodyCrew = crew.length
             ? crew.map(crewCard).join("")
@@ -511,7 +533,7 @@
                 ${canEdit() ? `<button type="button" data-action="${view.tab === "crew" ? "op-new-runner" : "op-new-gig"}" title="${view.tab === "crew" ? "Add an operator" : "Post a gig"}" style="font-family:inherit;background:rgba(158,240,26,.18);border:1px solid ${ACCENT};color:${ACCENT};width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:.9rem;">+</button>` : ""}
             </div>
             <div style="display:flex;flex-shrink:0;">${tab("gigs", "GIGS", live.length)}${tab("crew", "OPERATORS", crew.length)}</div>
-            <div style="flex:1;overflow-y:auto;padding:10px;">${view.tab === "crew" ? bodyCrew : bodyGigs}</div>`;
+            <div style="flex:1;overflow-y:auto;padding:10px;">${view.tab === "crew" ? bodyCrew : bodyGigs + dropStrip}</div>`;
     }
 
     const tile = () => ({ id: "operator", label: "OPERATOR", icon: "fas fa-headset", color: ACCENT, iconImg: null });
@@ -567,7 +589,8 @@
                         if (!skills.length) return ui.notifications.warn("A gig needs at least one skill.");
                         const t = today();
                         if (!t) return ui.notifications.error("The calendar module is not running, so a due date cannot be set.");
-                        const client = f.client.value.trim() || "Unknown client";
+                        const client = f.client.value.trim();
+                    if (!client) return ui.notifications.warn("A gig needs a client. Who is paying for this?");
                         if (!edit && hasDropped(client)) return ui.notifications.warn(`${esc(client)} dropped you after three failures and no longer brings work.`);
 
                         const fields = {
@@ -664,6 +687,14 @@
                 case "op-new-runner":
                     if (canEdit()) newRunnerDialog(app); break;
 
+                case "op-restore-client": {
+                    if (!canEdit()) break;
+                    const key = $t.data("client");
+                    await restoreClient(String(key));
+                    ui.notifications.info(`${clientLabel(String(key))} is bringing work again.`);
+                    app.render(true); break;
+                }
+
                 case "op-delete-gig": {
                     if (!canEdit()) break;
                     if (!await Dialog.confirm({ title: "Delete gig", content: "<p>Remove this gig from the board?</p>" })) break;
@@ -721,26 +752,64 @@
     /*  Wiring                                                           */
     /* ---------------------------------------------------------------- */
 
-    /** Roster membership by name, for the Contacts manager's toggle. */
-    const rosterHas = (name) => runners().some((r) => r.name.trim().toLowerCase() === String(name).trim().toLowerCase());
+    /* Membership is the actor, not the name. Keying on the name meant renaming an actor
+       made an existing operator look absent, and re-adding them built a second row at
+       tier 0 while the earned tier and completed count sat stranded on the first. */
+
+    const nameKey = (n) => String(n ?? "").trim().toLowerCase();
+    const sameActor = (r, actor) => (r.actorUuid && actor?.uuid && r.actorUuid === actor.uuid)
+        || (!r.actorUuid && nameKey(r.name) === nameKey(actor?.name));
+
+    /** The actor behind a name or uuid, however the caller has it. */
+    const resolveActor = (nameOrUuid, uuid = "") => actorOf(uuid)
+        ?? actorOf(nameOrUuid)
+        ?? game.actors.find((a) => nameKey(a.name) === nameKey(nameOrUuid))
+        ?? null;
+
+    /** Roster membership, for the Contacts manager's toggle. */
+    function rosterHas(nameOrUuid, uuid = "") {
+        const actor = resolveActor(nameOrUuid, uuid);
+        if (actor) return runners().some((r) => sameActor(r, actor));
+        return runners().some((r) => nameKey(r.name) === nameKey(nameOrUuid));
+    }
 
     /** Put someone on the roster. Their usable skills come from an actor sheet, so one has to exist. */
     async function rosterAdd(name, uuid = "") {
         if (!game.user.isGM) return false;
-        const key = String(name).trim().toLowerCase();
-        if (rosterHas(key)) return true;
-        const actor = actorOf(uuid) ?? game.actors.find((a) => a.name.trim().toLowerCase() === key);
+        const actor = resolveActor(name, uuid);
         if (!actor) { ui.notifications.warn(`Operator: no actor called "${name}", and an operator's skills come from their sheet.`); return false; }
-        await saveRunners([...runners(), { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier: 0, completed: 0 }]);
+
+        const list = runners();
+        const i = list.findIndex((r) => sameActor(r, actor));
+        if (i >= 0) {
+            // Already here under an older name. Catch the row up rather than duplicate it.
+            if (list[i].name !== actor.name || list[i].actorUuid !== actor.uuid) {
+                list[i] = { ...list[i], name: actor.name, img: actor.img, actorUuid: actor.uuid };
+                await saveRunners(list);
+            }
+            return true;
+        }
+
+        await saveRunners([...list, { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier: 0, completed: 0 }]);
         await giveContact(actor.name, actor.img);
         return true;
     }
 
-    async function rosterRemove(name) {
+    async function rosterRemove(name, uuid = "") {
         if (!game.user.isGM) return;
-        const key = String(name).trim().toLowerCase();
-        await saveRunners(runners().filter((r) => r.name.trim().toLowerCase() !== key));
+        const actor = resolveActor(name, uuid);
+        await saveRunners(runners().filter((r) => actor ? !sameActor(r, actor) : nameKey(r.name) !== nameKey(name)));
     }
+
+    /** A renamed actor drags their roster row along, so the two never drift apart again. */
+    Hooks.on("updateActor", async (actor, changes) => {
+        if (!game.user.isGM || !("name" in changes || "img" in changes)) return;
+        const list = runners();
+        const i = list.findIndex((r) => r.actorUuid && r.actorUuid === actor.uuid);
+        if (i < 0 || (list[i].name === actor.name && list[i].img === actor.img)) return;
+        list[i] = { ...list[i], name: actor.name, img: actor.img };
+        await saveRunners(list);
+    });
 
     globalThis.VirtualAgentOperator = { html, onClick, visible, tile, resolveDue, rosterHas, rosterAdd, rosterRemove, TIERS };
 
