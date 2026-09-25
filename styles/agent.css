@@ -3265,4 +3265,3 @@ button.skill-row:hover {
 @keyframes va-party-blip{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2.4);opacity:0}}
 
 /* NuNu packaging: GM home screen, which apps the party can see */
-.app-icon .app-label .party-check{display:inline;width:auto;height:auto;margin:0 0 0 4px;padding:0;background:none;border:0;box-shadow:none;font-size:inherit;line-height:inherit;color:#64ffda}
