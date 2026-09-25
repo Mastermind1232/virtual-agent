@@ -543,7 +543,6 @@
                     <div data-group="hard" style="display:${draft.hardOn ? "block" : "none"};margin-top:4px;">${rows}</div>
                 </div>
 
-                <p style="font-size:.8em;opacity:.7;">The headline is the whole post. The two bonuses are separate conditions and stack, so a story that does both is +3. Whether the city buys it is settled the moment it goes up, and the city will carry one story a week.</p>
             </form>`,
             buttons: {
                 post: { label: "Publish", callback: async (h) => {
