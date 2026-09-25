@@ -777,7 +777,6 @@
                 <datalist id="op-client-list">${clients.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
                 <div class="form-group"><label>Brief</label><textarea name="brief" rows="2" placeholder="What the client says.">${esc(existing?.brief ?? "")}</textarea></div>
                 <div class="form-group"><label>Payout (eb)</label><input type="number" name="payout" value="${Number(existing?.payout ?? 500)}" min="0" step="50"></div>
-                <div class="form-group"><label>Days to run</label><input type="number" name="days" value="${edit ? Math.max(1, Number(existing.days) || gigDays(existing?.skills?.length)) : gigDays(1)}" min="1" step="1"></div>
                 <hr><label style="font-size:.8em;opacity:.7;">Skills, one to five</label>${rows}
             </form>`,
             buttons: {
@@ -801,7 +800,7 @@
                             brief: f.brief.value.trim(), payout: Math.max(0, Number(f.payout.value) || 0),
                             // Editing a gig no longer slides its deadline forward on its own,
                             // but the days left are editable so a drifted one can be repaired.
-                            skills, days: Math.max(1, Number(f.days.value) || gigDays(skills.length)),
+                            skills, days: gigDays(skills.length),
                         };
 
                         const all = gigs();
@@ -826,20 +825,6 @@
                 cancel: { label: "Cancel" },
             },
             default: "post",
-            render: (h) => {
-                const f = h[0].querySelector("form");
-                if (!f?.days) return;
-                let touched = false;
-                f.days.addEventListener("input", () => { touched = true; });
-                const recount = () => {
-                    if (touched) return;
-                    let n = 0;
-                    for (let i = 0; i < 5; i++) if (f[`skill${i}`]?.value.trim()) n++;
-                    f.days.value = gigDays(n);
-                };
-                for (let i = 0; i < 5; i++) f[`skill${i}`]?.addEventListener("input", recount);
-                recount();
-            },
         }, { width: 420 }).render(true);
     }
 
