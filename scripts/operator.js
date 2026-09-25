@@ -355,7 +355,13 @@
                 if (i < 0 || list[i].status !== "open") return;
                 const r = runners().find((x) => x.id === msg.runnerId);
                 if (!r) return;
-                list[i] = { ...list[i], runnerId: msg.runnerId, status: "assigned" };
+                const t0 = today();
+                const span = Math.max(1, Number(list[i].days) || gigDays(list[i].skills?.length));
+                list[i] = {
+                    ...list[i], runnerId: msg.runnerId, status: "assigned",
+                    started: dateKey(t0) ?? "",
+                    due: t0 ? dateKey(addDays(t0, span)) : list[i].due,
+                };
                 await saveGigs(list);
                 await ChatMessage.create({ whisper: whisperTargets(), content: `<div style="font-family:monospace;"><b style="color:${ACCENT}">OPERATOR</b><br>${esc(r.name)} took <b>${esc(list[i].title)}</b>. Due ${esc(prettyDate(list[i].due))}.</div>` });
                 renderPhone();
@@ -446,7 +452,7 @@
             ? chip(g.outcome?.success ? "PAID" : "FAILED", g.outcome?.success ? ACCENT : "#ff3366")
             : (g.status === "assigned"
                 ? chip(days === null ? "IN PROGRESS" : (days <= 0 ? "DUE" : `${days}D LEFT`), "#ffd166")
-                : chip("AVAILABLE", "#888"));
+                : chip(`${Math.max(1, Number(g.days) || gigDays(g.skills?.length))}D JOB`, "#888"));
 
         const skills = g.skills.map((s) => {
             const covered = runner && usableSkills(runner).some((u) => u.name.trim().toLowerCase() === s.name.trim().toLowerCase());
@@ -724,7 +730,7 @@
                 <datalist id="op-client-list">${clients.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
                 <div class="form-group"><label>Brief</label><textarea name="brief" rows="2" placeholder="What the client says.">${esc(existing?.brief ?? "")}</textarea></div>
                 <div class="form-group"><label>Payout (eb)</label><input type="number" name="payout" value="${Number(existing?.payout ?? 500)}" min="0" step="50"></div>
-                <div class="form-group"><label>Days${edit ? " left" : ""}</label><input type="number" name="days" value="${edit ? (daysUntil(existing.due) ?? gigDays(existing?.skills?.length)) : gigDays(1)}" min="1" step="1"></div>
+                <div class="form-group"><label>Days to run</label><input type="number" name="days" value="${edit ? Math.max(1, Number(existing.days) || gigDays(existing?.skills?.length)) : gigDays(1)}" min="1" step="1"></div>
                 <hr><label style="font-size:.8em;opacity:.7;">Skills, one to five</label>${rows}
             </form>`,
             buttons: {
@@ -748,15 +754,19 @@
                             brief: f.brief.value.trim(), payout: Math.max(0, Number(f.payout.value) || 0),
                             // Editing a gig no longer slides its deadline forward on its own,
                             // but the days left are editable so a drifted one can be repaired.
-                            skills, due: dateKey(addDays(t, Math.max(1, Number(f.days.value) || gigDays(skills.length)))),
+                            skills, days: Math.max(1, Number(f.days.value) || gigDays(skills.length)),
                         };
 
                         const all = gigs();
                         if (edit) {
                             const i = all.findIndex((g) => g.id === existing.id);
                             if (i < 0) return ui.notifications.warn("That gig is gone.");
-                            if (all[i].status !== "open") return ui.notifications.warn("Somebody has already taken that gig.");
-                            all[i] = { ...all[i], ...fields };
+                            if (all[i].status === "done") return ui.notifications.warn("That gig is already settled.");
+                            const wasAssigned = all[i].status === "assigned";
+                            all[i] = {
+                                ...all[i], ...fields,
+                                due: wasAssigned && t ? dateKey(addDays(t, fields.days)) : all[i].due,
+                            };
                             await saveGigs(all);
                             ui.notifications.info(`Operator: "${esc(fields.title)}" updated.`);
                         } else {
