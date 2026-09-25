@@ -941,7 +941,15 @@
                 case "op-drop-runner": {
                     if (!canEdit()) break;
                     const id = $t.data("runner");
-                    if (!await Dialog.confirm({ title: "Drop operator", content: "<p>Drop this operator? Their gig history goes with them.</p>" })) break;
+                    const who = runners().find((r) => r.id === id);
+                    // A gig with nobody on it fails every skill when it comes due, and
+                    // says nothing about why, so the warning has to happen here.
+                    const live = gigs().filter((g) => g.runnerId === id && g.status === "assigned");
+                    const warning = live.length
+                        ? `<p style="color:#ff9900;"><b>${esc(who?.name ?? "They")} is on ${live.length} gig${live.length === 1 ? "" : "s"} right now:</b> ${live.map((g) => esc(g.title)).join(", ")}.</p>
+                           <p>Dropping ${live.length === 1 ? "it" : "them"} leaves nobody on the job, and ${live.length === 1 ? "it fails" : "they fail"} when the deadline comes.</p>`
+                        : "";
+                    if (!await Dialog.confirm({ title: "Drop operator", content: `${warning}<p>Drop this operator? Their gig history goes with them.</p>` })) break;
                     await saveRunners(runners().filter((r) => r.id !== id));
                     app.render(true); break;
                 }
