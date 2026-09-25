@@ -213,42 +213,66 @@
      * do not cover fails without dice unless Jan took the call. Two natural 1s
      * end the gig whatever the arithmetic says.
      */
-    async function resolveGig(gig) {
+    /** One skill, on its day. Returns the line it wrote, or null when it is not due yet
+        or has already been rolled. The result is kept so the week reads back afterwards. */
+    async function rollEntry(gig, index) {
+        const skill = gig.skills[index];
+        if (!skill) return null;
+
         const runner = runners().find((r) => r.id === gig.runnerId) ?? null;
-        const usable = usableSkills(runner).map((s) => s.name.trim().toLowerCase());
+        const usable = usableSkills(runner).map((x) => x.name.trim().toLowerCase());
         const rActor = actorOf(runner?.actorUuid);
         const jActor = ownerActor();
 
-        const lines = [];
+        const key = skill.name.trim().toLowerCase();
+        const assisted = gig.assist && gig.assist.skill.trim().toLowerCase() === key;
+        const covered = usable.includes(key);
+
+        if (!covered && !assisted) {
+            return { skill: skill.name, dv: skill.dv, by: "nobody", text: "No one on the job could cover it", delta: MISS, passed: false, assisted: false };
+        }
+
+        const by = assisted ? (jActor?.name ?? "Operator") : (rActor?.name ?? runner?.name ?? "Runner");
+        // An assist was rolled live when the call came in; that result stands.
+        const total = assisted ? (gig.assist.total ?? 0) : skillTotal(rActor, skill.name);
+        const die = assisted ? (gig.assist.die ?? 1) : (await new Roll("1d10").evaluate()).total;
+        const sum = die + total;
+
+        let delta = 0, text = "", passed = true;
+        if (die === 1) { delta = FUMBLE; text = `Fumble. ${total} + 1 against DV ${skill.dv}`; passed = false; }
+        else if (die === 10) { delta = PREEM; text = `Preem. ${total} + 10 = ${sum} against DV ${skill.dv}`; }
+        else if (sum >= skill.dv) { delta = 0; text = `${total} + ${die} = ${sum} against DV ${skill.dv}`; }
+        else { delta = MISS; text = `${total} + ${die} = ${sum} against DV ${skill.dv}`; passed = false; }
+
+        return { skill: skill.name, dv: skill.dv, by, text, delta, die, passed, assisted: !!assisted };
+    }
+
+    /** The day each skill is attempted: one a day, the last of them the day before the
+        deadline, so the job itself lands on the final day. */
+    const entryDay = (gig, index) => {
+        const n = gig.skills?.length ?? 0;
+        if (!gig.due) return null;
+        const [y, m, d] = gig.due.split("-").map(Number);
+        return addDays({ y, m, d }, -(n - index));
+    };
+
+    /** Settle a gig from the days already worked. */
+    async function resolveGig(gig) {
+        const lines = Array.isArray(gig.log) && gig.log.length === gig.skills.length
+            ? gig.log
+            : await (async () => {
+                // A gig from before the week was played out, or one forced to resolve
+                // early: roll whatever is still outstanding, now.
+                const out = [];
+                for (let i = 0; i < gig.skills.length; i++) {
+                    out.push(gig.log?.[i] ?? await rollEntry(gig, i));
+                }
+                return out.filter(Boolean);
+            })();
+
         let chance = CAPS[gig.skills.length] ?? 80;
         let fumbles = 0;
-
-        for (const skill of gig.skills) {
-            const key = skill.name.trim().toLowerCase();
-            const assisted = gig.assist && gig.assist.skill.trim().toLowerCase() === key;
-            const covered = usable.includes(key);
-
-            if (!covered && !assisted) {
-                chance += MISS;
-                lines.push({ skill: skill.name, dv: skill.dv, by: "nobody", text: "No one on the job could cover it", delta: MISS });
-                continue;
-            }
-
-            const by = assisted ? (jActor?.name ?? "Operator") : (rActor?.name ?? runner?.name ?? "Runner");
-            // An assist was rolled live when the call came in; that result stands.
-            const total = assisted ? (gig.assist.total ?? 0) : skillTotal(rActor, skill.name);
-            const die = assisted ? (gig.assist.die ?? 1) : (await new Roll("1d10").evaluate()).total;
-            const sum = die + total;
-
-            let delta = 0, text = "";
-            if (die === 1) { fumbles++; delta = FUMBLE; text = `Fumble. ${total} + 1 against DV ${skill.dv}`; }
-            else if (die === 10) { delta = PREEM; text = `Preem. ${total} + 10 = ${sum} against DV ${skill.dv}`; }
-            else if (sum >= skill.dv) { delta = 0; text = `${total} + ${die} = ${sum} against DV ${skill.dv}`; }
-            else { delta = MISS; text = `${total} + ${die} = ${sum} against DV ${skill.dv}`; }
-
-            chance += delta;
-            lines.push({ skill: skill.name, dv: skill.dv, by, text, delta, die });
-        }
+        for (const l of lines) { chance += l.delta ?? 0; if (l.die === 1) fumbles++; }
 
         const wiped = fumbles >= 2;
         chance = Math.max(0, Math.min(100, chance));
@@ -327,14 +351,67 @@
     }
 
     /** Called when the calendar date moves. Only one GM does the work. */
+    /** Work every day that has passed, on every gig in flight, then settle the ones whose
+        deadline has come. A week advanced in one move plays out in order, same as seven
+        single days would, because each entry is judged against its own date. */
     async function resolveDue() {
         if (!isActiveGM() || _resolving) return;
         _resolving = true;
         try {
+            let worked = false;
+
+            for (const gig of gigs().filter((g) => g.status === "assigned" && g.due)) {
+                const log = Array.isArray(gig.log) ? [...gig.log] : [];
+                let changed = false;
+
+                for (let i = 0; i < gig.skills.length; i++) {
+                    if (log[i]) continue;                       // already worked
+                    const day = entryDay(gig, i);
+                    if (!day || (daysUntil(dateKey(day)) ?? 1) > 0) continue;   // not yet
+                    // A gig already dead does not need the rest of its week rolled.
+                    if (log.filter((l) => l?.die === 1).length >= 2) break;
+                    log[i] = await rollEntry(gig, i);
+                    changed = true;
+                    await postDay(gig, log[i], i);
+                }
+
+                if (changed) {
+                    const list = gigs();
+                    const j = list.findIndex((g) => g.id === gig.id);
+                    if (j >= 0) { list[j] = { ...list[j], log }; await saveGigs(list); }
+                    worked = true;
+                }
+            }
+
             const due = gigs().filter((g) => g.status === "assigned" && g.due && (daysUntil(g.due) ?? 1) <= 0);
             for (const g of due) await resolveGig(g);
-            if (due.length) renderPhone();
+            if (due.length || worked) renderPhone();
         } finally { _resolving = false; }
+    }
+
+    /** The operator texts in with how the day went. */
+    async function postDay(gig, line, index) {
+        if (!line) return;
+        const runner = runners().find((r) => r.id === gig.runnerId);
+        const thread = runner ? clientThread(runner.name) : null;
+        const owner = ownerUser();
+        if (!thread || !owner) return;
+
+        const word = line.by === "nobody"
+            ? `Nobody could cover ${line.skill}.`
+            : (line.die === 1 ? `${line.skill} went badly wrong.`
+                : (line.die === 10 ? `${line.skill}, and it went better than it had any right to.`
+                    : (line.passed ? `${line.skill}, done.` : `${line.skill} did not go our way.`)));
+
+        await ChatMessage.create({
+            content: `Day ${index + 1} on ${gig.title}. ${word}`,
+            whisper: [owner.id, ...game.users.filter((u) => u.isGM).map((u) => u.id)],
+            speaker: { alias: runner.name },
+            flags: { VirtualAgent: {
+                isAgentMessage: true, threadId: thread,
+                overrideName: runner.name, overrideAvatar: runner.img ?? null,
+            } },
+        });
     }
     let _resolving = false;
     const _paying = new Set();
@@ -370,6 +447,7 @@
                 if (!r) return;
                 const t0 = today();
                 if (!t0) { ui.notifications.error("The calendar is not running, so a gig cannot be given a deadline."); return; }
+                delete list[i].log;                            // a fresh week for a fresh hire
                 const span = Math.max(1, Number(list[i].days) || gigDays(list[i].skills?.length));
                 list[i] = {
                     ...list[i], runnerId: msg.runnerId, status: "assigned",
@@ -498,13 +576,28 @@
                 ? chip(days === null ? "IN PROGRESS" : (days <= 0 ? "DUE" : `${days}D LEFT`), "#ffd166")
                 : chip(`${Math.max(1, Number(g.days) || gigDays(g.skills?.length))}D JOB`, "#888"));
 
-        const skills = g.skills.map((s) => {
+        // The week, a line a day. A day already worked shows how it went; one still to
+        // come shows only whether anybody on the job can cover it.
+        const skills = g.skills.map((s, i) => {
+            const done = Array.isArray(g.log) ? g.log[i] : null;
             const covered = runner && usableSkills(runner).some((u) => u.name.trim().toLowerCase() === s.name.trim().toLowerCase());
-            const assisted = g.assist && g.assist.skill.trim().toLowerCase() === s.name.trim().toLowerCase();
-            const mark = assisted ? "&#9679;" : (covered ? "&#10003;" : "&#10007;");
-            const colour = assisted ? "#22ddff" : (covered ? ACCENT : "#ff3366");
+            const day = entryDay(g, i);
+            const left = day ? daysUntil(dateKey(day)) : null;
+
+            let mark, colour, note;
+            if (done) {
+                const passed = done.passed;
+                mark = passed ? "&#10003;" : "&#10007;";
+                colour = done.assisted ? "#22ddff" : (passed ? ACCENT : "#ff3366");
+                note = done.assisted ? "you covered it" : esc(done.by === "nobody" ? "uncovered" : done.by);
+            } else {
+                mark = "&#9633;";
+                colour = covered ? "#8a8f84" : "#8a6060";
+                note = left === null ? "" : (left <= 0 ? "today" : `day ${i + 1}`);
+            }
+
             return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:2px 0;">
-                <span style="color:${colour};">${mark} ${esc(s.name)}</span>${chip(diffName(s.dv), diffColour(s.dv))}</div>`;
+                <span style="color:${colour};">${mark} ${esc(s.name)}${note ? ` <span style="opacity:.5;font-size:.9em;">${note}</span>` : ""}</span>${chip(diffName(s.dv), diffColour(s.dv))}</div>`;
         }).join("");
 
         let body = "";
