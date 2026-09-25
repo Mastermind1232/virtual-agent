@@ -152,17 +152,26 @@
 
         const gmList = game.user.getFlag(ID, "customContacts") || [];
         const existing = gmList.find(same);
+        // Keep everyone who already had this number. Overwriting the list with just the
+        // owner quietly took the contact off every other player's phone.
+        const holders = Array.from(new Set([
+            ...(Array.isArray(existing?.targetUserIds) ? existing.targetUserIds : []).filter((id) => game.users.get(id)),
+            owner.id,
+        ]));
         const record = {
             id: existing?.id ?? `npc_${uid()}`,
             name: runnerName, originalName: runnerName,
             avatar: (img && img !== "icons/svg/mystery-man.svg") ? img : (existing?.avatar ?? null),
             ownerId: owner.id,
             isPlayer: false,
-            targetUserIds: [owner.id],   // one owner, so the thread never splits and never moves
+            targetUserIds: holders,      // whoever already had the number, plus the owner
         };
         await game.user.setFlag(ID, "customContacts", [...gmList.filter((c) => !same(c)), record]);
-        const theirs = owner.getFlag(ID, "customContacts") || [];
-        await owner.setFlag(ID, "customContacts", [...theirs.filter((c) => !same(c)), record]);
+        for (const u of game.users) {
+            if (u.isGM || !holders.includes(u.id)) continue;
+            const theirs = u.getFlag(ID, "customContacts") || [];
+            await u.setFlag(ID, "customContacts", [...theirs.filter((c) => !same(c)), record]);
+        }
     }
 
     /* ---------------------------------------------------------------- */
@@ -328,6 +337,7 @@
         } finally { _resolving = false; }
     }
     let _resolving = false;
+    const _paying = new Set();
 
     /* ---------------------------------------------------------------- */
     /*  Writes                                                           */
@@ -340,7 +350,10 @@
     const SOCKET = `module.${ID}`;
 
     async function request(payload) {
-        if (game.user.isGM) return applyOp({ ...payload, userId: game.user.id });
+        // Whichever GM pressed it, one GM writes. Two of them applying the same press
+        // resolved a gig twice, with two chat cards and two tier bumps.
+        if (isActiveGM() || (game.user.isGM && !activeGM())) return applyOp({ ...payload, userId: game.user.id });
+        if (game.user.isGM) { game.socket.emit(SOCKET, { operator: true, ...payload, userId: game.user.id }); return; }
         if (!activeGM()) return ui.notifications.warn("No GM is connected, so the Operator cannot record that.");
         game.socket.emit(SOCKET, { operator: true, ...payload, userId: game.user.id });
     }
@@ -356,11 +369,11 @@
                 const r = runners().find((x) => x.id === msg.runnerId);
                 if (!r) return;
                 const t0 = today();
+                if (!t0) { ui.notifications.error("The calendar is not running, so a gig cannot be given a deadline."); return; }
                 const span = Math.max(1, Number(list[i].days) || gigDays(list[i].skills?.length));
                 list[i] = {
                     ...list[i], runnerId: msg.runnerId, status: "assigned",
-                    started: dateKey(t0) ?? "",
-                    due: t0 ? dateKey(addDays(t0, span)) : list[i].due,
+                    started: dateKey(t0), due: dateKey(addDays(t0, span)),
                 };
                 await saveGigs(list);
                 await ChatMessage.create({ whisper: whisperTargets(), content: `<div style="font-family:monospace;"><b style="color:${ACCENT}">OPERATOR</b><br>${esc(r.name)} took <b>${esc(list[i].title)}</b>. Due ${esc(prettyDate(list[i].due))}.</div>` });
@@ -377,13 +390,25 @@
                 return;
             }
             case "payout": {
+                // A player's press reaches here over the socket, which does not wait, so
+                // two clicks are two messages. This gate is on the GM and is the only one
+                // that can actually stop the second from paying again.
+                if (_paying.has(msg.gigId)) return;
+
                 const list = gigs();
                 const i = list.findIndex((g) => g.id === msg.gigId);
                 if (i < 0) return;
                 const gig = list[i];
                 if (gig.status !== "done" || !gig.outcome?.success || gig.paid) return;
 
-                const total = Number(gig.outcome.payout) || 0;
+                // Only the person whose app it is settles their own gigs. A GM may do it
+                // for them, which is also the answer when no owner has been set.
+                const from = game.users.get(msg.userId);
+                const owner = ownerUser();
+                if (!from || (!from.isGM && (!owner || from.id !== owner.id))) return;
+
+                // Older gigs kept the figure on the gig itself rather than the outcome.
+                const total = Number(gig.outcome.payout ?? gig.payout) || 0;
                 const cut = Math.max(0, Math.min(total, Math.round(Number(msg.cut) || 0)));
                 const keep = total - cut;
 
@@ -391,37 +416,56 @@
                 const fixer = ownerActor();
                 const hired = actorOf(runner?.actorUuid);
 
-                // A ledger line each, where there is a ledger to write to. An operator
-                // without an actor is paid in the fiction and nowhere else.
-                const pay = (actor, amount, reason) => {
-                    if (!actor || amount <= 0) return false;
+                /** Writes one ledger line. Returns why it could not, so nothing is
+                    reported as paid that was not. A mook has no wealth at all. */
+                const pay = async (actor, amount, who, reason) => {
+                    if (amount <= 0) return null;
+                    if (!actor) return `${who} has no character sheet`;
+                    const w = actor.system?.wealth;
+                    if (!Number.isSafeInteger(w?.value) || !Array.isArray(w.transactions)) {
+                        return `${actor.name} has no Eurobucks ledger`;
+                    }
                     try {
-                        const w = actor.system?.wealth;
-                        if (!Number.isSafeInteger(w?.value) || !Array.isArray(w.transactions)) return false;
-                        return actor.update({
+                        await actor.update({
                             "system.wealth.value": w.value + amount,
                             "system.wealth.transactions": [...w.transactions.map((r) => [...r]),
                                 [`Increased wealth by ${amount} to ${w.value + amount}`, reason]],
-                        }).then(() => true);
-                    } catch (e) { console.error("Operator |", e); return false; }
+                        });
+                        return null;
+                    } catch (e) { console.error("Operator |", e); return `${actor.name}: ${e.message}`; }
                 };
 
-                await pay(fixer, keep, `Fixer: Completed a gig for ${gig.client}`);
-                await pay(hired, cut, `${gig.client} gig, paid by ${fixer?.name ?? "the Operator"}`);
+                _paying.add(msg.gigId);
+                try {
+                    const runnerName = runner?.name ?? "The operator";
+                    const problems = [
+                        await pay(fixer, keep, "The Operator", `Fixer: Completed a gig for ${gig.client}`),
+                        await pay(hired, cut, runnerName, `${gig.client} gig, paid by ${fixer?.name ?? "the Operator"}`),
+                    ].filter(Boolean);
 
-                list[i] = { ...gig, paid: { cut, keep, payout: total, at: Date.now() } };
-                await saveGigs(list);
+                    // Nothing is marked settled unless the money actually moved.
+                    if (problems.length) {
+                        ui.notifications.error(`Operator: nobody was paid. ${problems.join(". ")}.`);
+                        return;
+                    }
 
-                const share = total > 0 ? Math.round((cut / total) * 100) : 0;
-                await ChatMessage.create({
-                    whisper: whisperTargets(),
-                    content: `<div style="font-family:monospace;font-size:.8rem;border:1px solid ${ACCENT};border-radius:6px;padding:10px;background:rgba(0,0,0,.35);">
-                        <div style="color:${ACCENT};letter-spacing:2px;margin-bottom:4px;">OPERATOR // SETTLED</div>
-                        <b>${esc(gig.title)}</b><br>
-                        ${esc(runner?.name ?? "The operator")} takes <b>${cut}eb</b> of <b>${total}eb</b>, a ${share}% cut.
-                        ${esc(fixer?.name ?? "The Operator")} keeps <b>${keep}eb</b>.</div>`,
-                });
-                renderPhone();
+                    const fresh = gigs();
+                    const j = fresh.findIndex((g) => g.id === msg.gigId);
+                    if (j < 0 || fresh[j].paid) return;
+                    fresh[j] = { ...fresh[j], paid: { cut, keep, payout: total, at: Date.now() } };
+                    await saveGigs(fresh);
+
+                    const share = total > 0 ? Math.round((cut / total) * 100) : 0;
+                    await ChatMessage.create({
+                        whisper: whisperTargets(),
+                        content: `<div style="font-family:monospace;font-size:.8rem;border:1px solid ${ACCENT};border-radius:6px;padding:10px;background:rgba(0,0,0,.35);">
+                            <div style="color:${ACCENT};letter-spacing:2px;margin-bottom:4px;">OPERATOR // SETTLED</div>
+                            <b>${esc(gig.title)}</b><br>
+                            ${esc(runnerName)} takes <b>${cut}eb</b> of <b>${total}eb</b>, a ${share}% cut.
+                            ${esc(fixer?.name ?? "The Operator")} keeps <b>${keep}eb</b>.</div>`,
+                    });
+                    renderPhone();
+                } finally { _paying.delete(msg.gigId); }
                 return;
             }
 
@@ -509,10 +553,13 @@
                    </div>`
                 : "";
 
-            const settle = (g.status === "done" && g.outcome?.success && !g.paid && isOwner())
+            const settle = (g.status === "done" && g.outcome?.success && !g.paid && (isOwner() || (game.user.isGM && !ownerUser())))
                 ? (() => {
-                    const total = Number(g.outcome.payout) || 0;
-                    const start = Math.round(total * 0.2);   // 80/20 the fixer's way
+                    const total = Number(g.outcome.payout ?? g.payout) || 0;
+                    // A text arriving redraws the phone. Without remembering the drag the
+                    // slider snapped back to its default and Pay sent that instead.
+                    const remembered = app._operator?.splits?.[g.id];
+                    const start = Math.max(0, Math.min(total, Number(remembered ?? Math.round(total * 0.2))));
                     return `<div style="margin-top:10px;border-top:1px solid #222;padding-top:9px;">
                         <div style="font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:6px;">THE SPLIT &middot; ${total}eb ON THE TABLE</div>
                         <div style="display:flex;justify-content:space-between;font-size:.68rem;margin-bottom:3px;">
@@ -869,7 +916,7 @@
                     if (!canEdit()) break;
                     const g = gigs().find((x) => x.id === gigId);
                     if (!g) break;
-                    if (g.status !== "open") { ui.notifications.warn("That gig has already been taken."); break; }
+                    if (g.status === "done") { ui.notifications.warn("That gig is already settled."); break; }
                     gigDialog(app, g); break;
                 }
 
@@ -922,13 +969,15 @@
                 }
 
                 case "op-settle": {
-                    if (!isOwner()) break;
+                    if (!isOwner() && !(game.user.isGM && !ownerUser())) break;
                     const g = gigs().find((x) => x.id === gigId);
                     if (!g || g.paid || !g.outcome?.success) break;
                     const range = $t.closest("div").find(`[data-split-range="${gigId}"]`)[0]
                         ?? document.querySelector(`[data-split-range="${gigId}"]`);
-                    const total = Number(g.outcome.payout) || 0;
-                    const cut = Math.max(0, Math.min(total, Math.round(Number(range?.value) || 0)));
+                    const total = Number(g.outcome.payout ?? g.payout) || 0;
+                    const dragged = app._operator?.splits?.[gigId];
+                    const raw = range?.value ?? dragged ?? Math.round(total * 0.2);
+                    const cut = Math.max(0, Math.min(total, Math.round(Number(raw) || 0)));
                     if (_calling.has(gigId)) break;
                     _calling.add(gigId);
                     try { await request({ op: "payout", gigId, cut }); } finally { _calling.delete(gigId); }
@@ -1030,7 +1079,16 @@
         game.settings.register(ID, "operatorDropped", { scope: "world", config: false, type: String, default: "[]" });
     });
 
-    Hooks.on("nunuCalendar.dateChanged", () => { resolveDue().catch(console.error); });
+    // Only forward. Stepping the date back used to settle everything already overdue,
+    // which is what taking the rewind button off the widget was meant to stop.
+    let _lastSeenDate = null;
+    Hooks.on("nunuCalendar.dateChanged", (date) => {
+        const key = date ? dateKey(date) : null;
+        const backwards = key && _lastSeenDate && key < _lastSeenDate;
+        _lastSeenDate = key ?? _lastSeenDate;
+        if (backwards) return;
+        resolveDue().catch(console.error);
+    });
 
     Hooks.once("ready", () => {
         // A player's actions arrive here; the upstream listener keys off `action`, so the two do not collide.

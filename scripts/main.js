@@ -658,6 +658,17 @@ function _agentUnreadThread(m) {
     return threadId;
 }
 
+/** The unread count the phone itself would show: threads that still exist, nothing else.
+    Defined at load rather than inside a render, because the launcher beside the calendar
+    asks for it before anybody has opened the phone. */
+globalThis.VirtualAgentUnreadTotal = () => {
+    try {
+        const raw = game.user.getFlag("VirtualAgent", "unreads") || {};
+        const ids = new Set((globalThis.AgentDeviceApp?.ui?._getContacts?.({ ignoreSearch: true }) || []).map((c) => c.id));
+        return Object.entries(raw).reduce((n, [tid, v]) => n + (ids.has(tid) && Number(v) > 0 ? Number(v) : 0), 0);
+    } catch (e) { return 0; }
+};
+
 Hooks.once("ready", async () => {
     try {
         const mark = game.user.getFlag("VirtualAgent", "lastSeenMsgId");
@@ -670,6 +681,9 @@ Hooks.once("ready", async () => {
         if (mark === undefined) return stamp(newest?.id);
 
         const from = mark ? ordered.findIndex((m) => m.id === mark) : -1;
+        // The marked message may have been deleted since. Walking from the start would
+        // then count the entire history as unread, so treat a lost mark as caught up.
+        if (mark && from < 0) return stamp(newest?.id);
         const missed = ordered.slice(from + 1);
         if (!missed.length) return stamp(newest?.id);
 

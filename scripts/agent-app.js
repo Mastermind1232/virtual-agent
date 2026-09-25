@@ -1409,13 +1409,6 @@ class AgentOSApplication extends Application {
         // is enough — orphans staying in the flag are invisible to the user.
         // Actual cleanup runs in the contact-delete handler (line ~1924).
         const validIds = new Set(data.contacts.map(c => c.id));
-        globalThis.VirtualAgentUnreadTotal = () => {
-            try {
-                const raw = game.user.getFlag("VirtualAgent", "unreads") || {};
-                const ids = new Set((globalThis.AgentDeviceApp?.ui?._getContacts?.({ ignoreSearch: true }) || []).map(c => c.id));
-                return Object.entries(raw).reduce((n, [tid, v]) => n + (ids.has(tid) && Number(v) > 0 ? Number(v) : 0), 0);
-            } catch (e) { return 0; }
-        };
         const unreads = {};
         for (const [tid, n] of Object.entries(rawUnreads)) {
             if (validIds.has(tid)) unreads[tid] = n;
@@ -6945,6 +6938,11 @@ class AgentOSApplication extends Application {
         // paid until the button underneath is pressed.
         html.on('input', '[data-split-range]', (ev) => {
             const el = ev.currentTarget;
+            // Remembered so a redraw, which any incoming text causes, does not throw the
+            // drag away and leave Pay sending the default instead.
+            this._operator = this._operator || {};
+            this._operator.splits = this._operator.splits || {};
+            this._operator.splits[el.dataset.splitRange] = Number(el.value) || 0;
             const total = Number(el.max) || 0;
             const cut = Math.max(0, Math.min(total, Number(el.value) || 0));
             const keep = total - cut;
