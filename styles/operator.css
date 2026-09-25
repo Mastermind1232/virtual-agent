@@ -39,6 +39,19 @@
 #agent-view-rep .rep-role.rep-allied { color: #6eb475; }
 #agent-view-rep .rep-role.rep-hostile { color: #ff3366; }
 
+/* The faction is a badge because it is an allegiance. A role is just what someone
+   does for a living, so it reads as plain text beside it. */
+#agent-view-rep .rep-role.rep-job {
+    border: 0;
+    padding: 0;
+    margin-left: 7px;
+    font-size: .62rem;
+    font-weight: 500;
+    letter-spacing: .02em;
+    text-transform: none;
+    color: #9aa5ae;
+}
+
 /* ------------------------------------------------------------------ *
  *  NuNu packaging: the Contacts manager, the GM's book behind the phones.
  * ------------------------------------------------------------------ */
