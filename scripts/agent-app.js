@@ -2044,8 +2044,9 @@ class AgentOSApplication extends Application {
                     // `ownerId` is no help here: it records the GM who created the contact.
                     if (!game.user.isGM) return of.includes(game.user.id);
                     const split = String(c.id).split("__")[1];
-                    return split ? of.includes(split)
-                        : (Array.isArray(c.targetUserIds) ? c.targetUserIds.some((u) => of.includes(u)) : false);
+                    if (split) return of.includes(split);
+                    const live = Array.isArray(c.targetUserIds) ? c.targetUserIds.filter((u) => game.users.get(u)) : [];
+                    return live.some((u) => of.includes(u));
                 })(),
             }));
 
@@ -6099,7 +6100,12 @@ class AgentOSApplication extends Application {
                                     await game.user.setFlag("VirtualAgent", "unreads", next);
                                 }
                                 // GM: also nuke switchboard-generated NPC threads + push removal to players
-                                if (game.user.isGM && String(id).startsWith("npc_")) {
+                                // A row for one player carries their id in the suffix, and
+                                // players store the contact under the bare id.
+                                const base = VA_baseId(id);
+                                const onlyUser = String(id).split("__")[1] || null;
+
+                                if (game.user.isGM && String(base).startsWith("npc_")) {
                                     const threadMsgs = game.messages.filter(m =>
                                         m.flags?.VirtualAgent?.isAgentMessage && m.flags.VirtualAgent.threadId === id
                                     );
@@ -6114,6 +6120,18 @@ class AgentOSApplication extends Application {
                                             playerContacts = playerContacts.filter(c => c.id !== base);
                                             await u.setFlag("VirtualAgent", "customContacts", playerContacts);
                                         }
+                                    }
+
+                                    // Deleting the whole contact, not one player's thread.
+                                    if (!onlyUser) {
+                                        try {
+                                            const raw = game.settings.get("VirtualAgent", "contactMeta");
+                                            const meta = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+                                            if (meta[base]) {
+                                                delete meta[base];
+                                                await game.settings.set("VirtualAgent", "contactMeta", JSON.stringify(meta));
+                                            }
+                                        } catch (e) { console.error("AgentDevice | contactMeta cleanup failed:", e); }
                                     }
                                 }
                             }
