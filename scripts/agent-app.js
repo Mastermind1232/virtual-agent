@@ -2044,7 +2044,7 @@ class AgentOSApplication extends Application {
         const STANDING_WEIGHT = { allied: 0, friendly: 1, neutral: 2, hostile: 3 };
         const STANDING_LABEL  = { allied: "ALLIED", friendly: "FRIENDLY", neutral: "NEUTRAL", hostile: "HOSTILE" };
         // NuNu packaging: A to Z is the default; there is no unsorted view.
-        const sortMode = this._repSort || "alpha";
+        const sortMode = this._repSort || "standing";
         data.repSort = sortMode;
         if (Array.isArray(data.npcReputations) && data.npcReputations.length) {
             const arr = data.npcReputations.slice();
@@ -2061,8 +2061,8 @@ class AgentOSApplication extends Application {
             data.npcReputations = arr;
         }
         data.repSortOptions = [
-            { id: "alpha",    label: "A → Z" },
-            { id: "standing", label: "By attitude" }
+            { id: "standing", label: "Attitude" },
+            { id: "alpha",    label: "Alphabetical" }
         ];
 
         // ════════════════════════════════════════════════════════════════════
@@ -6807,7 +6807,7 @@ class AgentOSApplication extends Application {
         // --- Contact Management ---
         // Patch3 (CommanderCrunch69): Fixers app sort dropdown.
         html.on('change', '#rep-sort-select', (ev) => {
-            this._repSort = ev.currentTarget.value || "default";
+            this._repSort = ev.currentTarget.value || "standing";
             this.render(false);
         });
 
