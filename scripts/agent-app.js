@@ -6073,11 +6073,18 @@ class AgentOSApplication extends Application {
                 }
 
                 case 'rep-open-messenger': {
-                    // NuNu packaging: the book IS the contact list, so this is just a jump.
+                    // Straight into the conversation. `chat` is the thread list; the
+                    // conversation itself is `chat-thread`, which is what every other
+                    // way of opening a thread uses.
                     const id = String($(ev.currentTarget).data('npc-id') || "");
                     if (!id) break;
-                    this.currentView = 'chat';
                     this.activeContactId = id;
+                    const unreads = game.user.getFlag("VirtualAgent", "unreads") || {};
+                    if (unreads[id]) {
+                        const next = { ...unreads, [id]: 0 };
+                        game.user.setFlag("VirtualAgent", "unreads", next).catch((e) => console.error("AgentDevice |", e));
+                    }
+                    this.currentView = 'chat-thread';
                     this.showAddContact = false;
                     this.editContactId = null;
                     this.render(true);
