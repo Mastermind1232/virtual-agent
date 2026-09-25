@@ -615,6 +615,9 @@
     /*  Dialogs                                                          */
     /* ---------------------------------------------------------------- */
 
+    /** A gig runs a week, always. */
+    const GIG_DAYS = 7;
+
     /** Every skill name known to the world, for the gig form's autocomplete. */
     function skillNames() {
         const names = new Set();
@@ -710,7 +713,6 @@
             </div>`;
         }).join("");
 
-        const days = edit ? Math.max(1, daysUntil(existing.due) ?? 7) : 7;
 
         new Dialog({
             title: edit ? "Edit gig" : "Post a gig",
@@ -721,7 +723,6 @@
                 <datalist id="op-client-list">${clients.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
                 <div class="form-group"><label>Brief</label><textarea name="brief" rows="2" placeholder="What the client says.">${esc(existing?.brief ?? "")}</textarea></div>
                 <div class="form-group"><label>Payout (eb)</label><input type="number" name="payout" value="${Number(existing?.payout ?? 500)}" min="0" step="50"></div>
-                <div class="form-group"><label>Days${edit ? " from today" : ""}</label><input type="number" name="days" value="${days}" min="1" step="1"></div>
                 <hr><label style="font-size:.8em;opacity:.7;">Skills, one to five</label>${rows}
             </form>`,
             buttons: {
@@ -743,7 +744,8 @@
                         const fields = {
                             title: f.title.value.trim() || "Untitled gig", client,
                             brief: f.brief.value.trim(), payout: Math.max(0, Number(f.payout.value) || 0),
-                            skills, due: dateKey(addDays(t, Math.max(1, Number(f.days.value) || 7))),
+                            // Editing keeps the deadline it already had; a new gig runs a week.
+                            skills, due: edit ? existing.due : dateKey(addDays(t, GIG_DAYS)),
                         };
 
                         const all = gigs();
