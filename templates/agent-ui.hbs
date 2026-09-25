@@ -39,7 +39,7 @@
                                             <img src="{{this.iconImg}}" class="app-icon-img" alt="{{this.label}}">
                                             {{#if (eq this.id 'chat')}}
                                                 {{#if ../totalUnreads}}
-                                                    <span class="unread-badge">{{../totalUnreads}}</span>
+                                                    <span class="unread-badge">{{../totalUnreadsLabel}}</span>
                                                 {{/if}}
                                             {{/if}}
                                         </span>
@@ -47,7 +47,7 @@
                                         <i class="{{this.icon}}" style="color: {{this.color}};">
                                             {{#if (eq this.id 'chat')}}
                                                 {{#if ../totalUnreads}}
-                                                    <span class="unread-badge">{{../totalUnreads}}</span>
+                                                    <span class="unread-badge">{{../totalUnreadsLabel}}</span>
                                                 {{/if}}
                                             {{/if}}
                                         </i>
@@ -96,7 +96,7 @@
                         {{#each threads}}
                             <div class="contact-card" data-contact-id="{{this.id}}" style="padding: 12px; margin-bottom: 8px; background: rgba(255, 255, 255, 0.05); border-left: 3px solid {{#if this.isPlayer}}var(--neon-cyan){{else}}var(--neon-red){{/if}}; border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; position: relative;">
                                 {{#if this.unreads}}
-                                    <span class="unread-badge" style="top: 0; right: 0;">{{this.unreads}}</span>
+                                    <span class="unread-badge" style="top: 0; right: 0;">{{this.unreadsLabel}}</span>
                                 {{/if}}
                                 <div>
                                     <div style="font-weight: bold; color: white;">

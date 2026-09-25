@@ -1409,12 +1409,24 @@ class AgentOSApplication extends Application {
         // is enough — orphans staying in the flag are invisible to the user.
         // Actual cleanup runs in the contact-delete handler (line ~1924).
         const validIds = new Set(data.contacts.map(c => c.id));
+        globalThis.VirtualAgentUnreadTotal = () => {
+            try {
+                const raw = game.user.getFlag("VirtualAgent", "unreads") || {};
+                const ids = new Set((globalThis.AgentDeviceApp?.ui?._getContacts?.({ ignoreSearch: true }) || []).map(c => c.id));
+                return Object.entries(raw).reduce((n, [tid, v]) => n + (ids.has(tid) && Number(v) > 0 ? Number(v) : 0), 0);
+            } catch (e) { return 0; }
+        };
         const unreads = {};
         for (const [tid, n] of Object.entries(rawUnreads)) {
             if (validIds.has(tid)) unreads[tid] = n;
         }
         data.totalUnreads = Object.values(unreads).reduce((a, b) => a + b, 0);
-        data.contacts.forEach(c => { c.unreads = unreads[c.id] || 0; });
+        // A badge is a nudge, not a tally. Anything past nine reads as "a lot".
+        data.totalUnreadsLabel = data.totalUnreads > 9 ? "9+" : String(data.totalUnreads);
+        data.contacts.forEach(c => {
+            c.unreads = unreads[c.id] || 0;
+            c.unreadsLabel = c.unreads > 9 ? "9+" : String(c.unreads);
+        });
         data.partyPlayers = game.users.filter(u => u.id !== game.user.id).map(u => {
             const identity = this._getIdentity(u);
             const actor = this._resolveActor(identity);

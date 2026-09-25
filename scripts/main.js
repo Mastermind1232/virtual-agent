@@ -621,6 +621,83 @@ Hooks.once('ready', async function () {
     }
 });
 
+/* ------------------------------------------------------------------ *
+ *  NuNu packaging: texts that arrived while you were logged out.
+ *
+ *  `createChatMessage` only fires on connected clients, so a message sent
+ *  while somebody was away never reached their unread count and they came
+ *  back to a silent phone.
+ *
+ *  The mark is the id of the last Agent message this client accounted for,
+ *  not a timestamp. Message timestamps are stamped by whichever machine
+ *  created them, so a GM whose clock runs fast would make every text look
+ *  newer than the player's own mark and get counted twice. Document order
+ *  is the same on every client, so walking from the marked message forward
+ *  has no clock in it at all.
+ * ------------------------------------------------------------------ */
+
+/** Does this Agent message belong in my unread count, and under which thread? */
+function _agentUnreadThread(m) {
+    const f = m.flags?.VirtualAgent;
+    if (!f?.isAgentMessage) return null;
+    if (m.author?.id === game.user.id) return null;
+
+    const w = Array.isArray(m.whisper) ? m.whisper : [];
+    // A GM watches everything, exactly as the live hook below lets them.
+    if (w.length && !w.includes(game.user.id) && !game.user.isGM) return null;
+
+    let threadId = f.threadId;
+    if (!threadId) return null;
+    if (!String(threadId).startsWith("npc_") && !String(threadId).startsWith("pcgroup_")
+        && threadId !== "party_group_chat" && w.length && w.includes(game.user.id)) {
+        // A one-to-one lands under whoever sent it. Without a sender there is no
+        // row to put it on, so it is not counted rather than counted invisibly.
+        if (!m.author?.id) return null;
+        threadId = m.author.id;
+    }
+    return threadId;
+}
+
+Hooks.once("ready", async () => {
+    try {
+        const mark = game.user.getFlag("VirtualAgent", "lastSeenMsgId");
+        const ordered = game.messages.contents;
+        const newest = [...ordered].reverse().find((m) => m.flags?.VirtualAgent?.isAgentMessage);
+        const stamp = async (id) => { if (id) await game.user.setFlag("VirtualAgent", "lastSeenMsgId", id); };
+
+        // First run on an existing world: start from now rather than counting a
+        // campaign's worth of history, most of which has been read.
+        if (mark === undefined) return stamp(newest?.id);
+
+        const from = mark ? ordered.findIndex((m) => m.id === mark) : -1;
+        const missed = ordered.slice(from + 1);
+        if (!missed.length) return stamp(newest?.id);
+
+        // Only threads that still exist. A count against a contact somebody deleted
+        // can never be cleared, because there is no row left to open.
+        const live = new Set((globalThis.AgentDeviceApp?.ui?._getContacts?.({ ignoreSearch: true }) || []).map((c) => c.id));
+        const unreads = { ...(game.user.getFlag("VirtualAgent", "unreads") || {}) };
+        let added = 0;
+
+        for (const m of missed) {
+            const threadId = _agentUnreadThread(m);
+            if (!threadId || !live.has(threadId)) continue;
+            unreads[threadId] = (unreads[threadId] || 0) + 1;
+            added++;
+        }
+
+        // The count and the mark move together, so nothing is counted twice and
+        // nothing is skipped if this fails halfway.
+        const update = { "flags.VirtualAgent.lastSeenMsgId": newest?.id ?? mark };
+        if (added) update["flags.VirtualAgent.unreads"] = unreads;
+        await game.user.update(update);
+
+        let notices = true;
+        try { notices = game.settings.get("VirtualAgent", "textNotices"); } catch (e) { /* default on */ }
+        if (added && notices) ui.notifications?.info?.(`Agent: ${added} message${added === 1 ? "" : "s"} while you were away.`);
+    } catch (e) { console.error("VirtualAgent | offline catch-up failed:", e); }
+});
+
 // Scene-controls button (consistent name + tooltip)
 Hooks.on('getSceneControlButtons', (controls) => {
     let tokenControls = controls.find(c => c.name === "token");
@@ -715,10 +792,17 @@ Hooks.on('createChatMessage', async (message, options, userId) => {
         const looking = app?.rendered && app.currentView === 'chat-thread' && app.activeContactId === threadId;
         if (!looking) {
             unreads[threadId] = (unreads[threadId] || 0) + 1;
-            await game.user.setFlag("VirtualAgent", "unreads", unreads);
-            // NuNu packaging: a text you are not already reading announces itself, with who
-            // it is from and the opening words, plus a short chime. Clicking it opens the thread.
+            // NuNu packaging: the unread count and the mark the next login reads from move
+            // in one write. Two writes could leave the mark past a message never counted.
+            await game.user.update({
+                "flags.VirtualAgent.unreads": unreads,
+                "flags.VirtualAgent.lastSeenMsgId": message.id,
+            });
+            // A text you are not already reading announces itself, with who it is from and
+            // the opening words, plus a short chime.
             _agentAnnounce(message);
+        } else {
+            await game.user.setFlag("VirtualAgent", "lastSeenMsgId", message.id);
         }
 
         // Patch4.8 (player report): if the recipient deleted this NPC thread
