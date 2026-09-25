@@ -6941,6 +6941,21 @@ class AgentOSApplication extends Application {
             this.render(true);
         });
 
+        // The Operator's payout slider. Dragging it only moves the numbers; nothing is
+        // paid until the button underneath is pressed.
+        html.on('input', '[data-split-range]', (ev) => {
+            const el = ev.currentTarget;
+            const total = Number(el.max) || 0;
+            const cut = Math.max(0, Math.min(total, Number(el.value) || 0));
+            const keep = total - cut;
+            const box = $(el).closest('div');
+            const pc = (n) => (total ? Math.round((n / total) * 100) : 0);
+            box.find('[data-split="cut-eb"]').text(cut);
+            box.find('[data-split="keep-eb"]').text(keep);
+            box.find('[data-split="cut-pc"]').text(`${pc(cut)}%`);
+            box.find('[data-split="keep-pc"]').text(`${pc(keep)}%`);
+        });
+
         // Patch4.8.3: GM speak-as switcher in multi-NPC group threads.
         html.on('change', '#gm-group-voice-select', (ev) => {
             if (!game.user.isGM || !this.activeContactId) return;

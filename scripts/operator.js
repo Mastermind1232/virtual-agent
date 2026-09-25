@@ -246,11 +246,9 @@
         const finalRoll = wiped ? 100 : (await new Roll("1d100").evaluate()).total;
         const success = !wiped && finalRoll <= chance;
 
-        const fee = Number.isFinite(gig.fee) ? gig.fee : 20;
-        const cut = success ? Math.round((Number(gig.payout) || 0) * (100 - fee) / 100) : 0;
-        const keep = success ? (Number(gig.payout) || 0) - cut : 0;
-
-        const outcome = { success, chance, finalRoll, wiped, fumbles, lines, cut, keep, fee };
+        // Nothing is split here. A successful gig puts the client's money on the table
+        // and Jan decides what his operator walks away with.
+        const outcome = { success, chance, finalRoll, wiped, fumbles, lines, payout: Number(gig.payout) || 0 };
 
         const list = gigs();
         const idx = list.findIndex((g) => g.id === gig.id);
@@ -300,7 +298,7 @@
                 : `<b style="color:#ff3366">Failed.</b> Rolled ${o.finalRoll} against ${o.chance}.`);
 
         const money = o.success
-            ? `<div style="margin-top:6px;">${esc(gig.client)} pays <b>${Number(gig.payout) || 0}eb</b>. ${esc(runner?.name ?? "The runner")} is owed <b>${o.cut}eb</b> at a ${o.fee}% fee, leaving <b>${o.keep}eb</b>.</div>`
+            ? `<div style="margin-top:6px;">${esc(gig.client)} pays <b>${Number(gig.payout) || 0}eb</b>. Nobody is paid until the split is settled.</div>`
             : `<div style="margin-top:6px;opacity:.8">No payout.</div>`;
 
         const streak = clientStreak(gig.client);
@@ -372,6 +370,55 @@
                 renderPhone();
                 return;
             }
+            case "payout": {
+                const list = gigs();
+                const i = list.findIndex((g) => g.id === msg.gigId);
+                if (i < 0) return;
+                const gig = list[i];
+                if (gig.status !== "done" || !gig.outcome?.success || gig.paid) return;
+
+                const total = Number(gig.outcome.payout) || 0;
+                const cut = Math.max(0, Math.min(total, Math.round(Number(msg.cut) || 0)));
+                const keep = total - cut;
+
+                const runner = runners().find((r) => r.id === gig.runnerId);
+                const fixer = ownerActor();
+                const hired = actorOf(runner?.actorUuid);
+
+                // A ledger line each, where there is a ledger to write to. An operator
+                // without an actor is paid in the fiction and nowhere else.
+                const pay = (actor, amount, reason) => {
+                    if (!actor || amount <= 0) return false;
+                    try {
+                        const w = actor.system?.wealth;
+                        if (!Number.isSafeInteger(w?.value) || !Array.isArray(w.transactions)) return false;
+                        return actor.update({
+                            "system.wealth.value": w.value + amount,
+                            "system.wealth.transactions": [...w.transactions.map((r) => [...r]),
+                                [`Increased wealth by ${amount} to ${w.value + amount}`, reason]],
+                        }).then(() => true);
+                    } catch (e) { console.error("Operator |", e); return false; }
+                };
+
+                await pay(fixer, keep, `Fixer: Completed a gig for ${gig.client}`);
+                await pay(hired, cut, `${gig.client} gig, paid by ${fixer?.name ?? "the Operator"}`);
+
+                list[i] = { ...gig, paid: { cut, keep, payout: total, at: Date.now() } };
+                await saveGigs(list);
+
+                const share = total > 0 ? Math.round((cut / total) * 100) : 0;
+                await ChatMessage.create({
+                    whisper: whisperTargets(),
+                    content: `<div style="font-family:monospace;font-size:.8rem;border:1px solid ${ACCENT};border-radius:6px;padding:10px;background:rgba(0,0,0,.35);">
+                        <div style="color:${ACCENT};letter-spacing:2px;margin-bottom:4px;">OPERATOR // SETTLED</div>
+                        <b>${esc(gig.title)}</b><br>
+                        ${esc(runner?.name ?? "The operator")} takes <b>${cut}eb</b> of <b>${total}eb</b>, a ${share}% cut.
+                        ${esc(fixer?.name ?? "The Operator")} keeps <b>${keep}eb</b>.</div>`,
+                });
+                renderPhone();
+                return;
+            }
+
             case "resolve": {
                 const g = gigs().find((x) => x.id === msg.gigId);
                 if (!g || g.status !== "assigned" || !g.runnerId) return;
@@ -456,13 +503,31 @@
                    </div>`
                 : "";
 
+            const settle = (g.status === "done" && g.outcome?.success && !g.paid && isOwner())
+                ? (() => {
+                    const total = Number(g.outcome.payout) || 0;
+                    const start = Math.round(total * 0.2);   // 80/20 the fixer's way
+                    return `<div style="margin-top:10px;border-top:1px solid #222;padding-top:9px;">
+                        <div style="font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:6px;">THE SPLIT &middot; ${total}eb ON THE TABLE</div>
+                        <div style="display:flex;justify-content:space-between;font-size:.68rem;margin-bottom:3px;">
+                            <span style="color:${ACCENT};">Fixer <b data-split="keep-eb">${total - start}</b>eb <span style="opacity:.6;" data-split="keep-pc">${total ? Math.round(((total - start) / total) * 100) : 0}%</span></span>
+                            <span style="color:#22ddff;"><span style="opacity:.6;" data-split="cut-pc">${total ? Math.round((start / total) * 100) : 0}%</span> <b data-split="cut-eb">${start}</b>eb ${esc(runner?.name ?? "Operator")}</span>
+                        </div>
+                        <input type="range" data-split-range="${g.id}" min="0" max="${total}" value="${start}" step="1"
+                          style="width:100%;margin:0;accent-color:${ACCENT};">
+                        <button type="button" data-action="op-settle" data-gig="${g.id}"
+                          style="font-family:inherit;width:100%;margin-top:8px;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.68rem;padding:6px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;">Pay ${esc(runner?.name ?? "the operator")}</button>
+                    </div>`;
+                })()
+                : "";
+
             const report = g.outcome
-                ? `<div style="margin-top:8px;font-size:.65rem;">${g.outcome.wiped ? "Two fumbles ended it." : `Rolled ${g.outcome.finalRoll} against ${g.outcome.chance}.`}${g.outcome.success ? ` Runner's cut ${g.outcome.cut}eb, yours ${g.outcome.keep}eb.` : ""}</div>`
+                ? `<div style="margin-top:8px;font-size:.65rem;">${g.outcome.wiped ? "Two fumbles ended it." : `Rolled ${g.outcome.finalRoll} against ${g.outcome.chance}.`}${g.outcome.success ? (g.paid ? ` ${esc(runner?.name ?? "The operator")} took ${g.paid.cut}eb of ${g.paid.payout}eb.` : "") : ""}</div>`
                 : "";
 
             body = `<div style="border-top:1px solid #222;margin-top:8px;padding-top:8px;">
                 ${g.brief ? `<div style="font-size:.7rem;opacity:.85;margin-bottom:8px;">${esc(g.brief)}</div>` : ""}
-                ${skills}${picker}${assist}${assistDone}${report}${gmTools}</div>`;
+                ${skills}${picker}${assist}${assistDone}${report}${settle}${gmTools}</div>`;
         }
 
         const spent = g.status === "done" && !open;
@@ -646,7 +711,6 @@
         }).join("");
 
         const days = edit ? Math.max(1, daysUntil(existing.due) ?? 7) : 7;
-        const fee = edit ? existing.fee : Number(game.settings.get(ID, "operatorFee") ?? 20);
 
         new Dialog({
             title: edit ? "Edit gig" : "Post a gig",
@@ -658,7 +722,6 @@
                 <div class="form-group"><label>Brief</label><textarea name="brief" rows="2" placeholder="What the client says.">${esc(existing?.brief ?? "")}</textarea></div>
                 <div class="form-group"><label>Payout (eb)</label><input type="number" name="payout" value="${Number(existing?.payout ?? 500)}" min="0" step="50"></div>
                 <div class="form-group"><label>Days${edit ? " from today" : ""}</label><input type="number" name="days" value="${days}" min="1" step="1"></div>
-                <div class="form-group"><label>Your fee (%)</label><input type="number" name="fee" value="${fee}" min="0" max="100" step="5"></div>
                 <hr><label style="font-size:.8em;opacity:.7;">Skills, one to five</label>${rows}
             </form>`,
             buttons: {
@@ -680,7 +743,6 @@
                         const fields = {
                             title: f.title.value.trim() || "Untitled gig", client,
                             brief: f.brief.value.trim(), payout: Math.max(0, Number(f.payout.value) || 0),
-                            fee: Math.min(100, Math.max(0, Number(f.fee.value) || 0)),
                             skills, due: dateKey(addDays(t, Math.max(1, Number(f.days.value) || 7))),
                         };
 
@@ -830,6 +892,20 @@
                     break;
                 }
 
+                case "op-settle": {
+                    if (!isOwner()) break;
+                    const g = gigs().find((x) => x.id === gigId);
+                    if (!g || g.paid || !g.outcome?.success) break;
+                    const range = $t.closest("div").find(`[data-split-range="${gigId}"]`)[0]
+                        ?? document.querySelector(`[data-split-range="${gigId}"]`);
+                    const total = Number(g.outcome.payout) || 0;
+                    const cut = Math.max(0, Math.min(total, Math.round(Number(range?.value) || 0)));
+                    if (_calling.has(gigId)) break;
+                    _calling.add(gigId);
+                    try { await request({ op: "payout", gigId, cut }); } finally { _calling.delete(gigId); }
+                    break;
+                }
+
                 case "op-resolve": {
                     if (!canEdit() || _calling.has(gigId)) break;
                     const g = gigs().find((x) => x.id === gigId);
@@ -919,11 +995,6 @@
             scope: "world", config: true, type: String, default: "",
             choices: { "": "GM only" },            // filled with the player list at ready; users do not exist yet at init
             onChange: () => renderPhone(),
-        });
-        game.settings.register(ID, "operatorFee", {
-            name: "Operator default fee (%)",
-            hint: "The cut the Operator keeps of a gig's payout by default. Set per gig when posting.",
-            scope: "world", config: true, type: Number, default: 20,
         });
         game.settings.register(ID, "operatorGigs", { scope: "world", config: false, type: String, default: "[]", onChange: () => renderPhone() });
         game.settings.register(ID, "operatorRunners", { scope: "world", config: false, type: String, default: "[]", onChange: () => renderPhone() });
