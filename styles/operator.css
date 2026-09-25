@@ -67,6 +67,7 @@
 
 /* The client sub-box sits indented under the player who holds the number. */
 .nunu-contacts .nc-person-wrap { display: flex; flex-direction: column; gap: 3px; }
+.nunu-contacts .nc-client[hidden] { display: none !important; }
 .nunu-contacts .nc-client { display: flex; align-items: center; gap: 6px; margin-left: 26px; font-size: 10.5px; color: #e0b341; cursor: pointer; }
 .nunu-contacts .nc-client input { margin: 0; flex: 0 0 auto; width: 12px; height: 12px; }
 

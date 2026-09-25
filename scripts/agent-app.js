@@ -2039,8 +2039,13 @@ class AgentOSApplication extends Application {
                 isClient: (() => {
                     const of = _contactMeta[VA_baseId(c.id)]?.clientOf;
                     if (!Array.isArray(of) || !of.length) return false;
+                    // A player asks about themselves. Only the GM's device splits a shared
+                    // contact into a row per holder, and only then does the row name one.
+                    // `ownerId` is no help here: it records the GM who created the contact.
+                    if (!game.user.isGM) return of.includes(game.user.id);
                     const split = String(c.id).split("__")[1];
-                    return of.includes(split || c.ownerId || game.user.id);
+                    return split ? of.includes(split)
+                        : (Array.isArray(c.targetUserIds) ? c.targetUserIds.some((u) => of.includes(u)) : false);
                 })(),
             }));
 
