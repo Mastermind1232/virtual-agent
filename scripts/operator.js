@@ -465,11 +465,15 @@
         }
 
         const spent = g.status === "done" && !open;
+        const face = clientFace(g.client);
         return `<div style="background:rgba(255,255,255,.03);border:1px solid ${open ? ACCENT : "#222"};border-radius:6px;padding:10px;margin-bottom:8px;${spent ? "opacity:.45;" : ""}">
             <div data-action="op-open-gig" data-gig="${g.id}" style="cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
-                <span>
-                    <span style="color:#fff;font-size:.85rem;font-weight:bold;">${esc(g.title)}</span><br>
-                    <span style="font-size:.65rem;opacity:.65;">${esc(g.client)}${runner ? ` &rarr; ${esc(runner.name)}` : ""}</span>
+                <span style="display:flex;gap:9px;align-items:center;min-width:0;">
+                    ${face ? `<img src="${esc(face)}" alt="" style="width:30px;height:30px;flex:0 0 30px;border-radius:50%;object-fit:cover;border:1px solid #2c333c;">` : ""}
+                    <span style="min-width:0;">
+                        <span style="color:#fff;font-size:.85rem;font-weight:bold;">${esc(g.title)}</span><br>
+                        <span style="font-size:.65rem;opacity:.65;">${esc(g.client)}${runner ? ` &rarr; ${esc(runner.name)}` : ""}</span>
+                    </span>
                 </span>
                 <span style="text-align:right;white-space:nowrap;">
                     <span style="color:#ffd166;font-size:.8rem;">${Number(g.payout) || 0}eb</span><br>${status}
@@ -550,9 +554,66 @@
         return [...names].sort();
     }
 
+    const IMG_PLACEHOLDER = /^icons\/svg\/(mystery-man|cowled)\.svg$/;
+
+    /** An actor's face: their token first, the sheet portrait as a fallback. */
+    const faceOf = (actor) => {
+        const token = actor?.prototypeToken?.texture?.src;
+        if (token && !IMG_PLACEHOLDER.test(token)) return token;
+        return actor?.img && !IMG_PLACEHOLDER.test(actor.img) ? actor.img : "";
+    };
+
+    /** A client's face, by way of the contact book: their contact names an actor, and
+        that actor's token is how the table knows them. Empty when nothing is linked. */
+    function clientFace(name) {
+        const key = String(name ?? "").trim().toLowerCase();
+        if (!key) return "";
+        try {
+            const raw = game.settings.get(ID, "contactMeta");
+            const meta = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+            for (const u of game.users) {
+                for (const c of (u.getFlag(ID, "customContacts") || [])) {
+                    const label = String(c.originalName || c.name || "").trim().toLowerCase();
+                    if (label !== key) continue;
+                    const uuid = meta[String(c.id).split("__")[0]]?.actorUuid;
+                    const actor = uuid ? fromUuidSync(uuid) : null;
+                    const face = actor?.documentName === "Actor" ? faceOf(actor) : "";
+                    if (face) return face;
+                    if (c.avatar) return c.avatar;
+                }
+            }
+        } catch (e) { /* a gig without a matching contact simply has no face */ }
+        return "";
+    }
+
+    /** The people who bring this Operator work: contacts the owner has marked as a
+        client in the Contacts book, plus anybody who has paid for a gig before. */
+    function clientNames() {
+        const names = new Set();
+        const owner = ownerUser();
+
+        if (owner) {
+            try {
+                const raw = game.settings.get(ID, "contactMeta");
+                const meta = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+                for (const u of game.users) {
+                    for (const c of (u.getFlag(ID, "customContacts") || [])) {
+                        const base = String(c.id).split("__")[0];
+                        const of = meta[base]?.clientOf;
+                        if (Array.isArray(of) && of.includes(owner.id)) names.add(c.originalName || c.name);
+                    }
+                }
+            } catch (e) { /* the book is optional; past gigs still fill the list */ }
+        }
+
+        for (const g of gigs()) if (g.client) names.add(g.client);
+        return [...names].sort((a, b) => a.localeCompare(b));
+    }
+
     /** Post a new gig, or edit one that nobody has taken yet. */
     function gigDialog(app, existing = null) {
         const list = skillNames();
+        const clients = clientNames();
         const edit = !!existing;
         const rows = Array.from({ length: 5 }, (_, i) => {
             const sk = existing?.skills?.[i];
@@ -570,7 +631,8 @@
             content: `<form>
                 <datalist id="op-skill-list">${list.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
                 <div class="form-group"><label>Title</label><input type="text" name="title" value="${esc(existing?.title ?? "")}" placeholder="Locker Job"></div>
-                <div class="form-group"><label>Client</label><input type="text" name="client" value="${esc(existing?.client ?? "")}" placeholder="Jaxon"></div>
+                <div class="form-group"><label>Client</label><input type="text" name="client" list="op-client-list" value="${esc(existing?.client ?? "")}" placeholder="Jaxon"></div>
+                <datalist id="op-client-list">${clients.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
                 <div class="form-group"><label>Brief</label><textarea name="brief" rows="2" placeholder="What the client says.">${esc(existing?.brief ?? "")}</textarea></div>
                 <div class="form-group"><label>Payout (eb)</label><input type="number" name="payout" value="${Number(existing?.payout ?? 500)}" min="0" step="50"></div>
                 <div class="form-group"><label>Days${edit ? " from today" : ""}</label><input type="number" name="days" value="${days}" min="1" step="1"></div>
@@ -641,8 +703,8 @@
                         const actor = actorOf(f.uuid.value);
                         if (!actor) return ui.notifications.warn("That actor is gone.");
                         const tier = Number(f.tier.value) || 0;
-                        await saveRunners([...runners(), { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier, completed: TIERS[tier].gigs }]);
-                        await giveContact(actor.name, actor.img);
+                        await saveRunners([...runners(), { id: uid(), name: actor.name, img: faceOf(actor) || actor.img, actorUuid: actor.uuid, tier, completed: TIERS[tier].gigs }]);
+                        await giveContact(actor.name, faceOf(actor) || actor.img);
                         ui.notifications.info(`Operator: ${esc(actor.name)} is now one of your operators.`);
                         app?.render(true);
                     },
@@ -784,14 +846,14 @@
         if (i >= 0) {
             // Already here under an older name. Catch the row up rather than duplicate it.
             if (list[i].name !== actor.name || list[i].actorUuid !== actor.uuid) {
-                list[i] = { ...list[i], name: actor.name, img: actor.img, actorUuid: actor.uuid };
+                list[i] = { ...list[i], name: actor.name, img: faceOf(actor) || actor.img, actorUuid: actor.uuid };
                 await saveRunners(list);
             }
             return true;
         }
 
-        await saveRunners([...list, { id: uid(), name: actor.name, img: actor.img, actorUuid: actor.uuid, tier: 0, completed: 0 }]);
-        await giveContact(actor.name, actor.img);
+        await saveRunners([...list, { id: uid(), name: actor.name, img: faceOf(actor) || actor.img, actorUuid: actor.uuid, tier: 0, completed: 0 }]);
+        await giveContact(actor.name, faceOf(actor) || actor.img);
         return true;
     }
 
@@ -803,11 +865,12 @@
 
     /** A renamed actor drags their roster row along, so the two never drift apart again. */
     Hooks.on("updateActor", async (actor, changes) => {
-        if (!game.user.isGM || !("name" in changes || "img" in changes)) return;
+        if (!game.user.isGM || !("name" in changes || "img" in changes || "prototypeToken" in changes)) return;
         const list = runners();
         const i = list.findIndex((r) => r.actorUuid && r.actorUuid === actor.uuid);
-        if (i < 0 || (list[i].name === actor.name && list[i].img === actor.img)) return;
-        list[i] = { ...list[i], name: actor.name, img: actor.img };
+        const face = faceOf(actor) || actor.img;
+        if (i < 0 || (list[i].name === actor.name && list[i].img === face)) return;
+        list[i] = { ...list[i], name: actor.name, img: face };
         await saveRunners(list);
     });
 
