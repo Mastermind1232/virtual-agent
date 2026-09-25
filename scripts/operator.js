@@ -754,6 +754,47 @@
         return [...names].sort((a, b) => a.localeCompare(b));
     }
 
+    /** Jan covers one skill himself. Rolled now, and that result stands at resolution. */
+    async function takeCall(app, gigId, skill) {
+        const g = gigs().find((x) => x.id === gigId);
+        if (!g || g.assist || _calling.has(gigId)) return;
+        const actor = ownerActor();
+        if (!actor) return ui.notifications.warn("No character is assigned to the Operator, so there is nothing to roll.");
+        _calling.add(gigId);
+        try {
+            app?.render(true);
+            const total = skillTotal(actor, skill);
+            const roll = await new Roll("1d10").evaluate();
+            await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Operator assist: ${esc(skill)}` });
+            await request({ op: "assist", gigId, skill, total, die: roll.total });
+            ui.notifications.info(`Operator: you covered ${esc(skill)}. That roll stands when the gig resolves.`);
+        } finally { _calling.delete(gigId); }
+    }
+
+    /** Told at the moment of hiring, because nothing else would tell him. */
+    function shortDialog(app, gig, hired, short) {
+        const many = short.length > 1;
+        const names = short.map((sk) => esc(sk.name));
+        const list = many ? `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}` : names[0];
+
+        const buttons = {};
+        for (const sk of short) {
+            buttons[sk.name.toLowerCase().replace(/[^a-z0-9]/g, "")] = {
+                label: `Take ${sk.name}`,
+                callback: () => takeCall(app, gig.id, sk.name),
+            };
+        }
+        buttons.later = { label: "Leave it" };
+
+        new Dialog({
+            title: "Short a skill",
+            content: `<p><b>${esc(hired.name)}</b> cannot cover <b>${list}</b> on this gig.</p>
+                <p style="font-size:.9em;opacity:.8;">${many ? "Each one fails" : "It fails"} on its own when the job lands, unless you take the call yourself. You get one call per gig${many ? ", so only one of these can be covered" : ""}, and you can make it any time before the deadline.</p>`,
+            buttons,
+            default: "later",
+        }, { width: 420 }).render(true);
+    }
+
     /** Post a new gig, or edit one that nobody has taken yet. */
     function gigDialog(app, existing = null) {
         const list = skillNames();
@@ -940,27 +981,24 @@
                     app.render(true); break;
                 }
 
-                case "op-assign":
-                    await request({ op: "assign", gigId, runnerId: $t.data("runner") });
-                    break;
-
-                case "op-assist": {
-                    const skill = String($t.data("skill"));
-                    const g = gigs().find((x) => x.id === gigId);
-                    if (!g || g.assist || _calling.has(gigId)) break;
-                    const actor = ownerActor();
-                    if (!actor) { ui.notifications.warn("No character is assigned to the Operator, so there is nothing to roll."); break; }
-                    _calling.add(gigId);                      // the button cannot be pressed twice while this lands
-                    try {
-                        app.render(true);
-                        const total = skillTotal(actor, skill);
-                        const roll = await new Roll("1d10").evaluate();
-                        await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `Operator assist: ${esc(skill)}` });
-                        await request({ op: "assist", gigId, skill, total, die: roll.total });
-                        ui.notifications.info(`Operator: you covered ${esc(skill)}. That roll stands when the gig resolves.`);
-                    } finally { _calling.delete(gigId); }
+                case "op-assign": {
+                    const runnerId = $t.data("runner");
+                    await request({ op: "assign", gigId, runnerId });
+                    // Say so now, while the choice is still fresh. Nothing else tells him,
+                    // and a skill nobody can cover fails on its own when the gig lands.
+                    const gig = gigs().find((x) => x.id === gigId);
+                    const hired = runners().find((r) => r.id === runnerId);
+                    if (gig && hired && !gig.assist) {
+                        const can = usableSkills(hired).map((u) => u.name.trim().toLowerCase());
+                        const short = (gig.skills ?? []).filter((sk) => !can.includes(sk.name.trim().toLowerCase()));
+                        if (short.length) shortDialog(app, gig, hired, short);
+                    }
                     break;
                 }
+
+                case "op-assist":
+                    await takeCall(app, gigId, String($t.data("skill")));
+                    break;
 
                 case "op-settle": {
                     if (!isOwner() && !(game.user.isGM && !ownerUser())) break;
