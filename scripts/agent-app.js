@@ -1384,10 +1384,16 @@ class AgentOSApplication extends Application {
         // Only threads with something in them, plus the party channel and whichever
         // thread is open right now, so arriving from Contacts does not show an
         // empty list. Every contact still lives in the Contacts app.
+        // The list is your conversations, but searching reaches everyone you could talk
+        // to. Without this a party member you have never texted cannot be found at all:
+        // they are not in the Contacts app either, so there was no way to start the first
+        // message. `data.contacts` is already narrowed by the query, so anything left
+        // matched it.
         data.threads = data.contacts.filter((c) =>
             c.id === "party_group_chat"
             || (_lastActivityByContact[c.id] || 0) > 0
-            || c.id === this.activeContactId);
+            || c.id === this.activeContactId
+            || !!this.searchQuery);
         // Patch4.7 (Gotto Goho ghost-notification fix): the home-screen badge
         // used to sum Object.values(unreads), which includes orphan threadIds
         // left behind when a contact was deleted. Now we filter against the
