@@ -2067,13 +2067,23 @@ class AgentOSApplication extends Application {
             } catch (e) { return ""; }
         };
 
+        const _seenRep = new Set();
         data.npcReputations = (this._getContacts({ ignoreSearch: true }) || [])
             // NuNu packaging: the crew are not contacts. They are still in the Messenger,
             // so anyone can text them; this app is the people outside the party.
             .filter((c) => c.id !== "party_group_chat" && !c.isPlayer && !String(c.id).startsWith("pcgroup_"))
+            // On the GM's device a contact several players share becomes one row per
+            // player, which is what the Messenger wants and the opposite of what an
+            // address book wants. The book lists each person once.
+            .filter((c) => {
+                const key = VA_baseId(c.id);
+                if (_seenRep.has(key)) return false;
+                _seenRep.add(key);
+                return true;
+            })
             .map((c) => ({
                 id: c.id,
-                name: c.name,
+                name: c.originalName || c.name,
                 avatar: c.avatar || null,
                 isPlayer: !String(c.id).startsWith("npc_"),
                 faction: _contactMeta[VA_baseId(c.id)]?.faction || "",
