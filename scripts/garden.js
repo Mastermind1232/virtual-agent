@@ -531,7 +531,6 @@
 
                 <div class="form-group" style="display:block;">
                     <label><input type="checkbox" name="simpleOn" ${draft.simpleOn ? "checked" : ""}> Verifiable Evidence (Simple) <b>+1</b></label>
-                    <p style="font-size:.72em;opacity:.6;margin:2px 0 0;">One piece an ordinary reader understands at a glance.</p>
                     <div data-group="simple" style="display:${draft.simpleOn ? "block" : "none"};margin-top:4px;">
                         <input type="text" name="simple" value="${esc(draft.simple)}" placeholder="What it is">
                     </div>
@@ -539,7 +538,6 @@
 
                 <div class="form-group" style="display:block;">
                     <label><input type="checkbox" name="hardOn" ${draft.hardOn ? "checked" : ""}> Verifiable Evidence <b>+2</b></label>
-                    <p style="font-size:.72em;opacity:.6;margin:2px 0 0;">${HARD_PIECES} distinct pieces of hard evidence. All ${HARD_PIECES} have to be filled in.</p>
                     <div data-group="hard" style="display:${draft.hardOn ? "block" : "none"};margin-top:4px;">${rows}</div>
                 </div>
 
