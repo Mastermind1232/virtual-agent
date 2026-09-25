@@ -277,6 +277,17 @@
                                   select so opening the dropdown doesn't bubble
                                   up to the parent app-header which has the
                                   `back-to-contacts` action. --}}
+                            {{#if gmPlayerVoices.length}}
+                            <div onclick="event.stopPropagation();" style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                <i class="fas fa-microphone" style="font-size:0.55rem; color:#ff9900;"></i>
+                                <span style="font-size:0.5rem; color:#ff9900; font-family:monospace; letter-spacing:0.5px;">AS:</span>
+                                <select id="gm-player-voice-select" onclick="event.stopPropagation();" onmousedown="event.stopPropagation();" style="flex: 1 1 auto; min-width: 0; background:#111; color:#ff9900; border:1px solid #ff9900; border-radius:3px; font-family:monospace; font-size:0.55rem; padding:1px 3px;">
+                                    {{#each gmPlayerVoices}}
+                                    <option value="{{this.id}}">{{this.name}}</option>
+                                    {{/each}}
+                                </select>
+                            </div>
+                            {{/if}}
                             {{#if gmGroupNpcVoices.length}}
                             <div onclick="event.stopPropagation();" style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
                                 <i class="fas fa-microphone" style="font-size:0.55rem; color:#ff9900;"></i>

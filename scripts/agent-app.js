@@ -1483,6 +1483,31 @@ class AgentOSApplication extends Application {
             }
         }
 
+        // NuNu packaging: navigate by player instead of by NPC. Standing in a party
+        // member's thread, the GM can pick any NPC that player holds and be taken to that
+        // pairing's own thread, where the history and the speaking-as banner already live.
+        // The option value is the thread id, which is split per holder only when more than
+        // one player has that contact, matching how the list above is built.
+        data.gmPlayerVoices = [];
+        if (game.user.isGM && activeContact?.isPlayer) {
+            const them = this.activeContactId;
+            const rows = [];
+            for (const u of game.users) {
+                for (const c of (u.getFlag("VirtualAgent", "customContacts") || [])) {
+                    if (!String(c.id).startsWith("npc_")) continue;
+                    const targets = (Array.isArray(c.targetUserIds) ? c.targetUserIds : []).filter((id) => game.users.get(id));
+                    if (!targets.includes(them)) continue;
+                    const threadId = targets.length > 1 ? `${c.id}__${them}` : c.id;
+                    if (rows.some((r) => r.id === threadId)) continue;
+                    rows.push({ id: threadId, name: c.originalName || c.name });
+                }
+            }
+            if (rows.length) {
+                rows.sort((a, b) => a.name.localeCompare(b.name));
+                data.gmPlayerVoices = [{ id: "gm", name: "GM (self)" }, ...rows];
+            }
+        }
+
         // SPEAKING AS label — for single-NPC threads (existing 4.7 behavior),
         // and for multi-NPC group threads when the GM has picked an NPC voice.
         if (game.user.isGM && isNpcThread && activeContact) {
@@ -6873,6 +6898,17 @@ class AgentOSApplication extends Application {
         // because the global data-action switch only listens for clicks.
         html.on('change', '#store-price-tier-select', (ev) => {
             this._storePriceTier = String(ev.currentTarget.value || "all");
+            this.render(true);
+        });
+
+        // Standing in a player's thread, pick an NPC and go to that pairing's thread.
+        html.on('change', '#gm-player-voice-select', (ev) => {
+            if (!game.user.isGM) return;
+            const pick = String(ev.currentTarget.value || "gm");
+            if (pick === "gm") return;
+            this.activeContactId = pick;
+            this.showAddContact = false;
+            this.editContactId = null;
             this.render(true);
         });
 
