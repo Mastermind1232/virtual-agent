@@ -258,21 +258,39 @@
 
     /** Settle a gig from the days already worked. */
     async function resolveGig(gig) {
-        const lines = Array.isArray(gig.log) && gig.log.length === gig.skills.length
-            ? gig.log
-            : await (async () => {
-                // A gig from before the week was played out, or one forced to resolve
-                // early: roll whatever is still outstanding, now.
-                const out = [];
-                for (let i = 0; i < gig.skills.length; i++) {
-                    out.push(gig.log?.[i] ?? await rollEntry(gig, i));
-                }
-                return out.filter(Boolean);
-            })();
+        const runner = runners().find((r) => r.id === gig.runnerId) ?? null;
+
+        // Days already worked stand. Anything outstanding is rolled now, which is what
+        // happens to a gig resolved by hand before its week is up, and to any gig from
+        // before the week was played out at all. A gig already lost to two fumbles has
+        // its remaining days left unrolled rather than played out for nothing.
+        const lines = [];
+        let banked = 0;
+        for (const l of (Array.isArray(gig.log) ? gig.log : [])) if (l?.die === 1) banked++;
+
+        for (let i = 0; i < gig.skills.length; i++) {
+            const done = gig.log?.[i];
+            if (done) { lines.push(done); continue; }
+            if (banked >= 2) {
+                lines.push({ skill: gig.skills[i].name, dv: gig.skills[i].dv, by: "nobody",
+                    text: "The job was already lost", delta: 0, passed: false, assisted: false, skipped: true });
+                continue;
+            }
+            const rolled = await rollEntry(gig, i);
+            if (rolled?.die === 1) banked++;
+            lines.push(rolled);
+        }
+
+        // The week as it actually went, kept so the card reads back the same as the report.
+        if (lines.length !== (gig.log?.length ?? 0)) {
+            const all = gigs();
+            const k = all.findIndex((g) => g.id === gig.id);
+            if (k >= 0) { all[k] = { ...all[k], log: lines }; await saveGigs(all); gig = all[k]; }
+        }
 
         let chance = CAPS[gig.skills.length] ?? 80;
         let fumbles = 0;
-        for (const l of lines) { chance += l.delta ?? 0; if (l.die === 1) fumbles++; }
+        for (const l of lines) { if (!l) continue; chance += l.delta ?? 0; if (l.die === 1) fumbles++; }
 
         const wiped = fumbles >= 2;
         chance = Math.max(0, Math.min(100, chance));
@@ -365,27 +383,31 @@
         try {
             let worked = false;
 
-            for (const gig of gigs().filter((g) => g.status === "assigned" && g.due)) {
+            for (const gig of gigs().filter((g) => g.status === "assigned" && g.due && Array.isArray(g.skills))) {
                 const log = Array.isArray(gig.log) ? [...gig.log] : [];
                 let changed = false;
 
-                for (let i = 0; i < gig.skills.length; i++) {
+                for (let i = 0; i < (gig.skills?.length ?? 0); i++) {
                     if (log[i]) continue;                       // already worked
                     const day = entryDay(gig, i);
-                    if (!day || (daysUntil(dateKey(day)) ?? 1) > 0) continue;   // not yet
+                    if (!day) continue;
+                    const left = daysUntil(dateKey(day));
+                    if (left === null || left > 0) continue;    // not yet, or no calendar
                     // A gig already dead does not need the rest of its week rolled.
                     if (log.filter((l) => l?.die === 1).length >= 2) break;
-                    log[i] = await rollEntry(gig, i);
-                    changed = true;
-                    await postDay(gig, log[i]);
-                }
 
-                if (changed) {
+                    log[i] = await rollEntry(gig, i);
+                    // Written before the text goes out. Saving once after the loop meant a
+                    // failure partway threw the day away and rolled it again next time.
                     const list = gigs();
                     const j = list.findIndex((g) => g.id === gig.id);
-                    if (j >= 0) { list[j] = { ...list[j], log }; await saveGigs(list); }
-                    worked = true;
+                    if (j >= 0) { list[j] = { ...list[j], log: [...log] }; await saveGigs(list); }
+                    changed = true;
+                    try { await postDay(gig, log[i]); }
+                    catch (e) { console.error("Operator |", e); }
                 }
+
+                if (changed) worked = true;
             }
 
             const due = gigs().filter((g) => g.status === "assigned" && g.due && (daysUntil(g.due) ?? 1) <= 0);
@@ -435,9 +457,12 @@
         if (!line) return;
         const runner = runners().find((r) => r.id === gig.runnerId);
         if (!runner) return;
-        const key = line.assisted
-            ? (line.passed ? "opGoodAssist" : "opBadAssist")
-            : (line.passed ? "opGoodDay" : "opBadDay");
+        // A day nobody could cover is not the operator having a bad day at it. If there
+        // is no line written for that, nothing is said, which is the honest result.
+        const key = line.by === "nobody" ? "opUncovered"
+            : (line.assisted
+                ? (line.passed ? "opGoodAssist" : "opBadAssist")
+                : (line.passed ? "opGoodDay" : "opBadDay"));
         await speak(runner.name, key, runner.img);
     }
     let _resolving = false;
@@ -956,8 +981,6 @@
                         const fields = {
                             title: f.title.value.trim() || "Untitled gig", client,
                             brief: f.brief.value.trim(), payout: Math.max(0, Number(f.payout.value) || 0),
-                            // Editing a gig no longer slides its deadline forward on its own,
-                            // but the days left are editable so a drifted one can be repaired.
                             skills, days: gigDays(skills.length),
                         };
 
@@ -966,11 +989,12 @@
                             const i = all.findIndex((g) => g.id === existing.id);
                             if (i < 0) return ui.notifications.warn("That gig is gone.");
                             if (all[i].status === "done") return ui.notifications.warn("That gig is already settled.");
-                            const wasAssigned = all[i].status === "assigned";
-                            all[i] = {
-                                ...all[i], ...fields,
-                                due: wasAssigned && t ? dateKey(addDays(t, fields.days)) : all[i].due,
-                            };
+                            // The deadline stays where it is: an edit is a correction, not a
+                            // new job. Changing the skills invalidates the week already
+                            // worked, so that starts over; anything else leaves it alone.
+                            const sameSkills = JSON.stringify(all[i].skills ?? []) === JSON.stringify(skills);
+                            all[i] = { ...all[i], ...fields, due: all[i].due };
+                            if (!sameSkills) delete all[i].log;
                             await saveGigs(all);
                             ui.notifications.info(`Operator: "${esc(fields.title)}" updated.`);
                         } else {
@@ -1239,6 +1263,7 @@
     });
 
     Hooks.once("ready", () => {
+        _lastSeenDate = todayKey();      // so the first move after a reload is still judged
         // A player's actions arrive here; the upstream listener keys off `action`, so the two do not collide.
         game.socket.on(SOCKET, (msg) => {
             if (!msg?.operator || !isActiveGM()) return;

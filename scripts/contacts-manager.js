@@ -47,6 +47,7 @@
         { key: "opBadDay",     label: "A bad day",            placeholder: "A day that did not." },
         { key: "opGoodAssist", label: "A good day, assisted", placeholder: "The Fixer stepped in and it worked." },
         { key: "opBadAssist",  label: "A bad day, assisted",  placeholder: "The Fixer stepped in and it still went wrong." },
+        { key: "opUncovered",  label: "A day nobody could cover", placeholder: "Nobody on the job had the skill for it." },
         { key: "opWin",        label: "The gig landed",       placeholder: "What they say when the job is done." },
         { key: "opLose",       label: "The gig failed",       placeholder: "What they say when it is not." },
     ];
