@@ -944,7 +944,9 @@ globalThis.VirtualAgentWorldMap = {
         const tok = wm.tokens.find((t) => (t.name || "").trim().toLowerCase() === name);
         if (!tok) return null;
         const g = wm.grid.size;
-        return this.pct(wm, tok.x + (tok.width * g) / 2, tok.y + (tok.height * g) / 2);
+        const x = Number.isFinite(tok._source?.x) ? tok._source.x : tok.x;
+        const y = Number.isFinite(tok._source?.y) ? tok._source.y : tok.y;
+        return this.pct(wm, x + (tok.width * g) / 2, y + (tok.height * g) / 2);
     },
     pinsFromNotes(wm) {
         const players = game.users.filter((u) => !u.isGM);
