@@ -654,6 +654,11 @@
                 <span style="color:${colour};">${mark} ${esc(s.name)}${note ? ` <span style="opacity:.5;font-size:.9em;">${note}</span>` : ""}</span>${chip(diffLabel(s.dv), diffColour(s.dv))}</div>`;
         }).join("");
 
+        const skillsHead = g.skills.length
+            ? `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:2px;">
+                <span>WHAT THE JOB NEEDS</span><span>DIFFICULTY</span></div>`
+            : "";
+
         let body = "";
         if (open) {
             // Who can do this job: every runner scored against this gig's own skills.
@@ -732,7 +737,7 @@
 
             body = `<div style="border-top:1px solid #222;margin-top:8px;padding-top:8px;">
                 ${g.brief ? `<div style="font-size:.7rem;opacity:.85;margin-bottom:8px;">${esc(g.brief)}</div>` : ""}
-                ${skills}${picker}${assist}${assistDone}${report}${settle}${gmTools}</div>`;
+                ${skillsHead}${skills}${picker}${assist}${assistDone}${report}${settle}${gmTools}</div>`;
         }
 
         const spent = g.status === "done" && !open;
