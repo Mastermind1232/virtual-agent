@@ -12,6 +12,14 @@ const VA_HOUSING = [
 ];
 const VA_LIFESTYLE = [["Kibble", "100"], ["Generic Prepak", "300"], ["Good Prepak", "600"], ["Fresh Food", "1500"]];
 const VA_LIFESTYLE_COST = Object.fromEntries(VA_LIFESTYLE);
+/* NuNu packaging: every field on the rap-sheet forms, inline and modal. Filing, amending
+   and cancelling all clear the same set, so a half-typed record never leaks into the next. */
+const NCPD_FIELD_IDS = [
+    "ncpd-add-name", "ncpd-add-charges", "ncpd-add-bounty", "ncpd-add-status", "ncpd-add-notes",
+    "ncpd-add-source", "ncpd-add-debt", "ncpd-add-location", "ncpd-add-kind",
+    "ncpd-modal-name", "ncpd-modal-charges", "ncpd-modal-bounty", "ncpd-modal-status", "ncpd-modal-notes",
+    "ncpd-modal-mugshot", "ncpd-modal-source", "ncpd-modal-debt", "ncpd-modal-location", "ncpd-modal-kind",
+];
 /* NuNu packaging: a character's Role in Cyberpunk RED is an Item of type "role",
    not `system.externalData.role`, which does not exist in the system's data model.
    Upstream reads the missing field, so every Agent ID reads "Citizen". */
@@ -2244,6 +2252,7 @@ class AgentOSApplication extends Application {
         } catch (e) { data.partyBlip = null; }
         // Patch5.5.5: GM add-content modal visibility (only ever true if GM).
         data.showNcpdAddModal = !!this.showNcpdAddModal && game.user.isGM;
+        data.ncpdEditing = !!this._ncpdEditId;
         data.showZigguratAddModal = !!this.showZigguratAddModal && game.user.isGM;
         data.showGardenAddModal = !!this.showGardenAddModal;   // 1.6.0 — players can add too (write is GM-relayed)
         // Patch5.5.3: Maps app pin curation state (moved from Sys Admin).
@@ -5549,10 +5558,40 @@ class AgentOSApplication extends Application {
                 // --- NCPD CRIME DATABASE ---
                 case 'ncpd-modal-open': {
                     if (!game.user.isGM) return;
+                    // A fresh filing starts empty, even straight after an amend.
+                    this._ncpdEditId = null;
+                    NCPD_FIELD_IDS.forEach((id) => { if (this._composerDrafts) this._composerDrafts[id] = ""; });
                     this.showNcpdAddModal = true; this.render(true); break;
                 }
                 case 'ncpd-modal-close': {
-                    this.showNcpdAddModal = false; this.render(true); break;
+                    this.showNcpdAddModal = false;
+                    this._ncpdEditId = null;
+                    NCPD_FIELD_IDS.forEach((id) => { if (this._composerDrafts) this._composerDrafts[id] = ""; });
+                    this.render(true); break;
+                }
+                // Amend a filed record. The modal is the same one; it arrives filled in
+                // through _composerDrafts, the way the identity editor does it.
+                case 'ncpd-edit-record': {
+                    if (!game.user.isGM) return;
+                    const recId = String($(ev.currentTarget).data('record-id') || "");
+                    let list = [];
+                    try { list = JSON.parse(game.settings.get("VirtualAgent", "ncpdRapSheets") || "[]"); } catch (e) {}
+                    const rec = list.find((r) => r.id === recId);
+                    if (!rec) { ui.notifications.warn("Bounties: that record is gone."); return; }
+                    if (!this._composerDrafts) this._composerDrafts = {};
+                    this._composerDrafts['ncpd-modal-name']     = rec.name     || "";
+                    this._composerDrafts['ncpd-modal-charges']  = rec.charges  || "";
+                    this._composerDrafts['ncpd-modal-bounty']   = rec.bounty   || "";
+                    this._composerDrafts['ncpd-modal-status']   = rec.status   || "";
+                    this._composerDrafts['ncpd-modal-notes']    = rec.notes    || "";
+                    this._composerDrafts['ncpd-modal-mugshot']  = rec.mugshot  || "";
+                    this._composerDrafts['ncpd-modal-location'] = rec.location || "";
+                    this._composerDrafts['ncpd-modal-kind']     = rec.kind     || "bounty";
+                    this._composerDrafts['ncpd-modal-source']   = rec.source   || "AGPD";
+                    this._composerDrafts['ncpd-modal-debt']     = rec.debt     || "";
+                    this._ncpdEditId = recId;
+                    this.showNcpdAddModal = true;
+                    this.render(true); break;
                 }
                 case 'ziggurat-modal-open': {
                     if (!game.user.isGM) return;
@@ -5603,17 +5642,25 @@ class AgentOSApplication extends Application {
                     const mugshot = useModal ? (html.find('#ncpd-modal-mugshot').val() || "").trim() : "";
                     let list = [];
                     try { list = JSON.parse(game.settings.get("VirtualAgent", "ncpdRapSheets") || "[]"); } catch(e) {}
-                    list.push({
-                        id: "rap_" + foundry.utils.randomID(),
+                    const fields = {
                         name, charges, bounty, status, notes, mugshot, location,
                         // NuNu packaging: a bounty knows who is paying it, and a debt claim
                         // pays the finder a tenth of the debt for bringing the debtor back alive.
                         kind: useModal ? (html.find('#ncpd-modal-kind').val() || "bounty") : (html.find('#ncpd-add-kind').val() || "bounty"),
                         source: (useModal ? (html.find('#ncpd-modal-source').val() || "") : (html.find('#ncpd-add-source').val() || "")).trim(),
                         debt: (useModal ? (html.find('#ncpd-modal-debt').val() || "") : (html.find('#ncpd-add-debt').val() || "")).trim(),
-                        createdAt: Date.now()
-                    });
+                    };
+
+                    // An amend writes over the record in place: the id and the day it was
+                    // filed are what the rest of the app holds on to.
+                    const editIdx = this._ncpdEditId ? list.findIndex((r) => r.id === this._ncpdEditId) : -1;
+                    if (this._ncpdEditId && editIdx < 0) { ui.notifications.warn("Bounties: that record is gone."); return; }
+                    if (editIdx >= 0) list[editIdx] = { ...list[editIdx], ...fields };
+                    else list.push({ id: "rap_" + foundry.utils.randomID(), ...fields, createdAt: Date.now() });
+
+                    const amended = editIdx >= 0;
                     await game.settings.set("VirtualAgent", "ncpdRapSheets", JSON.stringify(list));
+                    this._ncpdEditId = null;
                     if (useModal) this.showNcpdAddModal = false;
                     // Patch5.5.19: reset list-view state so the GM definitively
                     // lands on the unfiltered list with the new record visible.
@@ -5621,16 +5668,14 @@ class AgentOSApplication extends Application {
                     // open, the post-save render still respected those states
                     // and the new card appeared not to land. Now: clear search,
                     // close detail view, force list mode.
-                    this._ncpdActiveId = null;
-                    this._ncpdSearch = "";
-                    ["ncpd-add-name","ncpd-add-charges","ncpd-add-bounty","ncpd-add-status","ncpd-add-notes",
-                     "ncpd-modal-name","ncpd-modal-charges","ncpd-modal-bounty","ncpd-modal-status","ncpd-modal-notes","ncpd-modal-mugshot",
-                     "ncpd-add-source","ncpd-add-debt","ncpd-modal-source","ncpd-modal-debt",
-                     "ncpd-add-location","ncpd-modal-location"].forEach(id => {
+                    // An amend stays on the record you just changed; a new filing goes
+                    // back to the unfiltered list so the card you made is in front of you.
+                    if (!amended) { this._ncpdActiveId = null; this._ncpdSearch = ""; }
+                    NCPD_FIELD_IDS.forEach(id => {
                         html.find(`#${id}`).val("");
                         if (this._composerDrafts) this._composerDrafts[id] = "";
                     });
-                    ui.notifications.info(`Bounties: filed "${name}".`);
+                    ui.notifications.info(`Bounties: ${amended ? "amended" : "filed"} "${name}".`);
                     this.render(true);
                     break;
                 }

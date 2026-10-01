@@ -1450,7 +1450,8 @@
                     {{#if ncpdActiveRecord}}
                     {{!-- Detail view --}}
                     <div data-preserve-scroll-container="ncpd-detail" style="padding: 12px; flex: 1; overflow-y: auto;">
-                        <button type="button" data-action="ncpd-close-record" style="background: transparent; border: 1px solid #3a86ff; color: #3a86ff; padding: 4px 10px; font-family: monospace; font-size: 0.65rem; cursor: pointer; border-radius: 3px; margin-bottom: 10px;"><i class="fas fa-chevron-left"></i> BACK TO LIST</button>
+                        <button type="button" data-action="ncpd-close-record" style="background: transparent; border: 1px solid #3a86ff; color: #3a86ff; padding: 4px 10px; font-family: monospace; font-size: 0.65rem; cursor: pointer; border-radius: 3px; margin-bottom: 10px;"><i class="fas fa-chevron-left"></i> BACK TO LIST</button>{{#if isGM}}
+                        <button type="button" data-action="ncpd-edit-record" data-record-id="{{ncpdActiveRecord.id}}" style="background: transparent; border: 1px solid #3a86ff; color: #3a86ff; padding: 4px 10px; font-family: monospace; font-size: 0.65rem; cursor: pointer; border-radius: 3px; margin: 0 0 10px 6px;"><i class="fas fa-pen"></i> AMEND</button>{{/if}}
                         <div style="background: rgba(0,0,0,0.5); border: 1px solid #3a86ff; border-radius: 8px; padding: 12px; display: flex; gap: 12px;">
                             {{!-- Patch5.5.12: mugshot panel on the left, rap-sheet text on the right.
                                   Falls back to a generic mystery-man placeholder if no image is set. --}}
@@ -1532,20 +1533,20 @@
                     <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 200; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 14px;">
                         <div style="background: #0a0a0f; border: 2px solid #3a86ff; border-radius: 10px; padding: 14px; width: 94%; max-width: 380px; box-shadow: 0 0 30px rgba(58,134,255,0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <div style="font-family: monospace; color: #3a86ff; letter-spacing: 2px; font-size: 0.7rem;">FILE RAP SHEET</div>
+                                <div style="font-family: monospace; color: #3a86ff; letter-spacing: 2px; font-size: 0.7rem;">{{#if ncpdEditing}}AMEND RAP SHEET{{else}}FILE RAP SHEET{{/if}}</div>
                                 <button type="button" data-action="ncpd-modal-close" aria-label="Close" style="background: transparent; border: none; color: #888; cursor: pointer; padding: 4px; line-height: 1; font-size: 0.9rem;"><i class="fas fa-times"></i></button>
                             </div>
                             <input type="text" id="ncpd-modal-name" placeholder="Name *" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom:8px;">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-bottom: 8px;">
                                 {{!-- NuNu packaging: the in-app form files the same record the Sys Admin one does. --}}
-                                <select id="ncpd-modal-kind" style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
+                                <select id="ncpd-modal-kind" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
                                     <option value="bounty">Bounty</option>
                                     <option value="debt">Debt claim</option>
                                 </select>
-                                <select id="ncpd-modal-source" style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
+                                <select id="ncpd-modal-source" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
                                     <option value="AGPD">AGPD</option>
                                 </select>
-                                <select id="ncpd-modal-status" style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
+                                <select id="ncpd-modal-status" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
                                     <option value="">Status (none)</option>
                                     <option value="Tier: F">Tier: F</option><option value="Tier: E">Tier: E</option><option value="Tier: D">Tier: D</option>
                                     <option value="Tier: C">Tier: C</option><option value="Tier: B">Tier: B</option><option value="Tier: A">Tier: A (legendary)</option>
@@ -1564,7 +1565,7 @@
                             </div>
                             <div style="display: flex; gap: 6px;">
                                 <button type="button" data-action="ncpd-modal-close" style="flex:1; padding:8px; background:rgba(255,51,85,0.1); border:1px solid #ff3355; color:#ff3355; font-family:monospace; font-size:0.7rem; cursor:pointer; border-radius:4px;">CANCEL</button>
-                                <button type="button" data-action="ncpd-add-record" style="flex:1; padding:8px; background:rgba(58,134,255,0.18); border:1px solid #3a86ff; color:#3a86ff; font-family:monospace; font-size:0.7rem; font-weight:bold; cursor:pointer; border-radius:4px;"><i class="fas fa-fingerprint"></i> FILE</button>
+                                <button type="button" data-action="ncpd-add-record" style="flex:1; padding:8px; background:rgba(58,134,255,0.18); border:1px solid #3a86ff; color:#3a86ff; font-family:monospace; font-size:0.7rem; font-weight:bold; cursor:pointer; border-radius:4px;"><i class="fas fa-fingerprint"></i> {{#if ncpdEditing}}SAVE{{else}}FILE{{/if}}</button>
                             </div>
                         </div>
                     </div>
