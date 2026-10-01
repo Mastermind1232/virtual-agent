@@ -671,9 +671,13 @@
                 return { r, marks, hits: marks.filter((m) => m.has).length };
             }).sort((a, b) => b.hits - a.hits || a.r.name.localeCompare(b.r.name));
 
-            const picker = g.status === "open" && crew.length
+            const picking = view.picking?.has(g.id);
+            const picker = (g.status !== "open" || !crew.length) ? ""
+                : !picking
                 ? `<div style="margin-top:10px;">
-                    <div style="font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:4px;">CHOOSE OPERATOR</div>
+                    <button type="button" data-action="op-pick" data-gig="${g.id}" style="font-family:inherit;width:100%;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.68rem;letter-spacing:.08em;padding:6px;cursor:pointer;text-transform:uppercase;">Assign operator</button>
+                   </div>`
+                : `<div style="margin-top:10px;">
                     ${crew.map(({ r, marks, hits }) => `
                         <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #1b1b1b;">
                             <span style="flex:1;min-width:0;">
@@ -686,8 +690,8 @@
                             </span>
                             <button type="button" data-action="op-assign" data-gig="${g.id}" data-runner="${r.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 10px;cursor:pointer;">SEND</button>
                         </div>`).join("")}
-                   </div>`
-                : "";
+                    <button type="button" data-action="op-pick" data-gig="${g.id}" style="font-family:inherit;width:100%;background:transparent;border:0;color:#777;font-size:.6rem;letter-spacing:1px;padding:7px 0 0;cursor:pointer;text-transform:uppercase;">Close</button>
+                   </div>`;
 
             const uncovered = runner ? g.skills.filter((s) => !usableSkills(runner).some((u) => u.name.trim().toLowerCase() === s.name.trim().toLowerCase())) : [];
             const assist = (g.status === "assigned" && !g.assist && uncovered.length && !_calling.has(g.id))
@@ -779,7 +783,7 @@
     }
 
     function html(app) {
-        const view = app._operator ?? (app._operator = { tab: "gigs", gigId: null });
+        const view = app._operator ?? (app._operator = { tab: "gigs", gigId: null, picking: new Set() });
         const all = gigs();
         const live = all.filter((g) => g.status !== "done");
         const done = all.filter((g) => g.status === "done").slice(-8).reverse();
@@ -1061,7 +1065,8 @@
     const _calling = new Set();
 
     async function onClick(app, action, ev) {
-        const view = app._operator ?? (app._operator = { tab: "gigs", gigId: null });
+        const view = app._operator ?? (app._operator = { tab: "gigs", gigId: null, picking: new Set() });
+        view.picking ??= new Set();
         const $t = $(ev.currentTarget);
         const gigId = $t.data("gig");
 
@@ -1085,7 +1090,14 @@
                     view.tab = $t.data("tab"); view.gigId = null; app.render(true); break;
 
                 case "op-open-gig":
-                    view.gigId = view.gigId === gigId ? null : gigId; app.render(true); break;
+                    // Closing a gig forgets that its crew list was open.
+                    if (view.gigId === gigId) { view.gigId = null; view.picking.delete(gigId); }
+                    else view.gigId = gigId;
+                    app.render(true); break;
+
+                case "op-pick":
+                    view.picking.has(gigId) ? view.picking.delete(gigId) : view.picking.add(gigId);
+                    app.render(true); break;
 
                 case "op-new-gig":
                     if (canEdit()) gigDialog(app); break;
