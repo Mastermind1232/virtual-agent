@@ -933,7 +933,7 @@
         return new Promise((resolve) => {
             new Dialog({
                 title: "Short a skill",
-                content: `<p><b>${esc(hired.name)}</b> can't cover <b>${list}</b>. They may need an assist partway through&hellip;</p>`,
+                content: `<p><b>${esc(hired.name)}</b> can't cover <b>${list}</b>. They may need your assistance with ${names.length > 1 ? "these skills" : "this skill"} during the job&hellip;</p>`,
                 buttons: {
                     commit: { label: "Commit", callback: () => resolve(true) },
                     cancel: { label: "Cancel", callback: () => resolve(false) },
