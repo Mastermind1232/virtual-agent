@@ -479,14 +479,16 @@
             : c.deciphered ? chip(showingRaw ? "Show what it means" : "Show what they wrote", "gd-toggle", false, QUIET)
             : "";
 
+        const gmBtn = (action, icon, title) =>
+            `<button type="button" data-action="${action}" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" data-to="${c.deciphered ? "0" : "1"}" title="${esc(title)}"
+               style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.68rem;line-height:1;cursor:pointer;padding:0;"><i class="fas ${icon}"></i></button>`;
+
         const gm = game.user.isGM
-            ? `<button type="button" data-action="gd-recode" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" data-to="${c.deciphered ? "0" : "1"}"
-                 title="${c.deciphered ? "Put it back in code" : "Count it as already read"}"
-                 style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.62rem;cursor:pointer;padding:0 0 0 6px;">${c.deciphered ? "re-code" : "mark read"}</button>`
-              + `<button type="button" data-action="gd-edit-comment" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" title="Edit"
-                 style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.62rem;cursor:pointer;padding:0 0 0 6px;">edit</button>`
-              + `<button type="button" data-action="gd-drop-comment" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" title="Delete"
-                 style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.65rem;cursor:pointer;padding:0 0 0 6px;">&times;</button>`
+            ? `<span style="margin-left:auto;display:flex;align-items:center;gap:10px;white-space:nowrap;flex:0 0 auto;">
+                ${gmBtn("gd-recode", c.deciphered ? "fa-lock" : "fa-lock-open", c.deciphered ? "Put it back in code" : "Count it as already read")}
+                ${gmBtn("gd-edit-comment", "fa-pen", "Edit")}
+                ${gmBtn("gd-drop-comment", "fa-xmark", "Delete")}
+               </span>`
             : "";
 
         // What it says underneath, for your eyes only. Shown while it is still coded,
@@ -497,8 +499,8 @@
             : "";
 
         return `<div style="border-top:1px solid #1e1e22;padding:7px 0;">
-            <div style="display:flex;align-items:baseline;gap:6px;">
-                <span style="font-size:.65rem;color:#8ab4ff;">anon</span>${tag}${gm}
+            <div style="display:flex;align-items:center;gap:6px;">
+                <span style="font-size:.65rem;color:#8ab4ff;flex:0 0 auto;">anon</span>${tag}${gm}
             </div>
             ${body}${peek}${button}</div>`;
     }
