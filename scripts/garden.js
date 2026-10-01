@@ -613,13 +613,21 @@
         const editing = !!existing;
         new Dialog({
             title: editing ? "Edit the comment" : "Add a comment",
-            content: `<form>
-                <div class="form-group"><label>Comment</label><textarea name="text" rows="3" placeholder="What they wrote, in the clear or in code.">${esc(existing?.text ?? "")}</textarea></div>
-                <hr>
-                <div class="form-group"><label><input type="checkbox" name="coded" ${existing?.coded ? "checked" : ""}> Written in code</label></div>
-                <div class="form-group"><label>What it actually says</label><textarea name="intent" rows="2" placeholder="Revealed on a successful Decipher.">${esc(existing?.intent ?? "")}</textarea></div>
-                <div class="form-group"><label>Decipher DV</label><input type="number" name="dv" value="${esc(existing?.dv ?? 15)}" min="1" step="1"></div>
-                ${editing && existing?.deciphered ? `<p style="font-size:.75rem;color:#8b9183;margin:4px 0 0;">She has already cracked this one. Rewriting it changes what she reads, and it stays cracked.</p>` : ""}
+            content: `<form style="display:flex;flex-direction:column;height:100%;gap:10px;">
+                <div style="display:flex;flex-direction:column;flex:1 1 40%;min-height:90px;">
+                    <label style="font-weight:700;margin-bottom:3px;">What they wrote</label>
+                    <textarea name="text" style="flex:1 1 auto;width:100%;resize:none;font-family:monospace;" placeholder="In the clear, or in code.">${esc(existing?.text ?? "")}</textarea>
+                </div>
+                <label style="flex:0 0 auto;"><input type="checkbox" name="coded" ${existing?.coded ? "checked" : ""}> Written in code</label>
+                <div style="display:flex;flex-direction:column;flex:1 1 60%;min-height:110px;">
+                    <label style="font-weight:700;margin-bottom:3px;">What it actually says</label>
+                    <textarea name="intent" style="flex:1 1 auto;width:100%;resize:none;" placeholder="Revealed on a successful Decipher.">${esc(existing?.intent ?? "")}</textarea>
+                </div>
+                <div style="flex:0 0 auto;display:flex;align-items:center;gap:8px;">
+                    <label style="font-weight:700;margin:0;">Decipher DV</label>
+                    <input type="number" name="dv" value="${esc(existing?.dv ?? 15)}" min="1" step="1" style="width:70px;flex:0 0 auto;">
+                </div>
+                ${editing && existing?.deciphered ? `<p style="flex:0 0 auto;font-size:.75rem;color:#6b6b6b;margin:0;">She has already cracked this one. Rewriting it changes what she reads, and it stays cracked.</p>` : ""}
             </form>`,
             buttons: {
                 add: { label: editing ? "Save" : "Add", callback: async (h) => {
@@ -660,7 +668,11 @@
                 cancel: { label: "Cancel" },
             },
             default: "add",
-        }, { width: 460 }).render(true);
+            render: (h) => {
+                const body = h[0].querySelector(".dialog-content");
+                if (body) Object.assign(body.style, { display: "flex", flexDirection: "column", flex: "1 1 auto", minHeight: "0" });
+            },
+        }, { width: 620, height: 560, resizable: true }).render(true);
     }
 
     function followersDialog(app) {
