@@ -233,18 +233,7 @@
                         <div class="admin-hint" style="font-size:0.55rem; color:#666; margin-bottom: 4px;">Public — what other players see in contacts &amp; chat.</div>
                         <input type="text" id="id-edit-handle" class="datapool-input" value="{{idEdit.handle}}" placeholder="Leave blank to use actor name" style="width: 100%; padding: 8px; box-sizing: border-box; height: 34px; background:#222; color:#fff; border:1px solid #444; border-radius:3px; font-family:monospace; font-size:0.8rem; margin-bottom: 8px;" data-preserve-draft>
 
-                        <label style="font-size: 0.6rem; color: var(--neon-cyan); letter-spacing: 1px; display: block; margin: 4px 0 2px 0;">SUBTITLE / PRIORITY LEVEL</label>
-                        <input type="text" id="id-edit-subtitle" class="datapool-input" value="{{idEdit.subtitle}}" placeholder="Citizen Priority A+" style="width: 100%; padding: 8px; box-sizing: border-box; height: 34px; background:#222; color:#fff; border:1px solid #444; border-radius:3px; font-family:monospace; font-size:0.8rem; margin-bottom: 8px;" data-preserve-draft>
 
-                        <label style="font-size: 0.6rem; color: var(--neon-cyan); letter-spacing: 1px; display: block; margin: 4px 0 2px 0;">SIN STATUS</label>
-                        <select id="id-edit-sin" class="datapool-input" style="width: 100%; padding: 8px; box-sizing: border-box; height: 34px; background:#222; color:#fff; border:1px solid #444; border-radius:3px; font-family:monospace; font-size:0.8rem; margin-bottom: 8px;">
-                            {{#each idEditSinOptions}}
-                            <option value="{{this}}" {{#if (eq this ../idEdit.sinStatus)}}selected{{/if}}>{{this}}</option>
-                            {{/each}}
-                        </select>
-
-                        <label style="font-size: 0.6rem; color: var(--neon-cyan); letter-spacing: 1px; display: block; margin: 4px 0 2px 0;">CLEARANCE LEVEL</label>
-                        <input type="text" id="id-edit-clearance" class="datapool-input" value="{{idEdit.clearance}}" placeholder="Verified" style="width: 100%; padding: 8px; box-sizing: border-box; height: 34px; background:#222; color:#fff; border:1px solid #444; border-radius:3px; font-family:monospace; font-size:0.8rem; margin-bottom: 14px;" data-preserve-draft>
 
                         <div style="display: flex; justify-content: space-between; gap: 8px;">
                             <button type="button" data-action="cancel-agent-id" style="flex:1; background: transparent; color: #888; border: 1px solid #444; padding: 8px; font-family: monospace; font-size: 0.7rem; cursor: pointer; border-radius: 3px;">CANCEL</button>
@@ -1103,7 +1092,6 @@
                                 </div>
                                 <div>
                                     <div style="font-size: 1.1rem; font-weight: bold; color: #fff;">{{idViewName}}</div>
-                                    <div style="font-size: 0.6rem; color: #4488ff; text-transform: uppercase;">{{idViewSubtitle}}</div>
                                 </div>
                             </div>
 
@@ -1112,19 +1100,8 @@
                                     <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">Role</div>
                                     <div style="font-size: 0.8rem; color: #eee;">{{idViewRole}}</div>
                                 </div>
-                                {{!-- NuNu packaging: Handle removed from the ID card. --}}
-                                <div>
-                                    <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">SIN Status</div>
-                                    <div style="font-size: 0.8rem; color: {{#if (eq idViewSinStatus 'No SIN')}}#ff3333{{else}}#eee{{/if}};">{{idViewSinStatus}}</div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">Clearance</div>
-                                    <div style="font-size: 0.8rem; color: #44ff44;">{{idViewClearance}}</div>
-                                </div>
-                                <div>
-                                    <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">Network ID</div>
-                                    <div style="font-size: 0.8rem; color: #eee; font-family: monospace;">ZR-{{idViewIdShort}}</div>
-                                </div>
+                                {{!-- NuNu packaging: Handle, subtitle, SIN status, clearance and
+                                      Network ID removed from the ID card. --}}
                             </div>
 
                             {{!-- Patch5.5 (Gotto): housing / rent status. Patch5.5.20: show the

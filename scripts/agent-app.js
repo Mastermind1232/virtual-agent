@@ -6533,15 +6533,12 @@ class AgentOSApplication extends Application {
                     const result = {
                         displayName: (html.find('#id-edit-display-name').val() || "").trim(),
                         handle:      (html.find('#id-edit-handle').val() || "").trim(),
-                        subtitle:    (html.find('#id-edit-subtitle').val() || "").trim() || "Citizen Priority A+",
-                        sinStatus:   html.find('#id-edit-sin').val() || "Registered",
-                        clearance:   (html.find('#id-edit-clearance').val() || "").trim() || "Verified"
                     };
                     await targetUser.setFlag("VirtualAgent", "idOverrides", result);
                     this.showIdEditModal = false;
                     // Patch4.7.2: scrub the form drafts so the next open is clean.
                     if (this._composerDrafts) {
-                        ['id-edit-display-name','id-edit-handle','id-edit-subtitle','id-edit-sin','id-edit-clearance']
+                        ['id-edit-display-name','id-edit-handle']
                             .forEach(k => delete this._composerDrafts[k]);
                     }
                     ui.notifications.info(`Agent ID: Saved for ${targetUser.name}.`);
