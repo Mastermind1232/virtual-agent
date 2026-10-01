@@ -294,6 +294,20 @@
                 }
                 break;
             }
+            case "setDeciphered": {
+                const i = findPost();
+                const comments = i < 0 ? [] : (list[i].comments || []);
+                const j = comments.findIndex((c) => c.id === msg.commentId);
+                if (j >= 0) {
+                    const next = [...comments];
+                    // Putting it back in code clears today's failed attempt too, so she is
+                    // not locked out of a comment you have just handed back to her.
+                    next[j] = { ...next[j], deciphered: !!msg.deciphered, failedOn: "" };
+                    list[i] = { ...list[i], comments: next };
+                    changed = true;
+                }
+                break;
+            }
             case "editComment": {
                 const i = findPost();
                 const comments = i < 0 ? [] : (list[i].comments || []);
@@ -466,7 +480,10 @@
             : "";
 
         const gm = game.user.isGM
-            ? `<button type="button" data-action="gd-edit-comment" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" title="Edit"
+            ? `<button type="button" data-action="gd-recode" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" data-to="${c.deciphered ? "0" : "1"}"
+                 title="${c.deciphered ? "Put it back in code" : "Count it as already read"}"
+                 style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.62rem;cursor:pointer;padding:0 0 0 6px;">${c.deciphered ? "re-code" : "mark read"}</button>`
+              + `<button type="button" data-action="gd-edit-comment" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" title="Edit"
                  style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.62rem;cursor:pointer;padding:0 0 0 6px;">edit</button>`
               + `<button type="button" data-action="gd-drop-comment" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" title="Delete"
                  style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.65rem;cursor:pointer;padding:0 0 0 6px;">&times;</button>`
@@ -789,6 +806,15 @@
                     const post = posts().find((p) => p.id === postId);
                     if ((post?.comments || []).length >= MAX_COMMENTS) { ui.notifications.warn(`A story gets ${MAX_COMMENTS} comments and no more.`); break; }
                     commentDialog(app, postId); break;
+                }
+
+                case "gd-recode": {
+                    if (!game.user.isGM) break;
+                    const cid = $t.data("comment");
+                    await request({ op: "setDeciphered", postId, commentId: cid, deciphered: String($t.data("to")) === "1" });
+                    // A re-coded comment should not still be showing its plain text.
+                    view.raw?.delete(cid);
+                    app.render(true); break;
                 }
 
                 case "gd-edit-comment": {
