@@ -2156,7 +2156,8 @@ class AgentOSApplication extends Application {
             data.ncpdRapSheetsView = data.ncpdRapSheets.filter(s =>
                 String(s.name || "").toLowerCase().includes(q) ||
                 String(s.charges || "").toLowerCase().includes(q) ||
-                String(s.notes || "").toLowerCase().includes(q)
+                String(s.notes || "").toLowerCase().includes(q) ||
+                String(s.location || "").toLowerCase().includes(q)
             );
         } else {
             data.ncpdRapSheetsView = data.ncpdRapSheets;
@@ -5595,6 +5596,7 @@ class AgentOSApplication extends Application {
                     const bounty  = useModal ? (html.find('#ncpd-modal-bounty').val()  || "").trim() : (html.find('#ncpd-add-bounty').val()  || "").trim();
                     const status  = useModal ? (html.find('#ncpd-modal-status').val()  || "Known to police").trim() : (html.find('#ncpd-add-status').val() || "Known to police").trim();
                     const notes   = useModal ? (html.find('#ncpd-modal-notes').val()   || "").trim() : (html.find('#ncpd-add-notes').val()   || "").trim();
+                    const location = useModal ? (html.find('#ncpd-modal-location').val() || "").trim() : (html.find('#ncpd-add-location').val() || "").trim();
                     // Patch5.5.18: the const mugshot declaration was missing — list.push later
                     // referenced an undefined `mugshot` symbol → ReferenceError swallowed by
                     // Foundry's event-handler wrapper → FILE button appeared to hang.
@@ -5603,7 +5605,7 @@ class AgentOSApplication extends Application {
                     try { list = JSON.parse(game.settings.get("VirtualAgent", "ncpdRapSheets") || "[]"); } catch(e) {}
                     list.push({
                         id: "rap_" + foundry.utils.randomID(),
-                        name, charges, bounty, status, notes, mugshot,
+                        name, charges, bounty, status, notes, mugshot, location,
                         // NuNu packaging: a bounty knows who is paying it, and a debt claim
                         // pays the finder a tenth of the debt for bringing the debtor back alive.
                         kind: useModal ? (html.find('#ncpd-modal-kind').val() || "bounty") : (html.find('#ncpd-add-kind').val() || "bounty"),
@@ -5623,7 +5625,8 @@ class AgentOSApplication extends Application {
                     this._ncpdSearch = "";
                     ["ncpd-add-name","ncpd-add-charges","ncpd-add-bounty","ncpd-add-status","ncpd-add-notes",
                      "ncpd-modal-name","ncpd-modal-charges","ncpd-modal-bounty","ncpd-modal-status","ncpd-modal-notes","ncpd-modal-mugshot",
-                     "ncpd-add-source","ncpd-add-debt","ncpd-modal-source","ncpd-modal-debt"].forEach(id => {
+                     "ncpd-add-source","ncpd-add-debt","ncpd-modal-source","ncpd-modal-debt",
+                     "ncpd-add-location","ncpd-modal-location"].forEach(id => {
                         html.find(`#${id}`).val("");
                         if (this._composerDrafts) this._composerDrafts[id] = "";
                     });

@@ -1468,6 +1468,10 @@
                             {{else}}
                             {{#if ncpdActiveRecord.bounty}}<div style="font-size: 0.7rem; color: var(--creds-gold); margin-bottom: 8px;"><i class="fas fa-dollar-sign"></i> BOUNTY: {{ncpdActiveRecord.bounty}}eb</div>{{/if}}
                             {{/if}}
+                            {{#if ncpdActiveRecord.location}}
+                            <div style="font-size: 0.55rem; color: #888; letter-spacing: 1px; margin-top: 10px;">LOCATION</div>
+                            <div style="font-size: 0.75rem; color: #ddd; white-space: pre-wrap;">{{ncpdActiveRecord.location}}</div>
+                            {{/if}}
                             <div style="font-size: 0.55rem; color: #888; letter-spacing: 1px; margin-top: 10px;">CHARGES</div>
                             <div style="font-size: 0.75rem; color: #ddd; margin-bottom: 8px; white-space: pre-wrap;">{{#if ncpdActiveRecord.charges}}{{ncpdActiveRecord.charges}}{{else}}—{{/if}}</div>
                             {{#if ncpdActiveRecord.notes}}
@@ -1550,6 +1554,7 @@
                                 <input type="text" id="ncpd-modal-bounty" placeholder="Bounty (eb)" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; box-sizing:border-box;">
                             </div>
                             <input type="text" id="ncpd-modal-charges" placeholder="Charges (comma-separated)" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom: 8px;">
+                            <input type="text" id="ncpd-modal-location" placeholder="Location (where it happened, last seen…)" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom: 8px;">
                             <textarea id="ncpd-modal-notes" rows="3" placeholder="Notes (priors, MO, last known location…)" data-preserve-draft style="width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid #444; padding:7px 10px; border-radius:3px; font-family:monospace; font-size:0.72rem; margin-bottom: 8px; resize:none;"></textarea>
                             {{!-- Patch5.5.12: optional mugshot image path. Browse button uses Foundry FilePicker. --}}
                             <label class="admin-label" style="font-size: 0.6rem; color: #ccc;">Mugshot (optional)</label>
@@ -2115,6 +2120,7 @@
                                 <input type="text" id="ncpd-add-bounty" class="admin-input datapool-input" placeholder="Bounty (5,000eb)" data-preserve-draft style="box-sizing:border-box;">
                                 <input type="text" id="ncpd-add-charges" class="admin-input datapool-input" placeholder="Charges (comma-separated)" data-preserve-draft style="box-sizing:border-box;">
                             </div>
+                            <input type="text" id="ncpd-add-location" class="admin-input datapool-input" placeholder="Location (where it happened, last seen…)" data-preserve-draft style="width:100%; box-sizing:border-box; margin-bottom: 6px;">
                             <textarea id="ncpd-add-notes" class="admin-input admin-textarea datapool-input" rows="2" placeholder="Notes (priors, MO, last known location…)" data-preserve-draft style="width:100%; box-sizing:border-box; margin-bottom: 6px;"></textarea>
                             <div class="admin-inline-group" style="margin-bottom: 10px;">
                                 <button type="button" class="admin-btn admin-btn-cyan" data-action="ncpd-add-record"><i class="fas fa-fingerprint"></i> POST IT</button>
