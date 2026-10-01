@@ -686,7 +686,7 @@
                                 <span style="font-size:.6rem;opacity:.55;"> &middot; ${esc(tierOf(r).name)}</span><br>
                                 <span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">${marks.map((m) => `
                                     <span style="font-size:.58rem;border:1px solid ${m.has ? ACCENT : "#7a3340"};color:${m.has ? ACCENT : "#c06a76"};border-radius:3px;padding:1px 5px;white-space:nowrap;">
-                                        ${esc(m.name)}${m.has ? "" : " &#10007;"}
+                                        ${esc(m.name)} ${m.has ? "&#10003;" : "&#10007;"}
                                     </span>`).join("")}</span>
                             </span>
                             <button type="button" data-action="op-assign" data-gig="${g.id}" data-runner="${r.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 10px;cursor:pointer;">SEND</button>
