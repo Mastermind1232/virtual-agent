@@ -1094,25 +1094,13 @@
                                     <i class="fas fa-user-astronaut" style="font-size: 2rem; color: #444;"></i>
                                     {{/if}}
                                 </div>
-                                <div>
+                                <div style="min-width: 0;">
                                     <div style="font-size: 1.1rem; font-weight: bold; color: #fff;">{{idViewName}}</div>
+                                    {{#if idViewRole}}<div style="font-size: 0.8rem; color: #4488ff; margin-top: 2px;">{{idViewRole}}</div>{{/if}}
+                                    {{#if idViewResidence}}<div style="font-size: 0.7rem; color: #aaa; margin-top: 5px;"><span style="color: #666;">Residence:</span> {{idViewResidence}}</div>{{/if}}
                                 </div>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                                <div>
-                                    <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">Role</div>
-                                    <div style="font-size: 0.8rem; color: #eee;">{{idViewRole}}</div>
-                                </div>
-                                {{!-- NuNu packaging: Handle, subtitle, clearance and Network ID
-                                      removed. SIN status became where the holder lives. --}}
-                                {{#if idViewResidence}}
-                                <div>
-                                    <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">Residence</div>
-                                    <div style="font-size: 0.8rem; color: #eee;">{{idViewResidence}}</div>
-                                </div>
-                                {{/if}}
-                            </div>
 
                             {{!-- Patch5.5 (Gotto): housing / rent status. Patch5.5.20: show the
                                   block when EITHER status OR rent is set — Tester1's "rent terst"
