@@ -628,7 +628,8 @@
             ? chip(g.outcome?.success ? "PAID" : "FAILED", g.outcome?.success ? ACCENT : "#ff3366")
             : (g.status === "assigned"
                 ? chip(days === null ? "IN PROGRESS" : (days <= 0 ? "DUE" : `${days}D LEFT`), "#ffd166")
-                : chip((() => { const d = Math.max(1, Number(g.days) || gigDays(g.skills?.length)); return `${d} ${d === 1 ? "day" : "days"}`; })(), "#888"));
+                : (() => { const d = Math.max(1, Number(g.days) || gigDays(g.skills?.length));
+                    return `<span style="font-size:.6rem;color:#888;white-space:nowrap;">${d} ${d === 1 ? "day" : "days"}</span>`; })());
 
         // The week, a line a day. A day already worked shows how it went; one still to
         // come shows only whether anybody on the job can cover it.
