@@ -367,8 +367,8 @@
             whisper: whisperTargets(),
             content: `<div style="font-family: monospace; font-size: 0.8rem; border:1px solid ${ACCENT}; border-radius:6px; padding:10px; background:rgba(0,0,0,.35);">
                 <div style="color:${ACCENT}; letter-spacing:2px; margin-bottom:4px;">OPERATOR // GIG REPORT</div>
-                <div style="font-size:1rem;color:#fff;"><b>${esc(gig.title)}</b></div>
-                <div style="opacity:.7;margin-bottom:8px;">${esc(gig.client)} &middot; ${esc(runner?.name ?? "unassigned")}</div>
+                <div style="font-size:1rem;color:#fff;"><b>${esc(gig.client)}</b></div>
+                <div style="opacity:.7;margin-bottom:8px;">${esc(runner?.name ?? "unassigned")}</div>
                 ${rows}
                 <div style="margin-top:8px;">${verdict}</div>${money}${dropped}</div>`,
         });
@@ -507,7 +507,7 @@
                     started: dateKey(t0), due: dateKey(addDays(t0, span)),
                 };
                 await saveGigs(list);
-                await ChatMessage.create({ whisper: whisperTargets(), content: `<div style="font-family:monospace;"><b style="color:${ACCENT}">OPERATOR</b><br>${esc(r.name)} took <b>${esc(list[i].title)}</b>. Due ${esc(prettyDate(list[i].due))}.</div>` });
+                await ChatMessage.create({ whisper: whisperTargets(), content: `<div style="font-family:monospace;"><b style="color:${ACCENT}">OPERATOR</b><br>${esc(r.name)} took <b>${esc(list[i].client)}</b>'s gig. Due ${esc(prettyDate(list[i].due))}.</div>` });
                 renderPhone();
                 await speak(r.name, "opTake", r.img);
                 return;
@@ -592,7 +592,7 @@
                         whisper: whisperTargets(),
                         content: `<div style="font-family:monospace;font-size:.8rem;border:1px solid ${ACCENT};border-radius:6px;padding:10px;background:rgba(0,0,0,.35);">
                             <div style="color:${ACCENT};letter-spacing:2px;margin-bottom:4px;">OPERATOR // SETTLED</div>
-                            <b>${esc(gig.title)}</b><br>
+                            <b>${esc(gig.client)}</b><br>
                             ${esc(runnerName)} takes <b>${cut}eb</b> of <b>${total}eb</b>, a ${share}% cut.
                             ${esc(fixer?.name ?? "The Operator")} keeps <b>${keep}eb</b>.</div>`,
                     });
@@ -747,8 +747,8 @@
                 <span style="display:flex;gap:9px;align-items:center;min-width:0;">
                     ${face ? `<img src="${esc(face)}" alt="" style="width:30px;height:30px;flex:0 0 30px;border-radius:50%;object-fit:cover;border:1px solid #2c333c;">` : ""}
                     <span style="min-width:0;">
-                        <span style="color:#fff;font-size:.85rem;font-weight:bold;">${esc(g.title)}</span><br>
-                        <span style="font-size:.65rem;opacity:.65;">${esc(g.client)}${runner ? ` &rarr; ${esc(runner.name)}` : ""}</span>
+                        <span style="color:#fff;font-size:.85rem;font-weight:bold;">${esc(g.client)}</span><br>
+                        <span style="font-size:.65rem;opacity:.65;">${runner ? esc(runner.name) : "Nobody sent yet"}</span>
                     </span>
                 </span>
                 <span style="text-align:right;white-space:nowrap;display:flex;align-items:center;gap:8px;">
@@ -966,7 +966,6 @@
             title: edit ? "Edit gig" : "Post a gig",
             content: `<form>
                 <datalist id="op-skill-list">${list.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
-                <div class="form-group"><label>Title</label><input type="text" name="title" value="${esc(existing?.title ?? "")}" placeholder="Locker Job"></div>
                 <div class="form-group"><label>Client</label><input type="text" name="client" list="op-client-list" value="${esc(existing?.client ?? "")}" placeholder="Jaxon"></div>
                 <datalist id="op-client-list">${clients.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
                 <div class="form-group"><label>Brief</label><textarea name="brief" rows="2" placeholder="What the client says.">${esc(existing?.brief ?? "")}</textarea></div>
@@ -990,7 +989,7 @@
                         if (!edit && hasDropped(client)) return ui.notifications.warn(`${esc(client)} dropped you after three failures and no longer brings work.`);
 
                         const fields = {
-                            title: f.title.value.trim() || "Untitled gig", client,
+                            client,
                             brief: f.brief.value.trim(), payout: Math.max(0, Number(f.payout.value) || 0),
                             skills, days: gigDays(skills.length),
                         };
@@ -1007,10 +1006,10 @@
                             all[i] = { ...all[i], ...fields, due: all[i].due };
                             if (!sameSkills) delete all[i].log;
                             await saveGigs(all);
-                            ui.notifications.info(`Operator: "${esc(fields.title)}" updated.`);
+                            ui.notifications.info(`Operator: ${esc(fields.client)}'s gig updated.`);
                         } else {
                             await saveGigs([...all, { id: uid(), ...fields, posted: dateKey(t), runnerId: null, assist: null, status: "open", outcome: null }]);
-                            ui.notifications.info(`Operator: "${esc(fields.title)}" posted.`);
+                            ui.notifications.info(`Operator: ${esc(fields.client)}'s gig posted.`);
                             await speak(fields.client, "clientPost");
                         }
                         app?.render(true);
@@ -1126,7 +1125,7 @@
                     const live = gigs().filter((g) => g.runnerId === id && g.status === "assigned");
                     const one = live.length === 1;
                     const warning = live.length
-                        ? `<p style="color:#ff9900;"><b>${esc(who?.name ?? "They")} is on ${one ? "a gig" : `${live.length} gigs`} right now:</b> ${live.map((g) => esc(g.title)).join(", ")}.</p>
+                        ? `<p style="color:#ff9900;"><b>${esc(who?.name ?? "They")} is on ${one ? "a gig" : `${live.length} gigs`} right now:</b> ${live.map((g) => esc(g.client)).join(", ")}.</p>
                            <p>Drop anyway? ${one ? "It fails" : "They fail"} with nobody on ${one ? "it" : "them"}.</p>`
                         : "";
                     if (!await Dialog.confirm({ title: "Drop operator", content: `${warning}<p>Drop this operator? Their gig history goes with them.</p>` })) break;
