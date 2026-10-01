@@ -233,6 +233,10 @@
                         <div class="admin-hint" style="font-size:0.55rem; color:#666; margin-bottom: 4px;">Public — what other players see in contacts &amp; chat.</div>
                         <input type="text" id="id-edit-handle" class="datapool-input" value="{{idEdit.handle}}" placeholder="Leave blank to use actor name" style="width: 100%; padding: 8px; box-sizing: border-box; height: 34px; background:#222; color:#fff; border:1px solid #444; border-radius:3px; font-family:monospace; font-size:0.8rem; margin-bottom: 8px;" data-preserve-draft>
 
+                        <label style="font-size: 0.6rem; color: var(--neon-cyan); letter-spacing: 1px; display: block; margin: 4px 0 2px 0;">RESIDENCE</label>
+                        <div class="admin-hint" style="font-size:0.55rem; color:#666; margin-bottom: 4px;">Where they live, as it reads on an ID. Blank hides the field.</div>
+                        <input type="text" id="id-edit-residence" class="datapool-input" value="{{idEdit.residence}}" placeholder="Blue Block, Midtown" style="width: 100%; padding: 8px; box-sizing: border-box; height: 34px; background:#222; color:#fff; border:1px solid #444; border-radius:3px; font-family:monospace; font-size:0.8rem; margin-bottom: 8px;" data-preserve-draft>
+
 
 
                         <div style="display: flex; justify-content: space-between; gap: 8px;">
@@ -1100,8 +1104,14 @@
                                     <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">Role</div>
                                     <div style="font-size: 0.8rem; color: #eee;">{{idViewRole}}</div>
                                 </div>
-                                {{!-- NuNu packaging: Handle, subtitle, SIN status, clearance and
-                                      Network ID removed from the ID card. --}}
+                                {{!-- NuNu packaging: Handle, subtitle, clearance and Network ID
+                                      removed. SIN status became where the holder lives. --}}
+                                {{#if idViewResidence}}
+                                <div>
+                                    <div style="font-size: 0.55rem; color: #666; text-transform: uppercase;">Residence</div>
+                                    <div style="font-size: 0.8rem; color: #eee;">{{idViewResidence}}</div>
+                                </div>
+                                {{/if}}
                             </div>
 
                             {{!-- Patch5.5 (Gotto): housing / rent status. Patch5.5.20: show the

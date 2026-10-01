@@ -856,9 +856,7 @@ class AgentOSApplication extends Application {
 
         // Custom ID fields (user-editable overrides)
         const idOverrides = game.user.getFlag("VirtualAgent", "idOverrides") || {};
-        data.idSinStatus = idOverrides.sinStatus || "Registered";
-        data.idClearance = idOverrides.clearance || "Verified";
-        data.idSubtitle = idOverrides.subtitle || "Citizen Priority A+";
+        data.idResidence = idOverrides.residence || "";
         data.idCustomHandle = idOverrides.handle || "";
         data.displayHandle = data.idCustomHandle || data.actorHandle;
 
@@ -890,9 +888,7 @@ class AgentOSApplication extends Application {
                 data.idViewRole = VA_roleOf(tActor) || "Citizen";
                 data.idViewHandle = tOverrides.handle || tActor?.system?.externalData?.handle || targetUser.name;
                 data.idViewIdShort = (tActor?.id || targetUser.id).substring(0, 8).toUpperCase();
-                data.idViewSinStatus = tOverrides.sinStatus || "Registered";
-                data.idViewClearance = tOverrides.clearance || "Verified";
-                data.idViewSubtitle = tOverrides.subtitle || "Citizen Priority A+";
+                data.idViewResidence = tOverrides.residence || "";
                 data.idViewImg = tActor?.img || "icons/svg/mystery-man.svg";
             }
         } else {
@@ -907,9 +903,7 @@ class AgentOSApplication extends Application {
             data.idViewRole = data.actorRole;
             data.idViewHandle = data.displayHandle;
             data.idViewIdShort = data.actorIdShort;
-            data.idViewSinStatus = data.idSinStatus;
-            data.idViewClearance = data.idClearance;
-            data.idViewSubtitle = data.idSubtitle;
+            data.idViewResidence = data.idResidence;
             data.idViewImg = actor?.img || "icons/svg/mystery-man.svg";
         }
 
@@ -987,11 +981,8 @@ class AgentOSApplication extends Application {
                 targetName: editTarget?.name || "—",
                 displayName: eOver.displayName || "",
                 handle: eOver.handle || "",
-                subtitle: eOver.subtitle || "Citizen Priority A+",
-                clearance: eOver.clearance || "Verified",
-                sinStatus: eOver.sinStatus || "Registered"
+                residence: eOver.residence || ""
             };
-            data.idEditSinOptions = ["Registered", "No SIN", "Forged", "Nomad", "Corporate", "Classified"];
         }
 
         let actorCurrency = 0;
@@ -6515,7 +6506,7 @@ class AgentOSApplication extends Application {
                     this._composerDrafts['id-edit-display-name'] = eOver.displayName || "";
                     this._composerDrafts['id-edit-handle']       = eOver.handle      || "";
                     this._composerDrafts['id-edit-subtitle']     = eOver.subtitle    || "";
-                    this._composerDrafts['id-edit-sin']          = eOver.sinStatus   || "Registered";
+                    this._composerDrafts['id-edit-residence']    = eOver.residence   || "";
                     this._composerDrafts['id-edit-clearance']    = eOver.clearance   || "";
                     this.showIdEditModal = true;
                     this.render(true);
@@ -6533,12 +6524,13 @@ class AgentOSApplication extends Application {
                     const result = {
                         displayName: (html.find('#id-edit-display-name').val() || "").trim(),
                         handle:      (html.find('#id-edit-handle').val() || "").trim(),
+                        residence:   (html.find('#id-edit-residence').val() || "").trim(),
                     };
                     await targetUser.setFlag("VirtualAgent", "idOverrides", result);
                     this.showIdEditModal = false;
                     // Patch4.7.2: scrub the form drafts so the next open is clean.
                     if (this._composerDrafts) {
-                        ['id-edit-display-name','id-edit-handle']
+                        ['id-edit-display-name','id-edit-handle','id-edit-residence']
                             .forEach(k => delete this._composerDrafts[k]);
                     }
                     ui.notifications.info(`Agent ID: Saved for ${targetUser.name}.`);
