@@ -435,9 +435,10 @@
                 : `<div style="padding:6px 8px;border-left:2px solid ${ACCENT};background:rgba(255,20,147,.07);font-size:.7rem;color:#fff;white-space:pre-wrap;">${esc(c.intent)}</div>`)
             : `<div style="font-size:.7rem;color:${coded ? "#b9a7c4" : "#ddd"};white-space:pre-wrap;${coded ? "font-family:monospace;letter-spacing:.5px;" : ""}">${esc(c.text)}</div>`;
 
-        const tag = coded
-            ? `<span style="font-size:.5rem;border:1px solid #9b6dff;color:#9b6dff;border-radius:3px;padding:0 5px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;">coded</span>`
-            : (c.deciphered ? `<span style="font-size:.5rem;border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;padding:0 5px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;">read</span>` : "");
+        const pill = (label, ink) =>
+            `<span style="font-size:.52rem;border:1px solid ${ink};color:${ink};border-radius:3px;padding:0 5px;letter-spacing:.03em;white-space:nowrap;">${label}</span>`;
+        const tag = coded ? pill("Not yet deciphered", "#9b6dff")
+            : (c.deciphered ? pill("Deciphered", ACCENT) : "");
 
         const chip = (label, action, disabled, tone) =>
             `<button type="button" data-action="${action}" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" ${disabled ? "disabled" : ""}
