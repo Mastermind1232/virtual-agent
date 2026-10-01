@@ -657,21 +657,28 @@
         if (open) {
             // Who can do this job: every runner scored against this gig's own skills.
             const crew = runners().map((r) => {
-                const mine = usableSkills(r).map((u) => u.name.trim().toLowerCase());
-                const marks = g.skills.map((s) => mine.includes(s.name.trim().toLowerCase()));
-                return { r, marks, hits: marks.filter(Boolean).length };
+                const mine = usableSkills(r);
+                const marks = g.skills.map((s) => {
+                    const hit = mine.find((u) => u.name.trim().toLowerCase() === s.name.trim().toLowerCase());
+                    return { name: s.name, dv: s.dv, has: !!hit, total: hit?.total ?? 0 };
+                });
+                return { r, marks, hits: marks.filter((m) => m.has).length };
             }).sort((a, b) => b.hits - a.hits || a.r.name.localeCompare(b.r.name));
 
             const picker = g.status === "open" && crew.length
                 ? `<div style="margin-top:10px;">
-                    <div style="font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:4px;">WHO TAKES IT</div>
+                    <div style="font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:4px;">CHOOSE OPERATOR</div>
                     ${crew.map(({ r, marks, hits }) => `
                         <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid #1b1b1b;">
                             <span style="flex:1;min-width:0;">
                                 <span class="op-row-name" style="color:#fff;font-size:.75rem;">${esc(r.name)}</span>
                                 <span style="font-size:.6rem;opacity:.55;"> &middot; ${esc(tierOf(r).name)}</span><br>
-                                <span style="font-size:.65rem;letter-spacing:2px;">${marks.map((m, i) => `<span title="${esc(g.skills[i].name)}" style="color:${m ? ACCENT : "#ff3366"}">${m ? "&#10003;" : "&#10007;"}</span>`).join("")}</span>
-                                <span style="font-size:.6rem;opacity:.55;margin-left:6px;">${hits} of ${g.skills.length}</span>
+                                <span style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">${marks.map((m) => `
+                                    <span title="${m.has ? `Their ${esc(m.name)} is ${m.total}, against a DV of ${esc(m.dv)}` : `No ${esc(m.name)}`}"
+                                          style="font-size:.58rem;border:1px solid ${m.has ? ACCENT : "#7a3340"};color:${m.has ? ACCENT : "#c06a76"};border-radius:3px;padding:1px 5px;white-space:nowrap;">
+                                        ${esc(m.name)} ${m.has ? `<b>${m.total}</b> <span style="opacity:.6;">v ${esc(m.dv)}</span>` : "&#10007;"}
+                                    </span>`).join("")}</span>
+                                <span style="display:block;font-size:.58rem;opacity:.55;margin-top:3px;">Covers ${hits} of ${g.skills.length}</span>
                             </span>
                             <button type="button" data-action="op-assign" data-gig="${g.id}" data-runner="${r.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 10px;cursor:pointer;">SEND</button>
                         </div>`).join("")}
