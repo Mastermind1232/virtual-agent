@@ -1473,8 +1473,10 @@
                             <div style="font-size: 0.55rem; color: #888; letter-spacing: 1px; margin-top: 10px;">LOCATION</div>
                             <div style="font-size: 0.75rem; color: #ddd; white-space: pre-wrap;">{{ncpdActiveRecord.location}}</div>
                             {{/if}}
+                            {{#unless (eq ncpdActiveRecord.kind "debt")}}
                             <div style="font-size: 0.55rem; color: #888; letter-spacing: 1px; margin-top: 10px;">CHARGES</div>
-                            <div style="font-size: 0.75rem; color: #ddd; margin-bottom: 8px; white-space: pre-wrap;">{{#if ncpdActiveRecord.charges}}{{ncpdActiveRecord.charges}}{{else}}—{{/if}}</div>
+                            <div style="font-size: 0.75rem; color: #ddd; margin-bottom: 8px; white-space: pre-wrap;">{{#if ncpdActiveRecord.charges}}{{ncpdActiveRecord.charges}}{{else}}&mdash;{{/if}}</div>
+                            {{/unless}}
                             {{#if ncpdActiveRecord.notes}}
                             <div style="font-size: 0.55rem; color: #888; letter-spacing: 1px; margin-top: 10px;">NOTES</div>
                             <div style="font-size: 0.7rem; color: #aaa; white-space: pre-wrap;">{{ncpdActiveRecord.notes}}</div>
@@ -1517,7 +1519,7 @@
                                     {{#if this.amountLabel}}<span style="color: var(--creds-gold); font-size: 0.7rem; white-space: nowrap;">{{this.amountLabel}}</span>{{/if}}
                                 </div>
                                 {{#if this.source}}<div style="font-size: 0.55rem; color: #7f8a99; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.source}}{{#if this.status}} &middot; <span style="color: #ffcc00;">{{this.status}}</span>{{/if}}</div>{{else}}{{#if this.status}}<div style="font-size: 0.55rem; color: #ffcc00; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.status}}</div>{{/if}}{{/if}}
-                                {{#if this.charges}}<div style="font-size: 0.65rem; color: #aaa; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{this.charges}}</div>{{/if}}
+                                
                             </div>
                         </div>
                         {{/each}}

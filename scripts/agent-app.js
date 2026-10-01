@@ -5642,11 +5642,12 @@ class AgentOSApplication extends Application {
                     const mugshot = useModal ? (html.find('#ncpd-modal-mugshot').val() || "").trim() : "";
                     let list = [];
                     try { list = JSON.parse(game.settings.get("VirtualAgent", "ncpdRapSheets") || "[]"); } catch(e) {}
+                    // NuNu packaging: a bounty knows who is paying it, and a debt claim
+                    // pays the finder a tenth of the debt for bringing the debtor back alive.
+                    const kind = (useModal ? (html.find('#ncpd-modal-kind').val() || "bounty") : (html.find('#ncpd-add-kind').val() || "bounty"));
                     const fields = {
-                        name, charges, bounty, status, notes, mugshot, location,
-                        // NuNu packaging: a bounty knows who is paying it, and a debt claim
-                        // pays the finder a tenth of the debt for bringing the debtor back alive.
-                        kind: useModal ? (html.find('#ncpd-modal-kind').val() || "bounty") : (html.find('#ncpd-add-kind').val() || "bounty"),
+                        name, bounty, status, notes, mugshot, location, kind,
+                        charges: kind === "debt" ? "" : charges,
                         source: (useModal ? (html.find('#ncpd-modal-source').val() || "") : (html.find('#ncpd-add-source').val() || "")).trim(),
                         debt: (useModal ? (html.find('#ncpd-modal-debt').val() || "") : (html.find('#ncpd-add-debt').val() || "")).trim(),
                     };
@@ -7437,10 +7438,13 @@ class AgentOSApplication extends Application {
         // now, and this runs after the draft restore above so an amended debt claim
         // arrives with the field already open.
         const syncNcpdKind = () => {
-            [["#ncpd-modal-kind", "#ncpd-modal-debt"], ["#ncpd-add-kind", "#ncpd-add-debt"]].forEach(([kindSel, debtSel]) => {
+            [["#ncpd-modal-kind", "#ncpd-modal-debt", "#ncpd-modal-charges"],
+             ["#ncpd-add-kind", "#ncpd-add-debt", "#ncpd-add-charges"]].forEach(([kindSel, debtSel, chargesSel]) => {
                 const kind = html.find(kindSel);
                 if (!kind.length) return;
-                html.find(debtSel).css("display", kind.val() === "debt" ? "" : "none");
+                const isDebt = kind.val() === "debt";
+                html.find(debtSel).css("display", isDebt ? "" : "none");
+                html.find(chargesSel).css("display", isDebt ? "none" : "");
             });
         };
         html.on("change", "#ncpd-modal-kind, #ncpd-add-kind", syncNcpdKind);
