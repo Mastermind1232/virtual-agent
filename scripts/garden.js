@@ -222,7 +222,6 @@
 
     const saneComment = (c) => ({
         id: str(c?.id, 40) || uid(),
-        who: str(c?.who, 60) || "anon",
         text: str(c?.text, 2000),
         coded: !!c?.coded,
         intent: str(c?.intent, 2000),
@@ -282,7 +281,7 @@
                     // comment never un-cracks one she has already deciphered.
                     next[j] = {
                         ...next[j],
-                        who: str(msg.patch?.who, 60) || "anon",
+                        who: undefined,
                         text: str(msg.patch?.text, 2000),
                         coded: !!msg.patch?.coded,
                         intent: str(msg.patch?.intent, 2000),
@@ -453,7 +452,7 @@
         // since once she has cracked it the meaning is already on the card.
         const peek = game.user.isGM && coded && c.intent
             ? `<div style="margin-top:6px;border-left:2px solid #3a3f36;padding:4px 0 4px 7px;font-size:.62rem;color:#8b9183;white-space:pre-wrap;">
-                 <span style="letter-spacing:.1em;text-transform:uppercase;font-size:.55rem;color:#5a5f54;">GM${c.who && c.who !== "anon" ? ` &middot; ${esc(c.who)}` : ""} &middot; decodes to &middot; DV ${esc(c.dv)}</span><br>${esc(c.intent)}</div>`
+                 <span style="letter-spacing:.1em;text-transform:uppercase;font-size:.55rem;color:#5a5f54;">GM &middot; decodes to &middot; DV ${esc(c.dv)}</span><br>${esc(c.intent)}</div>`
             : "";
 
         return `<div style="border-top:1px solid #1e1e22;padding:7px 0;">
@@ -615,7 +614,6 @@
         new Dialog({
             title: editing ? "Edit the comment" : "Add a comment",
             content: `<form>
-                <div class="form-group"><label>Your note on who this is</label><input type="text" name="who" placeholder="Never shown. Readers always see &quot;anon&quot;." value="${esc(existing?.who ?? "")}"></div>
                 <div class="form-group"><label>Comment</label><textarea name="text" rows="3" placeholder="What they wrote, in the clear or in code.">${esc(existing?.text ?? "")}</textarea></div>
                 <hr>
                 <div class="form-group"><label><input type="checkbox" name="coded" ${existing?.coded ? "checked" : ""}> Written in code</label></div>
@@ -635,7 +633,7 @@
                     if (editing) {
                         if (!(post.comments || []).some((c) => c.id === existing.id)) return reject("That comment is no longer there.");
                         await request({ op: "editComment", postId, commentId: existing.id, patch: {
-                            who: f.who.value.trim(), text,
+                            text,
                             coded: f.coded.checked, intent: f.intent.value.trim(), dv: f.dv.value,
                         } });
                         app.render(true);
@@ -645,7 +643,7 @@
                     if ((post.comments || []).length >= MAX_COMMENTS) return reject(`A story gets ${MAX_COMMENTS} comments and no more.`);
 
                     await request({ op: "addComment", postId, comment: {
-                        id: uid(), who: f.who.value.trim(), text,
+                        id: uid(), text,
                         coded: f.coded.checked, intent: f.intent.value.trim(), dv: f.dv.value,
                     } });
 
