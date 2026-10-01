@@ -7432,6 +7432,20 @@ class AgentOSApplication extends Application {
             }
         });
 
+        // NuNu packaging: the "Debt owed" inputs ship hidden and nothing ever showed
+        // them, so a debt claim could never be given a debt. They follow the Kind select
+        // now, and this runs after the draft restore above so an amended debt claim
+        // arrives with the field already open.
+        const syncNcpdKind = () => {
+            [["#ncpd-modal-kind", "#ncpd-modal-debt"], ["#ncpd-add-kind", "#ncpd-add-debt"]].forEach(([kindSel, debtSel]) => {
+                const kind = html.find(kindSel);
+                if (!kind.length) return;
+                html.find(debtSel).css("display", kind.val() === "debt" ? "" : "none");
+            });
+        };
+        html.on("change", "#ncpd-modal-kind, #ncpd-add-kind", syncNcpdKind);
+        syncNcpdKind();
+
         // --- HANDSET MOBILITY ---
         // Custom drag implementation. V12's global Draggable wasn't reliably
         // driving the V1 window for this app, so we own the lifecycle directly.

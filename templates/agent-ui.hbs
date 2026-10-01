@@ -1499,7 +1499,7 @@
                                     <strong style="color: #fff;">{{this.name}}</strong>
                                     {{#if this.amountLabel}}<span style="color: var(--creds-gold); font-size: 0.7rem; white-space: nowrap;">{{this.amountLabel}}</span>{{/if}}
                                 </div>
-                                {{#if this.source}}<div style="font-size: 0.55rem; color: #7f8a99; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.source}}</div>{{/if}}
+                                {{#if this.source}}<div style="font-size: 0.55rem; color: #7f8a99; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.source}}{{#if this.status}} &middot; <span style="color: #ffcc00;">{{this.status}}</span>{{/if}}</div>{{else}}{{#if this.status}}<div style="font-size: 0.55rem; color: #ffcc00; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.status}}</div>{{/if}}{{/if}}
                                 {{#if this.charges}}<div style="font-size: 0.65rem; color: #aaa; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{this.charges}}</div>{{/if}}
                             </div>
                         </div>
@@ -1516,7 +1516,7 @@
                                     <strong style="color: #fff;">{{this.name}}</strong>
                                     {{#if this.amountLabel}}<span style="color: var(--creds-gold); font-size: 0.7rem; white-space: nowrap;">{{this.amountLabel}}</span>{{/if}}
                                 </div>
-                                {{#if this.source}}<div style="font-size: 0.55rem; color: #7f8a99; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.source}}</div>{{/if}}
+                                {{#if this.source}}<div style="font-size: 0.55rem; color: #7f8a99; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.source}}{{#if this.status}} &middot; <span style="color: #ffcc00;">{{this.status}}</span>{{/if}}</div>{{else}}{{#if this.status}}<div style="font-size: 0.55rem; color: #ffcc00; margin-top: 3px; text-transform: uppercase; letter-spacing: .08em;">{{this.status}}</div>{{/if}}{{/if}}
                                 {{#if this.charges}}<div style="font-size: 0.65rem; color: #aaa; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{this.charges}}</div>{{/if}}
                             </div>
                         </div>
