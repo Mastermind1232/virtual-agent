@@ -272,6 +272,27 @@
                 if (i >= 0) { list[i] = { ...list[i], comments: [...(list[i].comments || []), saneComment(msg.comment)] }; changed = true; }
                 break;
             }
+            case "editComment": {
+                const i = findPost();
+                const comments = i < 0 ? [] : (list[i].comments || []);
+                const j = comments.findIndex((c) => c.id === msg.commentId);
+                if (j >= 0) {
+                    const next = [...comments];
+                    // The reading history is the player's, not the text's: rewriting a
+                    // comment never un-cracks one she has already deciphered.
+                    next[j] = {
+                        ...next[j],
+                        who: str(msg.patch?.who, 60) || "anon",
+                        text: str(msg.patch?.text, 2000),
+                        coded: !!msg.patch?.coded,
+                        intent: str(msg.patch?.intent, 2000),
+                        dv: num(msg.patch?.dv, 1, 30) || 15,
+                    };
+                    list[i] = { ...list[i], comments: next };
+                    changed = true;
+                }
+                break;
+            }
             case "setFollowers": {
                 // Not a post change, but it travels the same road so a player's roll can
                 // record its gain even when the sheet is not theirs to write.
@@ -422,15 +443,24 @@
             : "";
 
         const gm = game.user.isGM
-            ? `<button type="button" data-action="gd-drop-comment" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" title="Delete"
+            ? `<button type="button" data-action="gd-edit-comment" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" title="Edit"
+                 style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.62rem;cursor:pointer;padding:0 0 0 6px;">edit</button>`
+              + `<button type="button" data-action="gd-drop-comment" data-post="${esc(post.id)}" data-comment="${esc(c.id)}" title="Delete"
                  style="font-family:inherit;background:transparent;border:0;color:#5a5f54;font-size:.65rem;cursor:pointer;padding:0 0 0 6px;">&times;</button>`
+            : "";
+
+        // What it says underneath, for your eyes only. Shown while it is still coded,
+        // since once she has cracked it the meaning is already on the card.
+        const peek = game.user.isGM && coded && c.intent
+            ? `<div style="margin-top:6px;border-left:2px solid #3a3f36;padding:4px 0 4px 7px;font-size:.62rem;color:#8b9183;white-space:pre-wrap;">
+                 <span style="letter-spacing:.1em;text-transform:uppercase;font-size:.55rem;color:#5a5f54;">GM${c.who && c.who !== "anon" ? ` &middot; ${esc(c.who)}` : ""} &middot; decodes to &middot; DV ${esc(c.dv)}</span><br>${esc(c.intent)}</div>`
             : "";
 
         return `<div style="border-top:1px solid #1e1e22;padding:7px 0;">
             <div style="display:flex;align-items:baseline;gap:6px;">
-                <span style="font-size:.65rem;color:#8ab4ff;">${esc(c.who || "anon")}</span>${tag}${gm}
+                <span style="font-size:.65rem;color:#8ab4ff;">anon</span>${tag}${gm}
             </div>
-            ${body}${button}</div>`;
+            ${body}${peek}${button}</div>`;
     }
 
     function postCard(post, view) {
@@ -578,26 +608,40 @@
         }, { width: 460 }).render(true);
     }
 
-    function commentDialog(app, postId) {
+    /** One dialog for both jobs: pass a comment to edit it, nothing to write a new one. */
+    function commentDialog(app, postId, existing = null) {
         const reject = (msg) => ui.notifications.warn(msg);
+        const editing = !!existing;
         new Dialog({
-            title: "Add a comment",
+            title: editing ? "Edit the comment" : "Add a comment",
             content: `<form>
-                <div class="form-group"><label>Handle</label><input type="text" name="who" placeholder="anon"></div>
-                <div class="form-group"><label>Comment</label><textarea name="text" rows="3" placeholder="What they wrote, in the clear or in code."></textarea></div>
+                <div class="form-group"><label>Your note on who this is</label><input type="text" name="who" placeholder="Never shown. Readers always see &quot;anon&quot;." value="${esc(existing?.who ?? "")}"></div>
+                <div class="form-group"><label>Comment</label><textarea name="text" rows="3" placeholder="What they wrote, in the clear or in code.">${esc(existing?.text ?? "")}</textarea></div>
                 <hr>
-                <div class="form-group"><label><input type="checkbox" name="coded"> Written in code</label></div>
-                <div class="form-group"><label>What it actually says</label><textarea name="intent" rows="2" placeholder="Revealed on a successful Decipher."></textarea></div>
-                <div class="form-group"><label>Decipher DV</label><input type="number" name="dv" value="15" min="1" step="1"></div>
+                <div class="form-group"><label><input type="checkbox" name="coded" ${existing?.coded ? "checked" : ""}> Written in code</label></div>
+                <div class="form-group"><label>What it actually says</label><textarea name="intent" rows="2" placeholder="Revealed on a successful Decipher.">${esc(existing?.intent ?? "")}</textarea></div>
+                <div class="form-group"><label>Decipher DV</label><input type="number" name="dv" value="${esc(existing?.dv ?? 15)}" min="1" step="1"></div>
+                ${editing && existing?.deciphered ? `<p style="font-size:.75rem;color:#8b9183;margin:4px 0 0;">She has already cracked this one. Rewriting it changes what she reads, and it stays cracked.</p>` : ""}
             </form>`,
             buttons: {
-                add: { label: "Add", callback: async (h) => {
+                add: { label: editing ? "Save" : "Add", callback: async (h) => {
                     const f = h[0].querySelector("form");
                     const text = f.text.value.trim();
                     if (!text) return reject("The comment needs something in it.");
 
                     const post = posts().find((p) => p.id === postId);
                     if (!post) return reject("That story is no longer there.");
+
+                    if (editing) {
+                        if (!(post.comments || []).some((c) => c.id === existing.id)) return reject("That comment is no longer there.");
+                        await request({ op: "editComment", postId, commentId: existing.id, patch: {
+                            who: f.who.value.trim(), text,
+                            coded: f.coded.checked, intent: f.intent.value.trim(), dv: f.dv.value,
+                        } });
+                        app.render(true);
+                        return;
+                    }
+
                     if ((post.comments || []).length >= MAX_COMMENTS) return reject(`A story gets ${MAX_COMMENTS} comments and no more.`);
 
                     await request({ op: "addComment", postId, comment: {
@@ -678,6 +722,14 @@
                     const post = posts().find((p) => p.id === postId);
                     if ((post?.comments || []).length >= MAX_COMMENTS) { ui.notifications.warn(`A story gets ${MAX_COMMENTS} comments and no more.`); break; }
                     commentDialog(app, postId); break;
+                }
+
+                case "gd-edit-comment": {
+                    if (!game.user.isGM) break;
+                    const post = posts().find((p) => p.id === postId);
+                    const c = (post?.comments || []).find((x) => x.id === $t.data("comment"));
+                    if (!c) { ui.notifications.warn("That comment is no longer there."); break; }
+                    commentDialog(app, postId, c); break;
                 }
 
                 case "gd-toggle": {
