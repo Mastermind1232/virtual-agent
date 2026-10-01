@@ -271,6 +271,16 @@
                 if (i >= 0) { list[i] = { ...list[i], comments: [...(list[i].comments || []), saneComment(msg.comment)] }; changed = true; }
                 break;
             }
+            case "editPost": {
+                const i = findPost();
+                if (i >= 0) {
+                    // Only the parts you write. The roll, the followers it earned and
+                    // everything said underneath it are left exactly as they were.
+                    list[i] = { ...list[i], headline: str(msg.patch?.headline, 300), posted: str(msg.patch?.posted, 24) };
+                    changed = true;
+                }
+                break;
+            }
             case "editComment": {
                 const i = findPost();
                 const comments = i < 0 ? [] : (list[i].comments || []);
@@ -495,6 +505,7 @@
         const gmTools = game.user.isGM
             ? `<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
                 <button type="button" data-action="gd-add-comment" data-post="${esc(post.id)}" ${comments.length >= MAX_COMMENTS ? "disabled" : ""} style="font-family:inherit;background:${comments.length >= MAX_COMMENTS ? "transparent" : "rgba(255,20,147,.14)"};border:1px solid ${comments.length >= MAX_COMMENTS ? "#553" : ACCENT};color:${comments.length >= MAX_COMMENTS ? "#775" : ACCENT};border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:${comments.length >= MAX_COMMENTS ? "default" : "pointer"};">${comments.length >= MAX_COMMENTS ? `${MAX_COMMENTS} comments, the most a story gets` : "Add comment"}</button>
+                <button type="button" data-action="gd-edit-post" data-post="${esc(post.id)}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:pointer;">Edit headline</button>
                 <button type="button" data-action="gd-drop-post" data-post="${esc(post.id)}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 9px;cursor:pointer;">Delete post</button>
                </div>`
             : "";
@@ -605,6 +616,38 @@
                 bind("hardOn", "hard");
             },
         }, { width: 460 }).render(true);
+    }
+
+    /** The headline and the date it went up. Everything else about a published story is
+        the record of what happened to it, so it is not editable here. */
+    function postDialog(app, postId) {
+        const post = posts().find((p) => p.id === postId);
+        if (!post) return ui.notifications.warn("That story is no longer there.");
+        new Dialog({
+            title: "Edit the story",
+            content: `<form style="display:flex;flex-direction:column;gap:10px;">
+                <div style="display:flex;flex-direction:column;">
+                    <label style="font-weight:700;margin-bottom:3px;">Headline</label>
+                    <textarea name="headline" rows="3" style="width:100%;resize:vertical;">${esc(post.headline ?? "")}</textarea>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label style="font-weight:700;margin:0;">Posted</label>
+                    <input type="text" name="posted" value="${esc(post.posted ?? "")}" style="flex:1 1 auto;font-family:monospace;">
+                </div>
+                <p style="font-size:.75rem;color:#6b6b6b;margin:0;">An in-game date is YYYY-MM-DD. Backdating a story moves when the next one is allowed.</p>
+            </form>`,
+            buttons: {
+                save: { label: "Save", callback: async (h) => {
+                    const f = h[0].querySelector("form");
+                    const headline = f.headline.value.trim();
+                    if (!headline) return ui.notifications.warn("A story needs a headline.");
+                    await request({ op: "editPost", postId, patch: { headline, posted: f.posted.value.trim() } });
+                    app?.render(true);
+                } },
+                cancel: { label: "Cancel" },
+            },
+            default: "save",
+        }, { width: 520 }).render(true);
     }
 
     /** One dialog for both jobs: pass a comment to edit it, nothing to write a new one. */
@@ -753,6 +796,9 @@
                     ev.currentTarget.disabled = true;
                     await decipher(postId, $t.data("comment"));
                     app.render(true); break;
+
+                case "gd-edit-post":
+                    if (game.user.isGM) postDialog(app, postId); break;
 
                 case "gd-drop-post": {
                     if (!game.user.isGM) break;
