@@ -32,6 +32,7 @@
         { name: "Suicide", dv: 21 },
     ];
     const diffName = (dv) => DIFF.find((d) => d.dv === Number(dv))?.name ?? `DV ${dv}`;
+    const diffLabel = (dv) => (game.user.isGM ? `${diffName(dv)} ${dv}` : diffName(dv));
 
     /** Starting success chance by how many skills the gig carries. */
     const CAPS = { 1: 95, 2: 90, 3: 85, 4: 80, 5: 75 };
@@ -343,7 +344,7 @@
             const colour = l.delta > 0 ? ACCENT : l.delta === 0 ? "#cccccc" : (l.delta === FUMBLE ? "#ff3366" : "#ff9900");
             const sign = l.delta > 0 ? `+${l.delta}` : (l.delta === 0 ? "pass" : l.delta);
             return `<div style="display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #222;padding:3px 0;">
-                <span><b>${esc(l.skill)}</b> <span style="opacity:.6">${esc(diffName(l.dv))}</span><br><span style="font-size:.85em;opacity:.7">${esc(l.by)}: ${esc(l.text)}</span></span>
+                <span><b>${esc(l.skill)}</b> <span style="opacity:.6">${esc(diffLabel(l.dv))}</span><br><span style="font-size:.85em;opacity:.7">${esc(l.by)}: ${esc(l.text)}</span></span>
                 <span style="color:${colour};white-space:nowrap;">${sign}</span></div>`;
         }).join("");
 
@@ -650,7 +651,7 @@
             }
 
             return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:2px 0;">
-                <span style="color:${colour};">${mark} ${esc(s.name)}${note ? ` <span style="opacity:.5;font-size:.9em;">${note}</span>` : ""}</span>${chip(diffName(s.dv), diffColour(s.dv))}</div>`;
+                <span style="color:${colour};">${mark} ${esc(s.name)}${note ? ` <span style="opacity:.5;font-size:.9em;">${note}</span>` : ""}</span>${chip(diffLabel(s.dv), diffColour(s.dv))}</div>`;
         }).join("");
 
         let body = "";
