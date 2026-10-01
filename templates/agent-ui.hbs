@@ -1469,11 +1469,11 @@
                             {{else}}
                             {{#if ncpdActiveRecord.bounty}}<div style="font-size: 0.7rem; color: var(--creds-gold); margin-bottom: 8px;"><i class="fas fa-dollar-sign"></i> BOUNTY: {{ncpdActiveRecord.bounty}}eb</div>{{/if}}
                             {{/if}}
+                            {{#unless (eq ncpdActiveRecord.kind "debt")}}
                             {{#if ncpdActiveRecord.location}}
                             <div style="font-size: 0.55rem; color: #888; letter-spacing: 1px; margin-top: 10px;">LOCATION</div>
                             <div style="font-size: 0.75rem; color: #ddd; white-space: pre-wrap;">{{ncpdActiveRecord.location}}</div>
                             {{/if}}
-                            {{#unless (eq ncpdActiveRecord.kind "debt")}}
                             <div style="font-size: 0.55rem; color: #888; letter-spacing: 1px; margin-top: 10px;">CHARGES</div>
                             <div style="font-size: 0.75rem; color: #ddd; margin-bottom: 8px; white-space: pre-wrap;">{{#if ncpdActiveRecord.charges}}{{ncpdActiveRecord.charges}}{{else}}&mdash;{{/if}}</div>
                             {{/unless}}

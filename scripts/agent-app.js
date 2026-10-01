@@ -5646,8 +5646,9 @@ class AgentOSApplication extends Application {
                     // pays the finder a tenth of the debt for bringing the debtor back alive.
                     const kind = (useModal ? (html.find('#ncpd-modal-kind').val() || "bounty") : (html.find('#ncpd-add-kind').val() || "bounty"));
                     const fields = {
-                        name, bounty, status, notes, mugshot, location, kind,
+                        name, bounty, status, notes, mugshot, kind,
                         charges: kind === "debt" ? "" : charges,
+                        location: kind === "debt" ? "" : location,
                         source: (useModal ? (html.find('#ncpd-modal-source').val() || "") : (html.find('#ncpd-add-source').val() || "")).trim(),
                         debt: (useModal ? (html.find('#ncpd-modal-debt').val() || "") : (html.find('#ncpd-add-debt').val() || "")).trim(),
                     };
@@ -7438,13 +7439,13 @@ class AgentOSApplication extends Application {
         // now, and this runs after the draft restore above so an amended debt claim
         // arrives with the field already open.
         const syncNcpdKind = () => {
-            [["#ncpd-modal-kind", "#ncpd-modal-debt", "#ncpd-modal-charges"],
-             ["#ncpd-add-kind", "#ncpd-add-debt", "#ncpd-add-charges"]].forEach(([kindSel, debtSel, chargesSel]) => {
+            [["#ncpd-modal-kind", "#ncpd-modal-debt", "#ncpd-modal-charges", "#ncpd-modal-location"],
+             ["#ncpd-add-kind", "#ncpd-add-debt", "#ncpd-add-charges", "#ncpd-add-location"]].forEach(([kindSel, debtSel, ...crimeOnly]) => {
                 const kind = html.find(kindSel);
                 if (!kind.length) return;
                 const isDebt = kind.val() === "debt";
                 html.find(debtSel).css("display", isDebt ? "" : "none");
-                html.find(chargesSel).css("display", isDebt ? "none" : "");
+                crimeOnly.forEach((sel) => html.find(sel).css("display", isDebt ? "none" : ""));
             });
         };
         html.on("change", "#ncpd-modal-kind, #ncpd-add-kind", syncNcpdKind);
