@@ -2241,6 +2241,9 @@ class AgentOSApplication extends Application {
             const wm = globalThis.VirtualAgentWorldMap?.scene();
             data.partyBlip = wm ? globalThis.VirtualAgentWorldMap.partyPos(wm) : null;
         } catch (e) { data.partyBlip = null; }
+        // The Sat Map's coordinate readout, from that same blip.
+        try { data.partyCoords = globalThis.VirtualAgentWorldMap?.coords(data.partyBlip) ?? null; }
+        catch (e) { data.partyCoords = null; }
         // Patch5.5.5: GM add-content modal visibility (only ever true if GM).
         data.showNcpdAddModal = !!this.showNcpdAddModal && game.user.isGM;
         data.ncpdEditing = !!this._ncpdEditId;

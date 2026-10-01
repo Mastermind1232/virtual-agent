@@ -919,6 +919,25 @@ globalThis.VirtualAgentWorldMap = {
         const d = wm.dimensions;
         return { x: Math.round(((x - d.sceneX) / d.sceneWidth) * 10000) / 100, y: Math.round(((y - d.sceneY) / d.sceneHeight) * 10000) / 100 };
     },
+    /* NuNu packaging: the Sat Map readout was hardcoded to downtown Los Angeles and
+       nothing ever wrote to it. The scene is Manhattan, so a percentage position on it
+       maps linearly onto the island's real bounding box. These four numbers are the
+       island's extent: the north tip at Inwood, the south tip at the Battery, the Hudson
+       shore and the East River. Widen them if the scene image carries water margins. */
+    BOUNDS: { north: 40.8820, south: 40.6950, west: -74.0260, east: -73.9030 },
+
+    /** A {x, y} percentage from pct() read as a real-world latitude and longitude. */
+    coords(pos) {
+        if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y)) return null;
+        const b = this.BOUNDS;
+        const lat = b.north - (pos.y / 100) * (b.north - b.south);
+        const lng = b.west + (pos.x / 100) * (b.east - b.west);
+        return {
+            lat: `${Math.abs(lat).toFixed(4)} ${lat >= 0 ? "N" : "S"}`,
+            lng: `${Math.abs(lng).toFixed(4)} ${lng >= 0 ? "E" : "W"}`,
+        };
+    },
+
     /** The party blip: the centre of the party marker token on the world-map scene. */
     partyPos(wm) {
         const name = (game.settings.get("VirtualAgent", "partyMarkerName") || "Party Marker").trim().toLowerCase();
