@@ -651,7 +651,7 @@
             }
 
             return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:2px 0;">
-                <span style="color:${colour};">${mark} ${esc(s.name)}${note ? ` <span style="opacity:.5;font-size:.9em;">${note}</span>` : ""}</span>${chip(diffLabel(s.dv), diffColour(s.dv))}</div>`;
+                <span style="color:${colour};">${mark} ${esc(s.name)}${note ? ` <span style="opacity:.5;font-size:.9em;">${note}</span>` : ""}</span><span style="font-size:.65rem;color:${diffColour(s.dv)};white-space:nowrap;">${esc(diffLabel(s.dv))}</span></div>`;
         }).join("");
 
         const skillsHead = g.skills.length
