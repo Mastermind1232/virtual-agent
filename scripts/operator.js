@@ -462,6 +462,9 @@
         from the card when a player missed it or you want it to land at a different moment. */
     async function sendGigText(gig) {
         const sentLine = await speak(gig.client, "clientPost");
+        // Both landing in the same instant reads as one block of text rather than as a
+        // person typing twice, so the job follows the heads-up a beat later.
+        if (sentLine && gig.brief) await new Promise((r) => setTimeout(r, 2200));
         const sentBrief = await sendAs(gig.client, gig.brief);
         return sentLine || sentBrief;
     }
