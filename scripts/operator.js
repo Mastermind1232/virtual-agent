@@ -436,14 +436,14 @@
     }
 
     /** Send one of a contact's lines as a text, if they have one for this. */
-    async function speak(name, key, avatar = null) {
-        const line = voiceLine(name, key);
-        if (!line) return;
+    /** One text, into the client's thread on the owner's phone, as the client. */
+    async function sendAs(name, text, avatar = null) {
+        if (!text) return false;
         const thread = clientThread(name);
         const owner = ownerUser();
-        if (!thread || !owner) return;
+        if (!thread || !owner) return false;
         await ChatMessage.create({
-            content: line,
+            content: String(text),
             whisper: [owner.id, ...game.users.filter((u) => u.isGM).map((u) => u.id)],
             speaker: { alias: name },
             flags: { VirtualAgent: {
@@ -451,6 +451,19 @@
                 overrideName: name, overrideAvatar: avatar ?? clientFace(name) ?? null,
             } },
         });
+        return true;
+    }
+
+    async function speak(name, key, avatar = null) {
+        return sendAs(name, voiceLine(name, key), avatar);
+    }
+
+    /** The client's heads-up, then the job itself. What posting the gig sends, replayable
+        from the card when a player missed it or you want it to land at a different moment. */
+    async function sendGigText(gig) {
+        const sentLine = await speak(gig.client, "clientPost");
+        const sentBrief = await sendAs(gig.client, gig.brief);
+        return sentLine || sentBrief;
     }
 
     /** The operator texts in with how the day went, in their own words. */
@@ -710,6 +723,7 @@
                 ? `<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
                     ${g.status !== "done" ? `<button type="button" data-action="op-edit-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #4a5a2e;color:#b6c98a;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">EDIT</button>` : ""}
                     ${g.status === "assigned" ? `<button type="button" data-action="op-resolve" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.15);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">RESOLVE NOW</button>` : ""}
+                    ${clientThread(g.client) ? `<button type="button" data-action="op-send-gig" data-gig="${g.id}" title="Send ${esc(g.client)}'s heads-up and the job text to the phone" style="font-family:inherit;background:rgba(158,240,26,.12);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;"><i class="fas fa-paper-plane"></i> Send gig text</button>` : ""}
                     ${clientThread(g.client) ? `<button type="button" data-action="op-text-owner" data-gig="${g.id}" style="font-family:inherit;background:rgba(158,240,26,.12);border:1px solid ${ACCENT};color:${ACCENT};border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;"><i class="fas fa-comment-dots"></i> Text as ${esc(g.client)}</button>` : ""}
                     <button type="button" data-action="op-delete-gig" data-gig="${g.id}" style="font-family:inherit;background:transparent;border:1px solid #553;color:#997;border-radius:3px;font-size:.65rem;padding:3px 8px;cursor:pointer;">DELETE</button>
                    </div>`
@@ -1102,6 +1116,17 @@
 
                 case "op-new-gig":
                     if (canEdit()) gigDialog(app); break;
+
+                case "op-send-gig": {
+                    if (!canEdit()) break;
+                    const gig = gigs().find((x) => x.id === gigId);
+                    if (!gig) break;
+                    const sent = await sendGigText(gig);
+                    ui.notifications[sent ? "info" : "warn"](sent
+                        ? `Operator: sent ${gig.client}'s text.`
+                        : `Operator: nothing to send. ${gig.client} has no thread on the owner's phone, or no brief and no clientPost line.`);
+                    break;
+                }
 
                 case "op-edit-gig": {
                     if (!canEdit()) break;
