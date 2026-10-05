@@ -173,17 +173,6 @@
 
             const gmIds = game.users.filter((u) => u.isGM).map((u) => u.id);
 
-            await roll.toMessage({
-                speaker: ChatMessage.getSpeaker({ actor }),
-                whisper: [game.user.id, ...gmIds],
-                flavor: `<div style="font-family:monospace;font-size:.8rem;border-left:3px solid ${ACCENT};padding-left:8px;">
-                    <span style="color:${ACCENT};letter-spacing:2px;">THE GARDEN</span><br>
-                    An anonymous comment on &ldquo;${esc(post.headline)}&rdquo;, taken apart with Deduction.<br>
-                    ${beat
-                        ? `<b style="color:#64ffda;">It comes apart.</b> What they were actually saying is on the post.`
-                        : `<b style="color:#ff3366;">It does not come apart.</b> Nothing more will come of it today.`}</div>`,
-            });
-
             if (gmIds.length) await ChatMessage.create({
                 whisper: gmIds,
                 content: `<div style="font-family:monospace;font-size:.72rem;color:#8b9183;border-left:3px solid #3a3f36;padding-left:8px;">
