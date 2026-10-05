@@ -440,12 +440,15 @@
     /* ---------------------------------------------------------------- */
 
     function commentRow(post, c, mine, raw) {
+        const privileged = mine || game.user.isGM;
         const coded = c.coded && !c.deciphered;
         const locked = lockedToday(c);
         // Once she has cracked it she reads the meaning by default, and can flip back to
         // what the commenter actually wrote.
         const showingRaw = raw.has(c.id);
-        const body = c.deciphered
+        const body = !privileged
+            ? `<div style="font-size:.7rem;color:${coded ? "#b9a7c4" : "#ddd"};white-space:pre-wrap;${coded ? "font-family:monospace;letter-spacing:.5px;" : ""}">${esc(c.text)}</div>`
+            : c.deciphered
             ? (showingRaw
                 ? `<div style="font-size:.7rem;color:#b9a7c4;white-space:pre-wrap;font-family:monospace;letter-spacing:.5px;">${esc(c.text)}</div>`
                 : `<div style="padding:6px 8px;border-left:2px solid ${ACCENT};background:rgba(255,20,147,.07);font-size:.7rem;color:#fff;white-space:pre-wrap;">${esc(c.intent)}</div>`)
@@ -453,7 +456,8 @@
 
         const pill = (label, ink) =>
             `<span style="font-size:.52rem;border:1px solid ${ink};color:${ink};border-radius:3px;padding:0 5px;letter-spacing:.03em;white-space:nowrap;">${label}</span>`;
-        const tag = coded ? pill("Not yet deciphered", "#9b6dff")
+        const tag = !privileged ? ""
+            : coded ? pill("Not yet deciphered", "#9b6dff")
             : (c.deciphered ? pill("Deciphered", ACCENT) : "");
 
         const chip = (label, action, disabled, tone) =>
@@ -497,10 +501,7 @@
     function postCard(post, view) {
         const open = view.postId === post.id;
         const mine = isAuthor(post);
-        // What is said under a story is the author's business. Everybody else on the
-        // Garden reads the headline, the same as everybody else in the city.
-        const canRead = mine || game.user.isGM;
-        const comments = canRead ? (post.comments || []) : [];
+        const comments = post.comments || [];
         const unread = comments.filter((c) => c.coded && !c.deciphered).length;
         const when = prettyDate(post.posted);
 
@@ -508,15 +509,13 @@
             <div style="color:#fff;font-size:.9rem;font-weight:700;line-height:1.3;">${esc(post.headline)}</div>
             <div style="font-size:.6rem;color:#7f8a99;margin-top:3px;">
                 ${esc(post.authorName)}${when ? ` &middot; ${esc(when)}` : ""}
-                ${canRead ? ` &middot; ${comments.length} comment${comments.length === 1 ? "" : "s"}` : ""}
+                &middot; ${comments.length} comment${comments.length === 1 ? "" : "s"}
                 ${unread && mine ? ` &middot; <span style="color:#9b6dff;">${unread} in code</span>` : ""}
             </div></div>`;
 
         if (!open) return `<div style="background:rgba(255,255,255,.03);border:1px solid #222;border-radius:6px;padding:10px;margin-bottom:8px;">${head}</div>`;
 
-        const rows = !canRead
-            ? ""
-            : comments.length
+        const rows = comments.length
             ? comments.map((c) => commentRow(post, c, mine, view.raw ?? new Set())).join("")
             : `<div style="font-size:.65rem;color:#5a5f54;padding:10px 0;">Nobody has said anything yet.</div>`;
 
@@ -538,7 +537,7 @@
             : "";
 
         return `<div style="background:rgba(255,255,255,.03);border:1px solid ${ACCENT};border-radius:6px;padding:10px;margin-bottom:8px;">
-            ${head}${bel}${rows ? `<div style="margin-top:8px;">${rows}</div>` : ""}${gmTools}</div>`;
+            ${head}${bel}<div style="margin-top:8px;">${rows}</div>${gmTools}</div>`;
     }
 
     function html(app) {
