@@ -464,7 +464,7 @@
         const sentLine = await speak(gig.client, "clientPost");
         // Both landing in the same instant reads as one block of text rather than as a
         // person typing twice, so the job follows the heads-up a beat later.
-        if (sentLine && gig.brief) await new Promise((r) => setTimeout(r, 10000));
+        if (sentLine && gig.brief) await new Promise((r) => setTimeout(r, 5000));
         const sentBrief = await sendAs(gig.client, gig.brief);
         return sentLine || sentBrief;
     }
