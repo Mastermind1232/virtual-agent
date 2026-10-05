@@ -497,7 +497,10 @@
     function postCard(post, view) {
         const open = view.postId === post.id;
         const mine = isAuthor(post);
-        const comments = post.comments || [];
+        // What is said under a story is the author's business. Everybody else on the
+        // Garden reads the headline, the same as everybody else in the city.
+        const canRead = mine || game.user.isGM;
+        const comments = canRead ? (post.comments || []) : [];
         const unread = comments.filter((c) => c.coded && !c.deciphered).length;
         const when = prettyDate(post.posted);
 
@@ -505,13 +508,15 @@
             <div style="color:#fff;font-size:.9rem;font-weight:700;line-height:1.3;">${esc(post.headline)}</div>
             <div style="font-size:.6rem;color:#7f8a99;margin-top:3px;">
                 ${esc(post.authorName)}${when ? ` &middot; ${esc(when)}` : ""}
-                &middot; ${comments.length} comment${comments.length === 1 ? "" : "s"}
+                ${canRead ? ` &middot; ${comments.length} comment${comments.length === 1 ? "" : "s"}` : ""}
                 ${unread && mine ? ` &middot; <span style="color:#9b6dff;">${unread} in code</span>` : ""}
             </div></div>`;
 
         if (!open) return `<div style="background:rgba(255,255,255,.03);border:1px solid #222;border-radius:6px;padding:10px;margin-bottom:8px;">${head}</div>`;
 
-        const rows = comments.length
+        const rows = !canRead
+            ? ""
+            : comments.length
             ? comments.map((c) => commentRow(post, c, mine, view.raw ?? new Set())).join("")
             : `<div style="font-size:.65rem;color:#5a5f54;padding:10px 0;">Nobody has said anything yet.</div>`;
 
@@ -533,7 +538,7 @@
             : "";
 
         return `<div style="background:rgba(255,255,255,.03);border:1px solid ${ACCENT};border-radius:6px;padding:10px;margin-bottom:8px;">
-            ${head}${bel}<div style="margin-top:8px;">${rows}</div>${gmTools}</div>`;
+            ${head}${bel}${rows ? `<div style="margin-top:8px;">${rows}</div>` : ""}${gmTools}</div>`;
     }
 
     function html(app) {
