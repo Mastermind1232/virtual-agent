@@ -3142,10 +3142,15 @@ class AgentOSApplication extends Application {
                             this._auctionDetailId = null;
                         }
                         // Opening Bounties shows the board, never whichever record was
-                        // left open the last time the phone was shut.
+                        // left open the last time the phone was shut. The Garden is the
+                        // same: the list of stories, not the one somebody was reading.
                         if (app === 'ncpd') {
                             this._ncpdActiveId = null;
                             this._ncpdSearch = "";
+                        }
+                        if (app === 'garden' && this._garden) {
+                            this._garden.postId = null;
+                            this._garden.raw = new Set();
                         }
                         this.render(true);
                     }
