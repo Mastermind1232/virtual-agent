@@ -2715,9 +2715,11 @@ textarea#agent-chat-input::-webkit-scrollbar-thumb { background: transparent; }
 }
 
 /* Chat message delete button — reveal on hover */
+.AgentDevice-form .chat-row:hover .edit-chat-msg,
 .AgentDevice-form .chat-row:hover .delete-chat-msg {
     opacity: 1 !important;
 }
+.AgentDevice-form .edit-chat-msg:hover,
 .AgentDevice-form .delete-chat-msg:hover {
     color: #ff0040 !important;
     text-shadow: 0 0 6px rgba(255,0,60,0.5);

@@ -1796,6 +1796,7 @@ class AgentOSApplication extends Application {
                     // Delete permission still tracks the real author so the
                     // GM can clean up their own NPC messages.
                     canDelete: realAuthorIsSelf || game.user.isGM,
+                    canEdit: realAuthorIsSelf || game.user.isGM,
                     timestamp: m.timestamp,
                     time: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     avatar: displayAvatar,
@@ -6793,6 +6794,27 @@ class AgentOSApplication extends Application {
             this.render(true);
         });
 
+        html.on('click', '.edit-chat-msg', (ev) => {
+            ev.preventDefault(); ev.stopPropagation();
+            const msgId = ev.currentTarget.dataset.msgId;
+            const msg = game.messages.get(msgId);
+            if (!msg) return;
+            if (!(msg.author?.id === game.user.id || game.user.isGM)) {
+                ui.notifications.warn("Agent: those are not your words to change.");
+                return;
+            }
+            // The stored content is escaped HTML with <br> for newlines. Put it back the
+            // way it was typed so the composer shows what the sender actually wrote.
+            this._editingMsgId = msgId;
+            this._chatInputDraft = String(msg.content ?? "")
+                .replace(/<br\s*\/?>/gi, "\n")
+                .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+                .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+                .replace(/&amp;/g, "&");
+            ui.notifications.info("Agent: editing. Send to save, Escape to cancel.");
+            this.render(true);
+        });
+
         html.on('click', '#agent-chat-send', async ev => {
             ev.preventDefault(); ev.stopPropagation();
             let input = html.find('#agent-chat-input');
@@ -6801,6 +6823,19 @@ class AgentOSApplication extends Application {
             const content = foundry.utils.escapeHTML
                 ? foundry.utils.escapeHTML(raw).replace(/\n/g, '<br>')
                 : raw.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])).replace(/\n/g, '<br>');
+
+            // Saving an edit never creates a second message.
+            if (this._editingMsgId) {
+                const target = game.messages.get(this._editingMsgId);
+                this._editingMsgId = null;
+                input.val(""); this._chatInputDraft = "";
+                if (target) {
+                    try { await target.update({ content }); }
+                    catch (e) { ui.notifications.error(`Agent: could not save that edit. ${e.message}`); }
+                }
+                this.render(true);
+                return;
+            }
             // Resolve display name + routing for the current thread
             const contacts = this._getContacts();
             const threadContact = contacts.find(c => c.id === this.activeContactId);
@@ -6909,6 +6944,15 @@ class AgentOSApplication extends Application {
 
         // --- Realistic-texting wiring ---
         html.on('keydown', '#agent-chat-input', (ev) => {
+            if (ev.key === "Escape" && this._editingMsgId) {
+                ev.preventDefault();
+                this._editingMsgId = null;
+                this._chatInputDraft = "";
+                ev.currentTarget.value = "";
+                ui.notifications.info("Agent: edit cancelled.");
+                this.render(true);
+                return;
+            }
             if (ev.key === 'Enter' && !ev.shiftKey && !ev.isComposing) {
                 ev.preventDefault();
                 html.find('#agent-chat-send').trigger('click');

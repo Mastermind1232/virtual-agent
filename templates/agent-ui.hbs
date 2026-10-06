@@ -368,6 +368,9 @@
                                             <div class="chat-time">{{this.time}}{{#if this.isSelf}} <span class="read-receipts">✓✓</span>{{/if}}</div>
                                         {{/if}}
                                     </div>
+                                    {{#if this.canEdit}}
+                                    <button type="button" class="edit-chat-msg" data-msg-id="{{this.id}}" title="Edit message" style="opacity:0; background:transparent; border:none; color:#8ab4ff; cursor:pointer; font-size:0.7rem; padding:2px 4px; margin:0 2px; transition:opacity 0.15s; align-self:center;"><i class="fas fa-pen"></i></button>
+                                    {{/if}}
                                     {{#if this.canDelete}}
                                     <button type="button" class="delete-chat-msg" data-msg-id="{{this.id}}" title="Delete message" style="opacity:0; background:transparent; border:none; color:#ff3355; cursor:pointer; font-size:0.7rem; padding:2px 4px; margin:0 2px; transition:opacity 0.15s; align-self:center;"><i class="fas fa-trash-alt"></i></button>
                                     {{/if}}
