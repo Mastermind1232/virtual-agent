@@ -3141,6 +3141,12 @@ class AgentOSApplication extends Application {
                             this._auctionView = 'list';
                             this._auctionDetailId = null;
                         }
+                        // Opening Bounties shows the board, never whichever record was
+                        // left open the last time the phone was shut.
+                        if (app === 'ncpd') {
+                            this._ncpdActiveId = null;
+                            this._ncpdSearch = "";
+                        }
                         this.render(true);
                     }
                     break;
