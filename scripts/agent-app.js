@@ -5635,7 +5635,7 @@ class AgentOSApplication extends Application {
                     if (!name) { ui.notifications.warn("Bounties: a name is required."); return; }
                     const charges = useModal ? (html.find('#ncpd-modal-charges').val() || "").trim() : (html.find('#ncpd-add-charges').val() || "").trim();
                     const bounty  = useModal ? (html.find('#ncpd-modal-bounty').val()  || "").trim() : (html.find('#ncpd-add-bounty').val()  || "").trim();
-                    const status  = useModal ? (html.find('#ncpd-modal-status').val()  || "Known to police").trim() : (html.find('#ncpd-add-status').val() || "Known to police").trim();
+                    const status  = (useModal ? (html.find('#ncpd-modal-status').val() || "") : (html.find('#ncpd-add-status').val() || "")).trim();
                     const notes   = useModal ? (html.find('#ncpd-modal-notes').val()   || "").trim() : (html.find('#ncpd-add-notes').val()   || "").trim();
                     const location = useModal ? (html.find('#ncpd-modal-location').val() || "").trim() : (html.find('#ncpd-add-location').val() || "").trim();
                     // Patch5.5.18: the const mugshot declaration was missing — list.push later
@@ -5648,9 +5648,10 @@ class AgentOSApplication extends Application {
                     // pays the finder a tenth of the debt for bringing the debtor back alive.
                     const kind = (useModal ? (html.find('#ncpd-modal-kind').val() || "bounty") : (html.find('#ncpd-add-kind').val() || "bounty"));
                     const fields = {
-                        name, bounty, status, notes, mugshot, kind,
+                        name, bounty, notes, mugshot, kind,
                         charges: kind === "debt" ? "" : charges,
                         location: kind === "debt" ? "" : location,
+                        status: kind === "debt" ? "" : status,
                         source: (useModal ? (html.find('#ncpd-modal-source').val() || "") : (html.find('#ncpd-add-source').val() || "")).trim(),
                         debt: (useModal ? (html.find('#ncpd-modal-debt').val() || "") : (html.find('#ncpd-add-debt').val() || "")).trim(),
                     };
@@ -7482,8 +7483,8 @@ class AgentOSApplication extends Application {
         // now, and this runs after the draft restore above so an amended debt claim
         // arrives with the field already open.
         const syncNcpdKind = () => {
-            [["#ncpd-modal-kind", "#ncpd-modal-debt", "#ncpd-modal-charges", "#ncpd-modal-location"],
-             ["#ncpd-add-kind", "#ncpd-add-debt", "#ncpd-add-charges", "#ncpd-add-location"]].forEach(([kindSel, debtSel, ...crimeOnly]) => {
+            [["#ncpd-modal-kind", "#ncpd-modal-debt", "#ncpd-modal-charges", "#ncpd-modal-location", "#ncpd-modal-status"],
+             ["#ncpd-add-kind", "#ncpd-add-debt", "#ncpd-add-charges", "#ncpd-add-location", "#ncpd-add-status"]].forEach(([kindSel, debtSel, ...crimeOnly]) => {
                 const kind = html.find(kindSel);
                 if (!kind.length) return;
                 const isDebt = kind.val() === "debt";

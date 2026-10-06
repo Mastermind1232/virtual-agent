@@ -1523,9 +1523,8 @@
                                     <option value="bounty">Bounty</option>
                                     <option value="debt">Debt claim</option>
                                 </select>
-                                <select id="ncpd-modal-source" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
-                                    <option value="AGPD">AGPD</option>
-                                </select>
+                                <input type="text" id="ncpd-modal-source" list="ncpd-source-list" placeholder="Posted by" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
+                                <datalist id="ncpd-source-list"><option value="AGPD"><option value="Trauma Team"><option value="Militech Atlantic Division"></datalist>
                                 <select id="ncpd-modal-status" data-preserve-draft style="background:#111; color:#fff; border:1px solid #444; padding:7px; border-radius:4px; font-family:monospace; font-size:0.75rem; box-sizing:border-box; width:100%;">
                                     <option value="">Status (none)</option>
                                     <option value="Tier: F">Tier: F</option><option value="Tier: E">Tier: E</option><option value="Tier: D">Tier: D</option>
@@ -2090,9 +2089,8 @@
                                     <option value="bounty">Bounty</option>
                                     <option value="debt">Debt claim</option>
                                 </select>
-                                <select id="ncpd-add-source" class="admin-input datapool-input" style="box-sizing:border-box;">
-                                    <option value="AGPD">AGPD</option>
-                                </select>
+                                <input type="text" id="ncpd-add-source" class="admin-input datapool-input" list="ncpd-source-list-add" placeholder="Posted by" data-preserve-draft style="box-sizing:border-box;">
+                                <datalist id="ncpd-source-list-add"><option value="AGPD"><option value="Trauma Team"><option value="Militech Atlantic Division"></datalist>
                                 <input type="text" id="ncpd-add-debt" class="admin-input datapool-input" placeholder="Debt owed (eb)" data-preserve-draft style="box-sizing:border-box; display:none;">
                                 {{!-- NuNu packaging: wanted tiers from the campaign's bounty table; picking one fills the bounty. --}}
                                 <select id="ncpd-add-status" class="admin-input datapool-input" style="box-sizing:border-box;">
