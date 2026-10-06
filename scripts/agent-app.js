@@ -2165,9 +2165,16 @@ class AgentOSApplication extends Application {
         {
             // NuNu packaging: bounties and debt claims are two lists in one app.
             const view = data.ncpdRapSheetsView || [];
-            const label = (r) => ({ ...r, amountLabel: r.kind === "debt"
-                ? (r.debt ? `${r.debt}eb owed` : (r.bounty ? `${r.bounty}eb fee` : ""))
-                : (r.bounty ? `${r.bounty}eb` : "") });
+            const feeFor = (r) => {
+                if (r.bounty) return String(r.bounty).trim();
+                const owed = Number(String(r.debt ?? "").replace(/[^0-9.]/g, ""));
+                return Number.isFinite(owed) && owed > 0 ? String(Math.round(owed * 0.1)) : "";
+            };
+            const label = (r) => {
+                if (r.kind !== "debt") return { ...r, amountLabel: r.bounty ? `${r.bounty}eb` : "" };
+                const fee = feeFor(r);
+                return { ...r, amountLabel: fee ? `${fee}eb fee` : "" };
+            };
             data.bountyList = view.filter((r) => r.kind !== "debt").map(label);
             data.debtList = view.filter((r) => r.kind === "debt").map(label);
         }
