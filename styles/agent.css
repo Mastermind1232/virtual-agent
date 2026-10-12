@@ -763,7 +763,7 @@
 /* Global input styling — scoped to .agent-content to avoid Foundry-injected form elements */
 .AgentDevice .agent-content input[type="text"]:not(.rep-input):not(.auction-input):not(.auction-input-full):not(.admin-input):not(.datapool-input):not(.social-composer-input):not(.skill-search-input):not(.agent-search-input),
 .AgentDevice .agent-content input[type="number"]:not(.rep-input):not(.auction-input):not(.auction-input-full):not(.admin-input):not(.datapool-input),
-.AgentDevice .agent-content textarea:not(.admin-textarea):not(.social-composer-input):not(.datapool-input) {
+.AgentDevice .agent-content textarea:not(.admin-textarea):not(.social-composer-input):not(.datapool-input):not(#agent-chat-input) {
     background: #111 !important;
     border: 1px solid #444 !important;
     color: #eee !important;
@@ -1209,6 +1209,12 @@ textarea#agent-chat-input {
     resize: none;
     line-height: 1.35;
     font-family: inherit;
+    /* The global .agent-content textarea rule used to supply this. That rule also
+       set height: 42px !important, which beat the inline height the auto-grow sets,
+       so the composer never grew. The chat input is excluded from it now, and the
+       properties it still needs are restored here. */
+    box-sizing: border-box;
+    color: #eee;
     /* Patch5.5.17: hide the native scrollbar entirely. Long messages still scroll
        internally up to max-height (120px) but the cyan thumb / native up-down
        arrow buttons no longer show between the placeholder and the send icon. */
