@@ -6830,6 +6830,15 @@ class AgentOSApplication extends Application {
                 .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
                 .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
                 .replace(/&amp;/g, "&");
+            // _render snapshots the live textarea into _chatInputDraft before it rebuilds,
+            // so a draft set only on the instance is overwritten with the empty box on the
+            // way through and the composer comes back blank. Writing it into the live box
+            // as well means that snapshot preserves the text instead of erasing it.
+            const liveInput = this.element?.find?.('#agent-chat-input');
+            if (liveInput?.length) {
+                liveInput.val(this._chatInputDraft);
+                this._autoGrowInput(liveInput[0]);
+            }
             ui.notifications.info("Agent: editing. Send to save, Escape to cancel.");
             this.render(true);
         });
