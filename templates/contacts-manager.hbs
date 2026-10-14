@@ -9,8 +9,17 @@
                 <option value="standing" {{#if (eq sort "standing")}}selected{{/if}}>Attitude</option>
             </select>
         </label>
+        <label>Whose phone
+            <select data-whose>
+                <option value="" {{#unless whose}}selected{{/unless}}>Everyone</option>
+                {{#each party}}<option value="{{this.id}}" {{#if (eq this.id ../whose)}}selected{{/if}}>{{this.name}}</option>{{/each}}
+                <option value="none" {{#if (eq whose "none")}}selected{{/if}}>On nobody's phone</option>
+            </select>
+        </label>
         <button type="button" data-new><i class="fas fa-plus"></i> New contact</button>
     </div>
+
+    {{#if whose}}<p class="nc-filtered">Showing what {{whoseName}} can call. {{hidden}} hidden.</p>{{/if}}
 
     {{#each contacts}}
     <div class="nc-card {{#if this.open}}is-open{{/if}}" data-card>

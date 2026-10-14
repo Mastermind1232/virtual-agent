@@ -160,7 +160,7 @@
             });
         }
 
-        constructor(...args) { super(...args); this.sort = "name"; this.editing = null; }
+        constructor(...args) { super(...args); this.sort = "name"; this.whose = ""; this.editing = null; }
 
         getData() {
             const list = allContacts();
@@ -170,6 +170,11 @@
             list.sort(order[this.sort] ?? order.name);
 
             const party = players().map((u) => ({ id: u.id, name: whoIs(u), img: faceOf(u.character) || "icons/svg/mystery-man.svg" }));
+            // "Whose phone" narrows the list to what one character can actually call,
+            // or to the contacts nobody is carrying yet.
+            const shown = this.whose === "" ? list
+                : this.whose === "none" ? list.filter((c) => !c.holders.length)
+                : list.filter((c) => c.holders.includes(this.whose));
             const playerActorIds = new Set(players().map((u) => u.character?.id).filter(Boolean));
             const actors = game.actors
                 .filter((a) => !playerActorIds.has(a.id))
@@ -177,12 +182,15 @@
                 .map((a) => ({ uuid: a.uuid, name: a.name }));
             return {
                 sort: this.sort,
+                whose: this.whose,
+                whoseName: this.whose === "none" ? "nobody" : (party.find((p) => p.id === this.whose)?.name ?? ""),
+                hidden: list.length - shown.length,
                 standings: STANDINGS,
                 roles: ROLES,
                 actors,
                 party,
                 editing: this.editing,
-                contacts: list.map((c) => ({
+                contacts: shown.map((c) => ({
                     ...c,
                     standingLabel: standing(c.standing).label,
                     standingColour: standing(c.standing).colour,
@@ -203,6 +211,20 @@
             super.activateListeners(html);
 
             html.on("change", "[data-sort]", (ev) => { this.sort = ev.currentTarget.value; this.render(true); });
+
+            html.on("change", "[data-whose]", (ev) => { this.whose = ev.currentTarget.value; this.render(true); });
+
+            // A new contact is named "Unlinked contact", so it sorts to the bottom of a
+            // long list and opens off screen. Bring whichever card is open into view,
+            // but only the first time it opens, so saving a field does not jump the list.
+            if (this.editing && this.editing !== this._broughtIntoView) {
+                const card = html.find(".nc-card.is-open")[0];
+                if (card) {
+                    this._broughtIntoView = this.editing;
+                    requestAnimationFrame(() => card.scrollIntoView({ block: "start", behavior: "smooth" }));
+                }
+            }
+            if (!this.editing) this._broughtIntoView = null;
 
             html.on("click", "[data-open]", (ev) => {
                 const id = ev.currentTarget.dataset.open;
