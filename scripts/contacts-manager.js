@@ -32,13 +32,13 @@
     /** The face to show for an actor: their token first, since that is how they appear at
         the table, falling back to the sheet portrait. */
     const faceOf = (actor) => {
-        // The portrait first. A token is drawn to sit on a map and usually carries its
-        // own ring, which lands inside the avatar's round crop as a ring within a ring
-        // and shrinks the face. The token is only the fallback.
-        const portrait = actor?.img;
-        if (portrait && !PLACEHOLDER.test(portrait)) return portrait;
+        // The token, not the portrait. A portrait is whatever art the actor has, often a
+        // full standing figure, and inside a 34px circle the face is unreadable. A
+        // Tokenizer token is always framed on the head. Its ring is cropped off in CSS,
+        // see the object-view-box rule on .Token. images.
         const token = actor?.prototypeToken?.texture?.src;
-        return token && !PLACEHOLDER.test(token) ? token : "";
+        if (token && !PLACEHOLDER.test(token)) return token;
+        return actor?.img && !PLACEHOLDER.test(actor.img) ? actor.img : "";
     };
 
     /** The moments a contact can have something to say. Left blank, they say nothing. */
@@ -200,6 +200,11 @@
                     standingColour: standing(c.standing).colour,
                     holderNames: c.holders.map((id) => game.users.get(id)).filter(Boolean).map(whoIs).join(", "),
                     party: party.map((p) => ({ ...p, has: c.holders.includes(p.id), isClient: c.clientOf.includes(p.id) })),
+                    // Shown on the collapsed row. Filtered to one character it reads as
+                    // "a client of theirs"; unfiltered it names whose client they are.
+                    clientNames: (this.whose && this.whose !== "none"
+                        ? (c.clientOf.includes(this.whose) ? [party.find((p) => p.id === this.whose)?.name] : [])
+                        : c.clientOf.map((id) => party.find((p) => p.id === id)?.name)).filter(Boolean).join(", "),
                     isOperator: !!globalThis.VirtualAgentOperator?.rosterHas?.(c.name, c.actorUuid),
                     actor: linkedActor(c.actorUuid),
                     roleFromSheet: !!roleOnSheet(linkedActor(c.actorUuid)),

@@ -93,6 +93,8 @@
 /* The client sub-box sits indented under the player who holds the number. */
 .nunu-contacts .nc-person-wrap { display: flex; flex-direction: column; gap: 3px; }
 .nunu-contacts .nc-client[hidden] { display: none !important; }
+.nunu-contacts .nc-clienttag { color: #e0b341; font-size: 10.5px; letter-spacing: .3px; white-space: nowrap; }
+
 .nunu-contacts .nc-client { display: flex; align-items: center; gap: 6px; margin-left: 26px; font-size: 10.5px; color: #e0b341; cursor: pointer; }
 .nunu-contacts .nc-client input { margin: 0; flex: 0 0 auto; width: 12px; height: 12px; }
 
@@ -172,3 +174,12 @@
 .nunu-contacts .nc-actor-field select { border-color: #3c5578; }
 .nunu-contacts .nc-hint { color: #737d86; font-size: 10px; }
 .nunu-contacts .nc-fields input[readonly] { background: #151a20; color: #9aa5ae; }
+
+/* A Tokenizer token carries its own decorative ring so it reads on a map. Inside a
+   round avatar that ring is a ring within a ring and it squeezes the face into the
+   middle. Crop the outer tenth of the source away, which removes the ring and leaves
+   a head that fills the circle. Keyed on the filename so hand-picked avatars, logos
+   among them, are left exactly as they are. */
+.nunu-contacts .nc-row img[src*=".Token."],
+img.avatar-chat[src*=".Token."],
+img.group-participant-avatar[src*=".Token."] { object-view-box: inset(10%); }

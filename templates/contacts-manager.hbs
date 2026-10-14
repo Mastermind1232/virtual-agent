@@ -32,6 +32,7 @@
                     <span class="nc-chip" style="color: {{this.standingColour}};">{{#if this.faction}}{{this.faction}}{{else}}Unaffiliated{{/if}}</span>
                     {{#if this.role}}<span class="nc-role">{{this.role}}</span>{{/if}}
                     <span class="nc-standing">{{this.standingLabel}}</span>
+                    {{#if this.clientNames}}<span class="nc-clienttag" title="Pays this character for work">Client of {{this.clientNames}}</span>{{/if}}
                     {{#unless this.hasActor}}<span class="nc-warn">needs an actor</span>{{/unless}}
                 </span>
             </span>
