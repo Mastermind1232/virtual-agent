@@ -32,9 +32,13 @@
     /** The face to show for an actor: their token first, since that is how they appear at
         the table, falling back to the sheet portrait. */
     const faceOf = (actor) => {
+        // The portrait first. A token is drawn to sit on a map and usually carries its
+        // own ring, which lands inside the avatar's round crop as a ring within a ring
+        // and shrinks the face. The token is only the fallback.
+        const portrait = actor?.img;
+        if (portrait && !PLACEHOLDER.test(portrait)) return portrait;
         const token = actor?.prototypeToken?.texture?.src;
-        if (token && !PLACEHOLDER.test(token)) return token;
-        return actor?.img && !PLACEHOLDER.test(actor.img) ? actor.img : "";
+        return token && !PLACEHOLDER.test(token) ? token : "";
     };
 
     /** The moments a contact can have something to say. Left blank, they say nothing. */

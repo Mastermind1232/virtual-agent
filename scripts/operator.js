@@ -861,11 +861,13 @@
 
     const IMG_PLACEHOLDER = /^icons\/svg\/(mystery-man|cowled)\.svg$/;
 
-    /** An actor's face: their token first, the sheet portrait as a fallback. */
+    /** An actor's face: the sheet portrait first, their token as a fallback. A token
+        carries its own ring, which doubles up inside a round avatar crop. */
     const faceOf = (actor) => {
+        const portrait = actor?.img;
+        if (portrait && !IMG_PLACEHOLDER.test(portrait)) return portrait;
         const token = actor?.prototypeToken?.texture?.src;
-        if (token && !IMG_PLACEHOLDER.test(token)) return token;
-        return actor?.img && !IMG_PLACEHOLDER.test(actor.img) ? actor.img : "";
+        return token && !IMG_PLACEHOLDER.test(token) ? token : "";
     };
 
     /** A client's face, by way of the contact book: their contact names an actor, and
