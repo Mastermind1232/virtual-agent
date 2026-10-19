@@ -12,6 +12,21 @@ const VA_HOUSING = [
 ];
 const VA_LIFESTYLE = [["Kibble", "100"], ["Generic Prepak", "300"], ["Good Prepak", "600"], ["Fresh Food", "1500"]];
 const VA_LIFESTYLE_COST = Object.fromEntries(VA_LIFESTYLE);
+/* NuNu packaging: the NPC a thread belongs to, looked up across every user's contact list.
+   A GM voicing an NPC whose contact was created on a player's device does not have that
+   contact in their own list, so resolving the speaker from the GM's contacts alone loses the
+   name and the message goes out as the GM. The avatar already had this fallback and the name
+   did not, which is how a text from an NPC arrived labelled "Gamemaster (Agent)" over the
+   NPC's own face. */
+function VA_npcContactById(id) {
+    if (!id || !String(id).startsWith("npc_")) return null;
+    for (const u of game.users) {
+        const list = u.getFlag("VirtualAgent", "customContacts") || [];
+        const hit = list.find((c) => c.id === id);
+        if (hit) return hit;
+    }
+    return null;
+}
 /* NuNu packaging: what a finder keeps for collecting on a posted debt. One constant for
    the two places that use it, the quoted fee on the board and the figure the form fills in,
    because the board quoting one number and the form writing another is worse than either. */
@@ -4653,10 +4668,12 @@ class AgentOSApplication extends Application {
                     const contacts = this._getContacts();
                     const threadContact = contacts.find(c => c.id === this.activeContactId);
                     const isNpcThread = this.activeContactId?.startsWith("npc_");
-                    const speakerAlias = (game.user.isGM && isNpcThread && threadContact)
-                        ? (threadContact.originalName || threadContact.name)
+                    const npcVoice = (game.user.isGM && isNpcThread)
+                        ? (threadContact ?? VA_npcContactById(this.activeContactId)) : null;
+                    const speakerAlias = npcVoice
+                        ? (npcVoice.originalName || npcVoice.name)
                         : (VA_displayName(game.user) + " (Agent)");
-                    const npcOverrideName = (game.user.isGM && isNpcThread && threadContact) ? (threadContact.originalName || threadContact.name) : undefined;
+                    const npcOverrideName = npcVoice ? (npcVoice.originalName || npcVoice.name) : undefined;
                     // 5.5.27 (live-Foundry screenshot): cross-user avatar resolution.
                     // When a PLAYER creates an NPC contact and uploads its
                     // avatar, the GM only sees the contact via the switchboard
@@ -6893,14 +6910,16 @@ class AgentOSApplication extends Application {
                 }
             }
 
-            const speakerAlias = (game.user.isGM && isNpcThread && threadContact)
-                ? (threadContact.originalName || threadContact.name)
+            const npcVoice = (game.user.isGM && isNpcThread)
+                ? (threadContact ?? VA_npcContactById(this.activeContactId)) : null;
+            const speakerAlias = npcVoice
+                ? (npcVoice.originalName || npcVoice.name)
                 : (groupNpcOverride
                     ? (groupNpcOverride.originalName || groupNpcOverride.name)
                     : (VA_displayName(game.user) + " (Agent)"));
 
-            const npcOverrideName = (game.user.isGM && isNpcThread && threadContact)
-                ? (threadContact.originalName || threadContact.name)
+            const npcOverrideName = npcVoice
+                ? (npcVoice.originalName || npcVoice.name)
                 : (groupNpcOverride ? (groupNpcOverride.originalName || groupNpcOverride.name) : undefined);
             // 5.5.27 (live-Foundry screenshot): cross-user avatar resolution. See
             // attachment-send block for the full reasoning — same lookup applies
