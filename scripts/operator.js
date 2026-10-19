@@ -59,6 +59,10 @@
         const [y, m, d] = k.split("-").map(Number);
         return cal.shortDate ? cal.shortDate({ y, m, d }) : k;
     };
+    /** Day and month alone. The calendar's short date carries a weekday and a year,
+        which is more than a chip or a one-line note has room for. */
+    const briefDate = (k) => { const p = String(prettyDate(k)).split(" "); return p.length >= 4 ? `${p[1]} ${p[2]}` : (prettyDate(k) || ""); };
+
     /** Days from today until a date key. Negative when the date has passed. */
     const daysUntil = (k) => {
         const t = today(); if (!t || !k) return null;
@@ -643,7 +647,7 @@
         const status = g.status === "done"
             ? chip(g.outcome?.success ? "PAID" : "FAILED", g.outcome?.success ? ACCENT : "#ff3366")
             : (g.status === "assigned"
-                ? chip(days === null ? "IN PROGRESS" : (days <= 0 ? "DUE" : `${days}D LEFT`), "#ffd166")
+                ? chip(days === null ? "IN PROGRESS" : `${days <= 0 ? "DUE " : ""}${briefDate(g.due).toUpperCase()}`, "#ffd166")
                 : (() => { const d = Math.max(1, Number(g.days) || gigDays(g.skills?.length));
                     return `<span style="font-size:.6rem;color:#888;white-space:nowrap;">${d} ${d === 1 ? "day" : "days"}</span>`; })());
 
@@ -664,7 +668,7 @@
             } else {
                 mark = "&#9633;";
                 colour = covered ? "#8a8f84" : "#8a6060";
-                note = left === null ? "" : (left <= 0 ? "today" : `day ${i + 1}`);
+                note = left === null ? "" : (left <= 0 ? "today" : briefDate(dateKey(day)));
             }
 
             return `<div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:2px 0;">
