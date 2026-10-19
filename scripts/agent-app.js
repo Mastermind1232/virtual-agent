@@ -12,6 +12,10 @@ const VA_HOUSING = [
 ];
 const VA_LIFESTYLE = [["Kibble", "100"], ["Generic Prepak", "300"], ["Good Prepak", "600"], ["Fresh Food", "1500"]];
 const VA_LIFESTYLE_COST = Object.fromEntries(VA_LIFESTYLE);
+/* NuNu packaging: what a finder keeps for collecting on a posted debt. One constant for
+   the two places that use it, the quoted fee on the board and the figure the form fills in,
+   because the board quoting one number and the form writing another is worse than either. */
+const VA_DEBT_FINDERS_CUT = 0.25;
 /* NuNu packaging: every field on the rap-sheet forms, inline and modal. Filing, amending
    and cancelling all clear the same set, so a half-typed record never leaks into the next. */
 const NCPD_FIELD_IDS = [
@@ -2168,7 +2172,7 @@ class AgentOSApplication extends Application {
             const feeFor = (r) => {
                 if (r.bounty) return String(r.bounty).trim();
                 const owed = Number(String(r.debt ?? "").replace(/[^0-9.]/g, ""));
-                return Number.isFinite(owed) && owed > 0 ? String(Math.round(owed * 0.1)) : "";
+                return Number.isFinite(owed) && owed > 0 ? String(Math.round(owed * VA_DEBT_FINDERS_CUT)) : "";
             };
             const label = (r) => {
                 if (r.kind !== "debt") return { ...r, amountLabel: r.bounty ? `${r.bounty}eb` : "" };
@@ -2983,14 +2987,14 @@ class AgentOSApplication extends Application {
         });
 
         // NuNu packaging: the same three behaviours on both the Sys Admin form and the
-        // in-app modal. Debt fills the finder's tenth; the kind decides who can post it
+        // in-app modal. Debt fills the finder's cut; the kind decides who can post it
         // and which amount field shows; a wanted tier fills the bounty from the campaign table.
         const BOUNTY_SOURCES = { bounty: ["AGPD"], debt: ["The Collector"] };
         const TIER_PAYOUT = { "Tier: F": "100", "Tier: E": "500", "Tier: D": "1000", "Tier: C": "1500", "Tier: B": "2000", "Tier: A": "3000" };
         for (const p of ["add", "modal"]) {
             html.on("input change", `#ncpd-${p}-debt`, (ev) => {
                 const debt = Number(String($(ev.currentTarget).val() || "").replace(/[^0-9.]/g, ""));
-                if (Number.isFinite(debt) && debt > 0) html.find(`#ncpd-${p}-bounty`).val(String(Math.round(debt / 10)));
+                if (Number.isFinite(debt) && debt > 0) html.find(`#ncpd-${p}-bounty`).val(String(Math.round(debt * VA_DEBT_FINDERS_CUT)));
             });
             html.on("change", `#ncpd-${p}-kind`, (ev) => {
                 const debt = String($(ev.currentTarget).val()) === "debt";
@@ -5656,7 +5660,7 @@ class AgentOSApplication extends Application {
                     let list = [];
                     try { list = JSON.parse(game.settings.get("VirtualAgent", "ncpdRapSheets") || "[]"); } catch(e) {}
                     // NuNu packaging: a bounty knows who is paying it, and a debt claim
-                    // pays the finder a tenth of the debt for bringing the debtor back alive.
+                    // pays the finder a quarter of the debt for bringing the debtor back alive.
                     const kind = (useModal ? (html.find('#ncpd-modal-kind').val() || "bounty") : (html.find('#ncpd-add-kind').val() || "bounty"));
                     const fields = {
                         name, bounty, notes, mugshot, kind,
