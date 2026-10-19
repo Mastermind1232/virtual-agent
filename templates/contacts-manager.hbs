@@ -1,6 +1,12 @@
 {{!-- NuNu packaging: the GM's book of everyone the party can call. --}}
 <div class="nunu-contacts-body">
 
+    {{!-- One shared list for every actor picker on the sheet. Each option carries the
+          uuid, because a datalist reports the text typed and never the option chosen. --}}
+    <datalist id="nc-actor-list">
+        {{#each actors}}<option value="{{this.label}}" data-uuid="{{this.uuid}}"></option>{{/each}}
+    </datalist>
+
     <div class="nc-toolbar">
         <label>Sort
             <select data-sort>
@@ -43,10 +49,9 @@
         <div class="nc-edit">
             <div class="nc-fields">
                 <label class="nc-actor-field">Actor sheet
-                    <select data-field="actor">
-                        <option value="">Not linked yet</option>
-                        {{#each ../actors}}<option value="{{this.uuid}}" {{#if (eq this.uuid ../this.actorUuid)}}selected{{/if}}>{{this.name}}</option>{{/each}}
-                    </select>
+                    <input type="hidden" data-field="actor" value="{{this.actorUuid}}">
+                    <input type="text" data-actor-search list="nc-actor-list" autocomplete="off"
+                        value="{{this.actorLabel}}" placeholder="Type a name, or leave empty">
                 </label>
                 <label>Name{{#if this.hasActor}} <span class="nc-hint">from the sheet</span>{{/if}}<input type="text" data-field="name" value="{{this.name}}" {{#if this.hasActor}}readonly{{/if}}></label>
                 <label>Affiliation<input type="text" data-field="faction" value="{{this.faction}}" placeholder="AGPD, Fenixxx, The Bunnies…"></label>

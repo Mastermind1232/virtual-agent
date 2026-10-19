@@ -180,10 +180,19 @@
                 : this.whose === "none" ? list.filter((c) => !c.holders.length)
                 : list.filter((c) => c.holders.includes(this.whose));
             const playerActorIds = new Set(players().map((u) => u.character?.id).filter(Boolean));
+            /* The picker types rather than scrolls, so every actor needs a label that is
+               unique as text: a datalist hands back what was typed, not which row was clicked,
+               and two actors called the same thing would be indistinguishable on the way back. */
+            const seen = new Map();
             const actors = game.actors
                 .filter((a) => !playerActorIds.has(a.id))
                 .sort((a, b) => a.name.localeCompare(b.name))
-                .map((a) => ({ uuid: a.uuid, name: a.name }));
+                .map((a) => {
+                    const n = (seen.get(a.name) ?? 0) + 1;
+                    seen.set(a.name, n);
+                    return { uuid: a.uuid, name: a.name, label: n > 1 ? `${a.name} (${n})` : a.name };
+                });
+            const labelFor = (uuid) => actors.find((a) => a.uuid === uuid)?.label ?? "";
             return {
                 sort: this.sort,
                 whose: this.whose,
@@ -211,6 +220,7 @@
                     voice: VOICE.map((v) => ({ ...v, value: c.voice[v.key] ?? "" })),
                     voiceCount: VOICE.filter((v) => (c.voice[v.key] ?? "").trim()).length,
                     hasActor: !!linkedActor(c.actorUuid),
+                    actorLabel: labelFor(c.actorUuid),
                     open: this.editing === c.id,
                 })),
             };
@@ -308,10 +318,20 @@
                 if (!on) client.find("input").prop("checked", false);
             });
 
-            html.on("change", "[data-field=actor]", (ev) => {
-                const a = linkedActor(ev.currentTarget.value);
+            /* Typing resolves to a uuid rather than selecting one. A datalist reports the text
+               that ended up in the box and never which option produced it, so the match is made
+               here against the option list and written to the hidden field the form reads. */
+            html.on("input change", "[data-actor-search]", (ev) => {
+                const box = ev.currentTarget;
+                const typed = String(box.value ?? "").trim().toLowerCase();
+                const hit = [...html.find("#nc-actor-list option")]
+                    .find((o) => String(o.value ?? "").trim().toLowerCase() === typed);
+                const card = $(box).closest("[data-card]");
+                const field = card.find("[data-field=actor]");
+                field.val(hit?.dataset?.uuid ?? "");
+                box.classList.toggle("nc-unmatched", !!typed && !hit);
+                const a = linkedActor(hit?.dataset?.uuid);
                 if (!a) return;
-                const card = $(ev.currentTarget).closest("[data-card]");
                 card.find("[data-field=name]").val(a.name);
                 const face = faceOf(a); if (face) card.find("[data-field=avatar]").val(face);
             });

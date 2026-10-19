@@ -171,7 +171,10 @@
 /* NuNu packaging: a contact is a person in the world, so it points at an actor sheet.
    One that does not yet is flagged, since their skills and portrait come from there. */
 .nunu-contacts .nc-warn { border: 1px solid #b4762a; border-radius: 3px; padding: 0 5px; font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ffb454; }
-.nunu-contacts .nc-actor-field select { border-color: #3c5578; }
+.nunu-contacts .nc-actor-field select,
+.nunu-contacts .nc-actor-field input[data-actor-search] { border-color: #3c5578; }
+/* Typed text that matches no actor: the contact saves unlinked, so say so before it does. */
+.nunu-contacts .nc-actor-field input.nc-unmatched { border-color: #b4553c; color: #ffb199; }
 .nunu-contacts .nc-hint { color: #737d86; font-size: 10px; }
 .nunu-contacts .nc-fields input[readonly] { background: #151a20; color: #9aa5ae; }
 
