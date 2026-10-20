@@ -1334,6 +1334,17 @@
                 ...Object.fromEntries(game.users.filter((u) => !u.isGM)
                     .map((u) => [u.id, u.character ? `${u.name} (${u.character.name})` : u.name])),
             };
+            /* This setting was a free-text box before it was a dropdown, so a world upgraded
+               across that change still holds a name where the options are now keyed by id. A
+               select with no matching option shows its first entry, "GM only", and the next
+               save of the settings form writes that over the real value: the owner loses the
+               app and nobody is told why. Translate the name to an id once, here. */
+            const held = String(game.settings.get(ID, "operatorOwner") || "").trim();
+            if (held && !(held in setting.choices) && isActiveGM()) {
+                const match = ownerUser();
+                if (match) game.settings.set(ID, "operatorOwner", match.id).catch(console.error);
+                else console.warn(`Operator | the owner setting holds "${held}", which matches no user. Pick one in module settings.`);
+            }
         }
 
         resolveDue().catch(console.error);
