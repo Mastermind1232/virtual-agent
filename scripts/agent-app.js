@@ -1665,7 +1665,26 @@ class AgentOSApplication extends Application {
                 // Strict-match views: exact threadId only.
                 if (isPartyChatView)  return flags.threadId === 'party_group_chat';
                 if (isPcGroupThread)  return flags.threadId === this.activeContactId;
-                if (isNpcThreadView)  return flags.threadId === this.activeContactId;
+                if (isNpcThreadView) {
+                    if (flags.threadId === this.activeContactId) return true;
+                    /* A conversation is keyed by the bare contact id while one player holds the
+                       number and by `contactId__userId` once several do, so handing a number to
+                       a second player renames the thread and orphans everything already said in
+                       it. Rather than depend on that spelling, a thread answers for its whole
+                       contact and lets visibility decide. Two players sharing an NPC still never
+                       see each other: the GM's replies are whispered to one of them, and their
+                       own messages are whispered to the GM, so neither test below can match the
+                       other's half. The id may drift; the history cannot be lost by it. */
+                    if (VA_baseId(flags.threadId) !== VA_baseId(this.activeContactId)) return false;
+                    /* Whose half of the conversation this row is. A split row names its player,
+                       and on the GM's phone that is somebody else: testing against the viewer
+                       instead would pour every player's thread with this NPC into all of them,
+                       because the GM wrote all of it. A bare row has no player in its id, so it
+                       is the viewer's own. */
+                    const side = String(this.activeContactId).split("__")[1] || game.user.id;
+                    if (m.author?.id === side) return true;
+                    return Array.isArray(m.whisper) && m.whisper.includes(side);
+                }
                 // 1-to-1 DM view: activeContactId is a user id.
                 // 5.5.22 (CommanderCrunch69 privacy bug): the threadId match
                 // used to be `flags.threadId === this.activeContactId` with
