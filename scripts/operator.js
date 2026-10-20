@@ -1341,9 +1341,16 @@
                app and nobody is told why. Translate the name to an id once, here. */
             const held = String(game.settings.get(ID, "operatorOwner") || "").trim();
             if (held && !(held in setting.choices) && isActiveGM()) {
-                const match = ownerUser();
+                /* Resolved against the options themselves, not against every user. ownerUser()
+                   will happily match a GM, and a GM's id is not an option here, so migrating to
+                   one would leave the select falling back to "GM only" and blanking itself again
+                   on the next save: the same failure, one step further along. */
+                const want = held.toLowerCase();
+                const match = game.users.find((u) => !u.isGM && (u.id in setting.choices)
+                    && (u.name.trim().toLowerCase() === want
+                        || (u.character?.name ?? "").trim().toLowerCase() === want));
                 if (match) game.settings.set(ID, "operatorOwner", match.id).catch(console.error);
-                else console.warn(`Operator | the owner setting holds "${held}", which matches no user. Pick one in module settings.`);
+                else console.warn(`Operator | the owner setting holds "${held}", which is not a player on this world. Pick one in module settings.`);
             }
         }
 
