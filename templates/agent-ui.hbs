@@ -42,6 +42,8 @@
                                                     <span class="unread-badge">{{../totalUnreadsLabel}}</span>
                                                 {{/if}}
                                             {{/if}}
+                                            {{!-- Any app may carry its own count. The Operator does. --}}
+                                            {{#if this.badge}}<span class="unread-badge">{{this.badge}}</span>{{/if}}
                                         </span>
                                     {{else}}
                                         <i class="{{this.icon}}" style="color: {{this.color}};">
@@ -50,6 +52,7 @@
                                                     <span class="unread-badge">{{../totalUnreadsLabel}}</span>
                                                 {{/if}}
                                             {{/if}}
+                                            {{#if this.badge}}<span class="unread-badge">{{this.badge}}</span>{{/if}}
                                         </i>
                                     {{/if}}
                                     <span class="app-label">{{this.label}}</span>

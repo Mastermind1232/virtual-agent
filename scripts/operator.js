@@ -509,6 +509,14 @@
     }
 
     /** GM side. Every list write lands here, re-reading first so nothing is clobbered. */
+    /** Why a press did nothing. The handler runs on the GM's client, so a toast alone
+        is a message to the wrong person. */
+    async function tellRequester(msg, why) {
+        ui.notifications.error(`Operator: ${why}`);
+        const tell = [...new Set([...whisperTargets(), msg?.userId].filter(Boolean))];
+        await ChatMessage.create({ whisper: tell, content: `<b style="color:#ff3366;">Operator: ${esc(why)}</b>` });
+    }
+
     async function applyOp(msg) {
         if (!game.user.isGM) return;
         switch (msg.op) {
@@ -519,7 +527,10 @@
                 const r = runners().find((x) => x.id === msg.runnerId);
                 if (!r) return;
                 const t0 = today();
-                if (!t0) { ui.notifications.error("The calendar is not running, so a gig cannot be given a deadline."); return; }
+                // Same shape as a failed payout: this runs on the GM's client, so the
+                // player who pressed Assign has to be told in a whisper or the button
+                // simply does nothing on their screen.
+                if (!t0) { await tellRequester(msg, "The calendar is not running, so a gig cannot be given a deadline."); return; }
                 delete list[i].log;                            // a fresh week for a fresh hire
                 const span = Math.max(1, Number(list[i].days) || gigDays(list[i].skills?.length));
                 list[i] = {
@@ -568,14 +579,15 @@
                 const fixer = ownerActor();
                 const hired = actorOf(runner?.actorUuid);
 
-                /** Writes one ledger line. Returns why it could not, so nothing is
-                    reported as paid that was not. A mook has no wealth at all. */
+                /** Writes one ledger line. A mook keeps no wealth at all, and neither does
+                    a runner with no sheet, so their share is cash in hand: said out loud on
+                    the card, never silently dropped. Only a write that actually failed
+                    stops the settlement, so one side can never be paid twice. */
                 const pay = async (actor, amount, who, reason) => {
-                    if (amount <= 0) return null;
-                    if (!actor) return `${who} has no character sheet`;
-                    const w = actor.system?.wealth;
-                    if (!Number.isSafeInteger(w?.value) || !Array.isArray(w.transactions)) {
-                        return `${actor.name} has no Eurobucks ledger`;
+                    if (amount <= 0) return { ok: true };
+                    const w = actor?.system?.wealth;
+                    if (!actor || !Number.isSafeInteger(w?.value) || !Array.isArray(w.transactions)) {
+                        return { ok: true, cash: `${actor?.name ?? who} keeps no ledger here, so their ${amount}eb is cash in hand.` };
                     }
                     try {
                         await actor.update({
@@ -583,21 +595,26 @@
                             "system.wealth.transactions": [...w.transactions.map((r) => [...r]),
                                 [`Increased wealth by ${amount} to ${w.value + amount}`, reason]],
                         });
-                        return null;
-                    } catch (e) { console.error("Operator |", e); return `${actor.name}: ${e.message}`; }
+                        return { ok: true };
+                    } catch (e) { console.error("Operator |", e); return { ok: false, problem: `${actor.name}: ${e.message}` }; }
                 };
 
                 _paying.add(msg.gigId);
                 try {
                     const runnerName = runner?.name ?? "The operator";
-                    const problems = [
+                    const results = [
                         await pay(fixer, keep, "The Operator", `Fixer: Completed a gig for ${gig.client}`),
                         await pay(hired, cut, runnerName, `${gig.client} gig, paid by ${fixer?.name ?? "the Operator"}`),
-                    ].filter(Boolean);
+                    ];
+                    const problems = results.filter((r) => !r.ok).map((r) => r.problem);
+                    const cashNotes = results.filter((r) => r.cash).map((r) => r.cash);
 
-                    // Nothing is marked settled unless the money actually moved.
+                    // Nothing is marked settled unless the money actually moved. The press
+                    // comes over the socket and is handled here on the GM's client, so the
+                    // reason has to be whispered back or the player who pressed it sees
+                    // nothing happen at all.
                     if (problems.length) {
-                        ui.notifications.error(`Operator: nobody was paid. ${problems.join(". ")}.`);
+                        await tellRequester(msg, `nobody was paid. ${problems.join(". ")}.`);
                         return;
                     }
 
@@ -614,7 +631,8 @@
                             <div style="color:${ACCENT};letter-spacing:2px;margin-bottom:4px;">OPERATOR // SETTLED</div>
                             <b>${esc(gig.client)}</b><br>
                             ${esc(runnerName)} takes <b>${cut}eb</b> of <b>${total}eb</b>, a ${share}% cut.
-                            ${esc(fixer?.name ?? "The Operator")} keeps <b>${keep}eb</b>.</div>`,
+                            ${esc(fixer?.name ?? "The Operator")} keeps <b>${keep}eb</b>.
+                            ${cashNotes.map((n) => `<div style="margin-top:4px;opacity:.75;">${esc(n)}</div>`).join("")}</div>`,
                     });
                     renderPhone();
                 } finally { _paying.delete(msg.gigId); }
@@ -741,7 +759,7 @@
                     const total = Number(g.outcome.payout ?? g.payout) || 0;
                     // A text arriving redraws the phone. Without remembering the drag the
                     // slider snapped back to its default and Pay sent that instead.
-                    const remembered = app._operator?.splits?.[g.id];
+                    const remembered = view.splits?.[g.id];
                     const start = Math.max(0, Math.min(total, Number(remembered ?? Math.round(total * 0.2))));
                     return `<div style="margin-top:10px;border-top:1px solid #222;padding-top:9px;">
                         <div style="font-size:.6rem;opacity:.6;letter-spacing:1px;margin-bottom:6px;">THE SPLIT &middot; ${total}eb ON THE TABLE</div>
@@ -845,7 +863,16 @@
             <div style="flex:1;overflow-y:auto;padding:10px;">${view.tab === "crew" ? bodyCrew : bodyGigs + dropStrip}</div>`;
     }
 
-    const tile = () => ({ id: "operator", label: "OPERATOR", icon: "fas fa-headset", color: ACCENT, iconImg: null });
+    /** What the app is waiting on this viewer for. Settling is the only thing anyone
+        has to come back and do, and pressing Pay clears it, so a badge can never stick. */
+    const owed = () => gigs().filter((g) => g.status === "done" && g.outcome?.success && !g.paid).length;
+    const pending = () => (isOwner() || (game.user.isGM && !ownerUser()) ? owed() : 0);
+
+    const tile = () => {
+        const n = pending();
+        return { id: "operator", label: "OPERATOR", icon: "fas fa-headset", color: ACCENT, iconImg: null,
+            badge: n ? (n > 9 ? "9+" : String(n)) : null };
+    };
 
     /* ---------------------------------------------------------------- */
     /*  Dialogs                                                          */

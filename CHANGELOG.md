@@ -1,3 +1,15 @@
+## 1.29.8.1 — Operator: the app the owner could not open, and the gig nobody could be paid for
+
+Opening a finished gig on the Operator board threw a ReferenceError and the app rendered "could not draw" instead. The payout slider read the remembered drag off `app._operator`, but `app` is a parameter of the view builder and does not exist inside the gig card, so the line threw every time it ran. It only ran for the person who can settle a gig, which is the app's owner and never the GM while an owner is set, so the app worked perfectly on the GM's screen and was dead on the owner's.
+
+Settling a gig could also fail for everyone at once. A runner hired off the roster is usually a mook, and a mook has no Eurobucks ledger at all, so the write for their cut was reported as a problem and the all-or-nothing guard then refused to pay the Fixer either. A payee with no ledger now takes their share as cash in hand, said out loud on the settlement card, and only a write that genuinely failed stops the settlement. The failure notice is also whispered to whoever pressed Pay: the press is handled on the GM's client, so until now a player saw nothing happen and no reason why.
+
+The Operator tile on the home screen now carries a count while money is waiting to be handed out, the same badge the Messenger uses. Pressing Pay clears it. Any app tile can now carry one.
+
+Assigning a gig with no calendar running failed the same way a payout did, with the reason toasted on the GM's screen while the player who pressed the button saw nothing at all. Both now whisper the reason to whoever pressed it. A lint pass for the same class of scope error across every module in the game found nothing else.
+
+---
+
 ## 1.8.4 — Roll-vanish watchdog (diagnostic)
 
 Players reported dice rolls from the character sheet appearing on screen, vanishing, and never landing in the chat log. Virtual Agent never deletes non-Agent messages (its only two delete paths are the manual message delete and the GM's NPC-contact cleanup, both of which can only match Agent messages) — so something else at the table is deleting them, or a chat-render pipeline is swallowing them.
